@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>C++ 哈希容器</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 34px 40px;
+    font: 23px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 600px; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { position: absolute; left: 110px; right: 110px; bottom: 56px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">C++ 哈希容器</p>
+  <h1>哈希题会用到的 4 个容器</h1>
+  <p class="lead">前两个是主力，后两个是需要「有序」时的替代品</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">unordered_map</p>
+      <p class="desc">键 → 值<br>记下标、计数、分组</p>
+      <div class="tags"><span class="tag fast">O(1)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">unordered_set</p>
+      <p class="desc">只存键<br>去重、判断存不存在</p>
+      <div class="tags"><span class="tag fast">O(1)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">map</p>
+      <p class="desc">按键排好序的<br>键 → 值</p>
+      <div class="tags"><span class="tag slow">O(log n)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">set</p>
+      <p class="desc">排好序的去重集合<br>能找最大最小</p>
+      <div class="tags"><span class="tag slow">O(log n)</span></div>
+    </div>
+  </div>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. unordered_map -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">C++ 哈希容器 · 02</p>
+  <div class="head"><h1 class="mono">unordered_map</h1><span class="what">哈希表：键 → 值</span><span class="cx fast mono">平均 O(1)</span><span class="inc mono">#include &lt;unordered_map&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 创建
+unordered_map<string, int> m;
+unordered_map<int, int> m2 = {{1, 10}, {2, 20}};
+m.reserve(n);           // 预分配，少扩容
+
+# 增 / 改
+m["a"] = 1;             // 没有就插入，有就覆盖
+m["a"]++;               // 计数：默认值是 0
+m.insert({"b", 2});     // 已存在则不动
+m.emplace("c", 3);      // 同 insert，原地构造
+</script>
+<script type="text/x-cpp">
+# 查
+m.count("a");           // 存在 1，不存在 0
+auto it = m.find("a");  // 找不到是 m.end()
+if (it != m.end())
+    cout << it->second; // 取值
+m.at("a");              // 不存在会抛异常
+
+# 删
+m.erase("a");           // 按键删
+m.clear();              // 全清空
+
+# 遍历（顺序不固定）
+for (auto& [k, v] : m)
+    cout << k << v;
+m.size();  m.empty();
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>if (m[k])</b><span>会把 k 插进去，判断存在用 <code>m.count(k)</code></span></div>
+      <div class="p"><b>m.at(k)</b><span>k 不存在会抛异常，不确定时先 <code>find</code></span></div>
+      <div class="p"><b>遍历时 erase(it)</b><span>it 会失效，写成 <code>it = m.erase(it)</code></span></div>
+      <div class="p"><b>pair 当键</b><span>没有默认哈希，编译报错，改用 <code>map</code> 或编码成 <code>long long</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. unordered_set -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">C++ 哈希容器 · 03</p>
+  <div class="head"><h1 class="mono">unordered_set</h1><span class="what">哈希集合：只存键，自动去重</span><span class="cx fast mono">平均 O(1)</span><span class="inc mono">#include &lt;unordered_set&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 创建
+unordered_set<int> s;
+unordered_set<int> s2 = {1, 2, 3};
+// 从 vector 建，顺便去重
+unordered_set<int> s3(v.begin(), v.end());
+
+# 增
+s.insert(5);            // 已存在则忽略
+// ok：是否真的插入了
+auto [it, ok] = s.insert(5);
+</script>
+<script type="text/x-cpp">
+# 查
+s.count(5);             // 存在 1，不存在 0
+s.find(5) != s.end();   // 同上
+s.contains(5);          // C++20 才有
+
+# 删
+s.erase(5);             // 按值删
+s.clear();
+
+# 遍历（顺序不固定）
+for (int x : s)
+    cout << x;
+s.size();  s.empty();
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>想改某个元素</b><span>元素是只读的，先 <code>erase</code> 再 <code>insert</code></span></div>
+      <div class="p"><b>s.contains(x)</b><span>C++20 才有，C++17 下用 <code>s.count(x)</code></span></div>
+      <div class="p"><b>依赖遍历顺序</b><span>顺序不固定，要有序用 <code>set</code></span></div>
+      <div class="p"><b>遍历时 insert</b><span>可能触发扩容，迭代器全部失效</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. map -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">C++ 哈希容器 · 04</p>
+  <div class="head"><h1 class="mono">map</h1><span class="what">有序表：键从小到大排好</span><span class="cx slow mono">O(log n)</span><span class="inc mono">#include &lt;map&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 增删查：和 unordered_map 一样
+map<string, int> m;
+m["b"] = 2;
+m["a"] = 1;
+m.count("a");  m.find("a");
+m.erase("a");
+
+# 遍历：按键从小到大
+for (auto& [k, v] : m)  // a 1, b 2
+    cout << k << v;
+
+# 从大到小排
+map<int, int, greater<int>> m2;
+</script>
+<script type="text/x-cpp">
+# 有序才有的接口
+m.begin()->first;       // 最小的键
+m.rbegin()->first;      // 最大的键
+
+m.lower_bound(k);       // 第一个 >= k
+m.upper_bound(k);       // 第一个 >  k
+
+auto it = m.lower_bound(k);
+if (it != m.end())
+    cout << it->first;  // 找到了
+
+# 一边遍历一边删
+for (auto it = m.begin(); it != m.end(); )
+    it = cond ? m.erase(it) : next(it);
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>m[k] 同样会插入</b><span>只读时用 <code>count</code> / <code>find</code></span></div>
+      <div class="p"><b>std::lower_bound(m...)</b><span>在 map 上是 O(n)，用成员 <code>m.lower_bound(k)</code></span></div>
+      <div class="p"><b>空表取 begin / rbegin</b><span>解引用会崩，先判 <code>m.empty()</code></span></div>
+      <div class="p"><b>不需要顺序也用 map</b><span>慢一截，换 <code>unordered_map</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. set -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">C++ 哈希容器 · 05</p>
+  <div class="head"><h1 class="mono">set</h1><span class="what">有序集合：排好序 + 去重</span><span class="cx slow mono">O(log n)</span><span class="inc mono">#include &lt;set&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 基本操作
+set<int> s = {3, 1, 2}; // 里面是 1 2 3
+s.insert(5);
+s.erase(1);
+s.count(2);
+
+# 最小 / 最大
+*s.begin();             // 最小
+*s.rbegin();            // 最大
+
+# 二分查找
+s.lower_bound(x);       // 第一个 >= x
+s.upper_bound(x);       // 第一个 >  x
+</script>
+<script type="text/x-cpp">
+# multiset：允许重复
+multiset<int> ms = {2, 2, 3};
+ms.count(2);            // 2
+
+ms.erase(ms.find(2));   // 只删一个 2
+ms.erase(2);            // ⚠ 删掉所有 2
+
+# 常见用法：滑动窗口里的最值
+ms.insert(nums[r]);
+ms.erase(ms.find(nums[l]));
+*ms.rbegin();           // 窗口最大值
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>ms.erase(x)</b><span>删光所有 x，只删一个用 <code>ms.erase(ms.find(x))</code></span></div>
+      <div class="p"><b>std::lower_bound(s...)</b><span>在 set 上是 O(n)，用成员 <code>s.lower_bound(x)</code></span></div>
+      <div class="p"><b>空集合 *s.begin()</b><span>未定义行为，先判 <code>s.empty()</code></span></div>
+      <div class="p"><b>*it = 新值</b><span>元素是只读的，先 <code>erase</code> 再 <code>insert</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 + 常见坑 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">C++ 哈希容器 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见坑</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我需要……</h2>
+      <div class="row"><span class="need">判断一个数「见没见过」</span><span class="use mono">unordered_set</span></div>
+      <div class="row"><span class="need">记录 值 → 下标 / 次数</span><span class="use mono">unordered_map</span></div>
+      <div class="row"><span class="need">把东西按某个特征分组</span><span class="use mono">unordered_map</span></div>
+      <div class="row"><span class="need">按顺序遍历 / 找第一个 ≥ x</span><span class="use mono">map / set</span></div>
+      <div class="row"><span class="need">随时拿最大、最小值</span><span class="use mono">set / multiset</span></div>
+      <div class="row"><span class="need">键只是 0~25 或很小的整数</span><span class="use mono">数组 int[26]</span></div>
+    </div>
+    <div class="panel">
+      <h2>容易踩的坑</h2>
+      <div class="pit">
+        <p class="bad"><code>if (m[k])</code> 判断存在</p>
+        <p class="fix">会把 k 插进去，改用 <code>m.count(k)</code> 或 <code>m.find(k)</code></p>
+      </div>
+      <div class="pit">
+        <p class="bad">遍历时直接 <code>m.erase(it)</code></p>
+        <p class="fix">it 会失效，写成 <code>it = m.erase(it)</code></p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>unordered_map&lt;pair&lt;int,int&gt;, int&gt;</code> 编译报错</p>
+        <p class="fix">pair 没有默认哈希，改用 <code>map</code>，或把两个数编码成 <code>long long</code></p>
+      </div>
+      <div class="pit">
+        <p class="bad">遍历 unordered_map 依赖顺序</p>
+        <p class="fix">顺序不固定，需要顺序就用 <code>map</code> 或先排序</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
+  const TY = new Set('int long char bool void double string vector pair unordered_map unordered_set map set multiset multimap greater cout'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题
+    return line.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)|([^\w"'\/]+|\/)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        if (fn) return KW.has(fn) ? `<span class="k">${fn}</span>` : TY.has(fn) ? `<span class="t">${fn}</span>` : `<span class="f">${fn}</span>`;
+        if (id) return KW.has(id) ? `<span class="k">${id}</span>` : TY.has(id) ? `<span class="t">${id}</span>` : id;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-cpp"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
