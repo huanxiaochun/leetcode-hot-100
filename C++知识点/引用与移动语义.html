@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>C++ 引用与移动语义</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  /* 常见搭配 */
+  .pit.ok .bad { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">C++ 引用与移动语义</p>
+  <h1>少拷贝，改对东西</h1>
+  <p class="lead">刷题里最常见的四种写法：引用、范围 for、传参、std::move</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">T&amp;</p>
+      <p class="desc">引用<br>给变量起个别名</p>
+      <div class="tags"><span class="tag lc mono">int&amp; r = a</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">for (x : v)</p>
+      <p class="desc">范围 for<br>拷贝 / 引用 / 只读</p>
+      <div class="tags"><span class="tag lc mono">auto&amp;</span><span class="tag lc mono">const auto&amp;</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">const T&amp;</p>
+      <p class="desc">函数传参<br>什么时候传值、传引用</p>
+      <div class="tags"><span class="tag lc mono">f(const T&amp;)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">std::move</p>
+      <p class="desc">移动语义<br>把内存交出去，不复制</p>
+      <div class="tags"><span class="tag lc mono">push_back(move(s))</span></div>
+    </div>
+  </div>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. T& -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">C++ 引用与移动语义 · 02</p>
+  <div class="head"><h1 class="mono">T&amp;</h1><span class="what">引用：变量的另一个名字</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 引用 = 别名
+int a = 1;
+int& r = a;                // r 就是 a
+r = 5;                     // a 也变成 5
+
+# 必须初始化，不能改绑
+int& r2;                   // ✗ 编译错误
+int b = 2;
+r = b;                     // 不是改绑，是 a = 2
+</script>
+<script type="text/x-cpp">
+# 参数加 &：直接改调用方的变量
+void inc(int& x) { x++; }
+int n = 1;
+inc(n);                    // n == 2
+
+# 不加 &：拷贝一份，改不到原变量
+void inc2(int x) { x++; }
+inc2(n);                   // n 还是 2
+
+# 引用数组元素，少写下标
+int& cur = nums[i];
+cur += 10;                 // nums[i] 也变了
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>auto x = r;</b><span>auto 会去掉引用，x 是拷贝；要引用写 <code>auto&amp; x = r</code></span></div>
+      <div class="p"><b>int&amp; r = 5;</b><span>普通引用不能绑字面量，用 <code>const int&amp;</code> 或直接 <code>int</code></span></div>
+      <div class="p"><b>int&amp; f() { int x; return x; }</b><span>返回局部变量的引用，函数结束 x 就没了，<code>按值返回</code></span></div>
+      <div class="p"><b>int&amp; e = v[0]; v.push_back(1);</b><span>vector 扩容后 e 指向旧内存，<code>push_back 后重新取</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. for (x : v) -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">C++ 引用与移动语义 · 03</p>
+  <div class="head"><h1 class="mono">for (x : v)</h1><span class="what">范围 for：逐个取出容器里的元素</span><span class="inc mono">C++11</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+vector<string> strs = {"eat", "tea"};
+
+# 1. 拷贝：s 是副本，改了不影响 strs
+for (string s : strs) s += "!";
+
+# 2. 引用：s 就是元素本身，能改、不拷贝
+for (string& s : strs) s += "!";
+
+# 3. 只读引用：不拷贝，也不许改
+for (const string& s : strs) cout << s;
+</script>
+<script type="text/x-cpp">
+# 用 auto 省掉类型
+for (auto x : v) {}        // 拷贝
+for (auto& x : v) {}       // 要修改
+for (const auto& x : v) {} // 只读，推荐
+
+# 遍历 map：结构化绑定（C++17）
+for (auto& [k, val] : m) cout << k << val;
+
+# string& s 等价于
+for (size_t i = 0; i < strs.size(); ++i) {
+    string& s = strs[i];
+}
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>for (auto x : v) x = 0;</b><span>x 是拷贝，v 没变；要改元素写 <code>auto&amp; x</code></span></div>
+      <div class="p"><b>for (string s : strs)</b><span>每个字符串都拷贝一次，只读用 <code>const string&amp;</code></span></div>
+      <div class="p"><b>循环里 v.push_back()</b><span>扩容后迭代器失效，可能崩溃，<code>改用下标循环</code></span></div>
+      <div class="p"><b>pair&lt;int,int&gt;&amp; p : m</b><span>map 元素是 <code>pair&lt;const K, V&gt;</code>，类型不对会报错，写 <code>auto&amp;</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. const T& -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">C++ 引用与移动语义 · 04</p>
+  <div class="head"><h1 class="mono">const T&amp;</h1><span class="what">函数传参：拷贝、可改、只读</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 三种传参
+void f1(vector<int> v);         // 拷贝整个数组
+void f2(vector<int>& v);        // 能改原数组
+void f3(const vector<int>& v);  // 只读，不拷贝
+
+# LeetCode 的函数签名
+vector<int> twoSum(vector<int>& nums,
+                   int target);
+// nums 是引用：不拷贝，改了会影响调用方
+</script>
+<script type="text/x-cpp">
+# int、char 这种小类型直接传值
+void g(int x, char c);
+
+# const 引用能接临时值，普通引用不行
+void h(const string& s);
+h("hello");                // ✓
+void h2(string& s);
+h2("hello");               // ✗ 编译错误
+
+# 返回值：放心按值返回
+vector<int> make(int n) {
+    vector<int> ans(n);
+    return ans;            // 编译器优化，不拷贝
+}
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>dfs(vector&lt;int&gt; path)</b><span>递归每层都拷贝一次数组，容易超时，<code>传 vector&lt;int&gt;&amp;</code></span></div>
+      <div class="p"><b>const map 上用 m[k]</b><span><code>[]</code> 可能插入，const 下编译报错，用 <code>find</code> / <code>at</code></span></div>
+      <div class="p"><b>const int&amp; x</b><span>小类型拷贝更便宜，<code>直接写 int x</code></span></div>
+      <div class="p"><b>vector&lt;int&gt;&amp; f()</b><span>返回局部数组的引用会悬空，<code>按值返回 vector&lt;int&gt;</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. std::move -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">C++ 引用与移动语义 · 05</p>
+  <div class="head"><h1 class="mono">std::move</h1><span class="what">移动语义：把内存交出去，不复制</span><span class="inc mono">#include &lt;utility&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 拷贝：复制一份数据，O(长度)
+string a = "hello world";
+string b = a;              // a、b 各有一份
+
+# 移动：把内存交给对方，O(1)
+string c = std::move(a);   // 不复制字符
+// 之后 a 内容不确定，别再读它
+a = "new";                 // 重新赋值可以
+
+# move 自己不搬东西
+// 只是把 a 标成「可以被搬走」，接收方来搬
+</script>
+<script type="text/x-cpp">
+# 放进容器：变量之后不用了就 move
+vector<string> v;
+v.push_back(std::move(s)); // 不拷贝 s
+v.emplace_back(3, 'x');    // 原地构造 "xxx"
+
+# 整个容器转移 / 交换
+vector<int> x, y;
+y = std::move(x);          // x 的内容交给 y
+swap(x, y);                // O(1)，只换内部指针
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>move 之后再读 s</b><span>内容不确定，<code>只能重新赋值或销毁</code></span></div>
+      <div class="p"><b>std::move(const 对象)</b><span>const 不能被搬，悄悄退化成拷贝</span></div>
+      <div class="p"><b>return std::move(ans);</b><span>反而挡住编译器优化，<code>直接 return ans</code></span></div>
+      <div class="p"><b>std::move(int)</b><span>小类型移动 = 拷贝，没意义</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">C++ 引用与移动语义 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">遍历时只读</span><span class="use mono">const auto&amp;</span></div>
+      <div class="row"><span class="need">遍历时修改元素</span><span class="use mono">auto&amp;</span></div>
+      <div class="row"><span class="need">遍历 int 这种小类型</span><span class="use mono">auto</span></div>
+      <div class="row"><span class="need">函数参数，只读大对象</span><span class="use mono">const T&amp;</span></div>
+      <div class="row"><span class="need">函数里改调用方的变量</span><span class="use mono">T&amp;</span></div>
+      <div class="row"><span class="need">变量之后不用了，放进容器</span><span class="use mono">std::move</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>for (auto&amp; x : v) out.push_back(std::move(x));</code></p>
+        <p class="fix">把元素搬进另一个容器，一次都不拷贝；之后 v 里的元素别再读</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>for (const auto&amp; [k, val] : m)</code></p>
+        <p class="fix">只读遍历 map，键值对都不拷贝</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>void dfs(vector&lt;int&gt;&amp; path)</code></p>
+        <p class="fix">递归每层共用同一个数组，进去 <code>push_back</code>，回来 <code>pop_back</code></p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>for (auto x : v) out.push_back(std::move(x));</code></p>
+        <p class="fix">x 已经是拷贝，move 只省掉第二次；要真正不拷贝，循环变量写 <code>auto&amp;</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
+  const TY = new Set('int long char bool void double size_t string vector pair unordered_map unordered_set map set multiset multimap greater cout'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题
+    return line.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)|([^\w"'\/]+|\/)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        if (fn) return KW.has(fn) ? `<span class="k">${fn}</span>` : TY.has(fn) ? `<span class="t">${fn}</span>` : `<span class="f">${fn}</span>`;
+        if (id) return KW.has(id) ? `<span class="k">${id}</span>` : TY.has(id) ? `<span class="t">${id}</span>` : id;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-cpp"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

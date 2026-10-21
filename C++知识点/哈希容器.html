@@ -23,11 +23,12 @@
   .slide {
     position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
     margin: -540px 0 0 -960px; transform-origin: center;
-    background: var(--bg); padding: 76px 110px 0;
+    background: var(--bg); padding: 76px 110px 56px;
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
     -webkit-font-smoothing: antialiased;
     opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
   }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
   .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
 
   /* 页头 */
@@ -46,10 +47,10 @@
   }
 
   /* 代码卡片 */
-  .codes { margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
   pre.cpp {
-    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 34px 40px;
-    font: 23px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 600px; overflow: hidden;
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
   }
   pre.cpp.short { height: auto; }
   .cpp .sec { color: #89b4fa; font-weight: 700; }
@@ -57,7 +58,7 @@
   .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
 
   /* 底部要点 */
-  .facts { position: absolute; left: 110px; right: 110px; bottom: 56px; }
+  .facts { margin-top: 48px; }
   .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
   .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
   .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }

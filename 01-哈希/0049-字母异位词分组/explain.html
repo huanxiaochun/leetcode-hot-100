@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>49. 字母异位词分组</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* 单词格子 */
+  .box.word { width: auto; min-width: 72px; padding: 0 18px; font-size: 24px; }
+  .key-line { margin-top: 16px; font-size: 24px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .key-line .from { font-weight: 700; }
+  .key-line .to { color: var(--muted); }
+  .letters { display: inline-flex; gap: 6px; }
+  .letters span {
+    padding: 2px 10px; border-radius: 10px; background: var(--amber-soft); color: var(--amber); font-weight: 700;
+  }
+  .letters span sub { font-size: 14px; margin-left: 1px; vertical-align: baseline; opacity: .8; }
+
+  /* 分组 */
+  .groups { display: flex; flex-direction: column; gap: 10px; min-height: 64px; }
+  .grp {
+    display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 14px;
+    background: var(--inset); border: 2.5px solid transparent; transition: all .3s;
+  }
+  .grp .gk { display: inline-flex; gap: 4px; min-width: 150px; color: var(--muted); font-size: 16px; font-weight: 600; }
+  .grp .ws { display: flex; gap: 8px; flex-wrap: wrap; }
+  .grp .w { padding: 4px 14px; border-radius: 10px; background: var(--card); font-size: 20px; font-weight: 600; }
+  .grp.new { border-color: var(--blue); animation: pop .4s cubic-bezier(.2,.8,.2,1); }
+  .grp.hit { border-color: var(--green); background: var(--green-soft); }
+  .grp.hit .w:last-child { color: var(--green); }
+  .groups .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>49. 字母异位词分组</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">哈希</span>
+    <a href="https://leetcode.cn/problems/group-anagrams/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">字母异位词的<b>字母计数</b>完全一样，用它当 key，同 key 的单词放一组。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="strsIn">strs</label><input id="strsIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">strs</div>
+        <div class="array" id="array"></div>
+        <div class="key-line mono" id="keyline"></div>
+      </div>
+      <div>
+        <div class="label">哈希表 groups &nbsp;字母计数 → 同组单词</div>
+        <div class="groups mono" id="groups"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(nk)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>n</b> 个单词</span><span class="op">×</span><span class="term">数字母 <b>O(k)</b></span><span class="op">=</span><span class="term"><b>O(nk)</b></span></div>
+        <p class="why"><b>k</b> 是最长单词的长度。每个字母只看<b>一次</b>；key 固定 26 位，算哈希、比较都是常数时间。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">e</span><span class="c b">a</span><span class="c b">t</span><span class="ar">→</span><span class="c g">a1</span><span class="c g">e1</span><span class="c g">t1</span></div><div class="cells"><span class="c b">t</span><span class="c b">e</span><span class="c b">a</span><span class="ar">→</span><span class="c g">a1</span><span class="c g">e1</span><span class="c g">t1</span></div><span class="cap">每个单词扫一遍得到计数，异位词的计数完全一样</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(nk)</span></div>
+      <div>
+        <div class="eq"><span class="term">所有单词共 <b>nk</b> 个字符</span><span class="op">+</span><span class="term">每组一个 26 位 key</span></div>
+        <p class="why">每个单词都要放进哈希表的某一组，总共就是<b>所有字符</b>的量。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(nk log k)</span></div>
+      <div>
+        <p class="why">把单词<b>排序</b>后当 key 也能分组，但每个单词排序要 O(k log k)，比数字母慢；k 很小时两者差不多。</p>
+      </div>
+      <div class="fig"><div class="vs"><span class="k a">排序</span><span class="mono">eat → aet</span><span class="cap">O(k log k)</span><span class="k g">计数</span><span class="mono">eat → a1 e1 t1</span><span class="cap">O(k)</span></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+
+  const CODE = [
+    '<span class="t">vector</span>&lt;<span class="t">vector</span>&lt;<span class="t">string</span>&gt;&gt; groupAnagrams(<span class="t">vector</span>&lt;<span class="t">string</span>&gt;&amp; strs) {',
+    '    <span class="t">unordered_map</span>&lt;<span class="t">string</span>, <span class="t">vector</span>&lt;<span class="t">string</span>&gt;&gt; groups;',
+    '    <span class="k">for</span> (<span class="t">string</span>&amp; s : strs) {',
+    '        <span class="t">string</span> key(26, 0);',
+    '        <span class="k">for</span> (<span class="t">char</span> c : s) key[c - <span class="t">\'a\'</span>]++;  <span class="c">// 数字母</span>',
+    '        groups[key].push_back(s);',
+    '    }',
+    '    <span class="t">vector</span>&lt;<span class="t">vector</span>&lt;<span class="t">string</span>&gt;&gt; ans;',
+    '    <span class="k">for</span> (<span class="k">auto</span>&amp; [k, g] : groups) ans.push_back(g);',
+    '    <span class="k">return</span> ans;',
+    '}',
+  ];
+  const EXAMPLES = [
+    ['eat', 'tea', 'tan', 'ate', 'nat', 'bat'],
+    ['abc', 'bca', 'xyz', 'cab', 'zyx'],
+    ['ab', 'ba', 'abb'],
+    ['a'],
+  ];
+
+  // 字母计数，按字母顺序列出，如 eat -> a1 e1 t1
+  const keyOf = s => {
+    const cnt = {};
+    for (const c of s) cnt[c] = (cnt[c] || 0) + 1;
+    return Object.keys(cnt).sort().map(c => [c, cnt[c]]);
+  };
+  const keyStr = k => k.map(([c, n]) => c + n).join('') || '∅';
+  const keyHtml = k => k.length
+    ? k.map(([c, n]) => `<span>${c}<sub>×${n}</sub></span>`).join('')
+    : '<span>空</span>';
+  const show = w => w === '' ? '""' : w;
+
+  function build(strs) {
+    const s = [], groups = [];
+    const snap = () => groups.map(g => ({ k: g.k, key: g.key, ws: g.ws.slice() }));
+    s.push({ strs, i: -1, groups: [], line: 1, msg: '准备一个空哈希表' });
+    strs.forEach((w, i) => {
+      const key = keyOf(w), k = keyStr(key);
+      s.push({ strs, i, groups: snap(), line: 2, msg: `看 ${show(w)}` });
+      s.push({ strs, i, key, groups: snap(), line: 4, msg: `数一数字母，得到 ${k}` });
+      const g = groups.find(g => g.k === k);
+      if (g) {
+        g.ws.push(w);
+        s.push({ strs, i, key, groups: snap(), line: 5, hitK: k, kind: 'ok', msg: `${k} 已有，${show(w)} 加入这一组` });
+      } else {
+        groups.push({ k, key, ws: [w] });
+        s.push({ strs, i, key, groups: snap(), line: 5, newK: k, msg: `${k} 没见过，新建一组` });
+      }
+    });
+    s.push({ strs, i: -1, groups: snap(), line: 9, kind: 'ok', msg: `✓ 共 ${groups.length} 组` });
+    return s;
+  }
+
+  function render(st) {
+    $('array').innerHTML = st.strs.map((w, k) => {
+      const c = k === st.i ? 'cur' : st.i >= 0 && k < st.i ? 'past' : '';
+      return `<div class="cell ${c}"><span class="arrow">s</span><div class="box word mono">${show(w)}</div><div class="idx mono">${k}</div></div>`;
+    }).join('');
+    $('keyline').innerHTML = st.key
+      ? `<span class="from">${show(st.strs[st.i])}</span><span class="to">→</span><span class="letters">${keyHtml(st.key)}</span>`
+      : '';
+    $('groups').innerHTML = st.groups.length
+      ? st.groups.map(g => `<div class="grp ${g.k === st.hitK ? 'hit' : g.k === st.newK ? 'new' : ''}">
+          <span class="gk">${g.k}</span>
+          <span class="ws">${g.ws.map(w => `<span class="w">${show(w)}</span>`).join('')}</span></div>`).join('')
+      : '<div class="empty">空</div>';
+  }
+
+  const fill = strs => { $('strsIn').value = strs.join(', '); };
+  const parse = () => {
+    const raw = $('strsIn').value.replace(/[\[\]"']/g, '');
+    const strs = raw.split(/[,，]/).map(x => x.trim());
+    const ok = strs.length <= 8 && strs.every(w => /^[a-z]{0,8}$/.test(w));
+    return ok ? strs : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === st.line));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  $('code').innerHTML = CODE.map(c => `<span class="l">${c}</span>`).join('');
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+})();
+</script>
+</body>
+</html>

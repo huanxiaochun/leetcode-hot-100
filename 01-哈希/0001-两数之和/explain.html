@@ -149,12 +149,58 @@
   pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
   .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
 
-  /* 要点 */
-  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  @media (max-width: 760px) { .facts { grid-template-columns: 1fr; } }
-  .fact { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 24px; }
-  .fact .big { font-size: 26px; font-weight: 700; }
-  .fact .sub { color: var(--muted); font-size: 16px; margin-top: 4px; }
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -195,11 +241,6 @@
     </div>
 
   </section>
-  <div class="facts">
-    <div class="fact"><div class="big mono">O(n)</div><div class="sub">时间，一次遍历</div></div>
-    <div class="fact"><div class="big mono">O(n)</div><div class="sub">空间，哈希表</div></div>
-    <div class="fact"><div class="big">先查后存</div><div class="sub">避免自己和自己配对</div></div>
-  </div>
   </div>
 
   <div class="side">
@@ -217,9 +258,34 @@
   <section class="card code">
     <pre id="code"></pre>
   </section>
+  </div>
+  </div>
 
-  </div>
-  </div>
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">遍历 <b>n</b> 个数</span><span class="op">×</span><span class="term">每个数查 <b>1</b> 次、存 <b>1</b> 次</span><span class="op">=</span><span class="term"><b>O(n)</b></span></div>
+        <p class="why">数组只从左到右走<b>一遍</b>，哈希表查和存平均都是 <b>O(1)</b>，不会因为表变大而变慢。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">2</span><span class="c b">7</span><span class="c b">11</span><span class="c b">15</span><span class="c b">3</span><span class="c b">6</span></div><div class="sweep"></div><span class="cap">一次遍历，每格 O(1)</span></div>
+    </div>
+    <div class="cx-row space">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">哈希表最多存 <b>n − 1</b> 项</span></div>
+        <p class="why">最坏情况答案是<b>最后两个数</b>，前面每个数都得先存进表里等着配对。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c g">2→0</span><span class="c g">7→1</span><span class="c g">11→2</span><span class="c g">15→3</span><span class="c g">3→4</span></div><span class="cap">答案是最后两个数时，走到最后一个数前表里已有 n − 1 项</span></div>
+    </div>
+    <div class="cx-row cmp">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(n²)</span></div>
+      <div>
+        <p class="why">暴力解法要把<b>每一对</b>都试一遍，共 n(n−1)/2 对。哈希表是<b>用空间换时间</b>：多花 O(n) 内存，把时间从 n² 降到 n。</p>
+      </div>
+      <div class="fig"><div class="tri"><span class="d"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d on"></span><span class="d on"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d on"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d on"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span></div><span class="cap">6 个数就要试 15 对，n 翻倍对数翻 4 倍</span></div>
+    </div>
+  </section>
 </main>
 
 <script>
