@@ -202,6 +202,17 @@
   .fig .vs .k.a { color: var(--x); }
   .fig .vs .k.g { color: var(--t); }
 
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -256,6 +267,10 @@
     </div>
   </section>
   <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
     <pre id="code"></pre>
   </section>
   </div>
@@ -302,6 +317,18 @@
     '    <span class="k">return</span> {};',
     '}',
   ];
+  const PY = [
+      "<span class=\"k\">def</span> twoSum(<span class=\"t\">self</span>, nums, target):",
+      "    seen = {}",
+      "    <span class=\"k\">for</span> i, x <span class=\"k\">in</span> <span class=\"t\">enumerate</span>(nums):",
+      "        need = target - x",
+      "        <span class=\"k\">if</span> need <span class=\"k\">in</span> seen:",
+      "            <span class=\"k\">return</span> [seen[need], i]",
+      "        seen[x] = i  <span class=\"c\"># 先查后存</span>",
+      "    <span class=\"k\">return</span> []"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行
+  const PYMAP = [0, 1, 2, 3, 4, 5, 6, 6, 7, 7];
   const EXAMPLES = [
     [[2, 7, 11, 15], 9],
     [[3, 2, 4], 6],
@@ -347,7 +374,8 @@
       : '<div class="empty">空</div>';
     $('status').textContent = st.msg;
     $('status').className = 'status ' + (st.kind || '');
-    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === st.line));
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
     $('count').textContent = `${cur + 1}/${steps.length}`;
     $('bar').style.width = `${(cur / (steps.length - 1)) * 100}%`;
     $('prev').disabled = cur === 0;
@@ -396,7 +424,25 @@
     load(n, t);
   });
 
-  $('code').innerHTML = CODE.map(c => `<span class="l">${c}</span>`).join('');
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
   $('prev').onclick = () => { stop(); cur > 0 && (cur--, render()); };
   $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, render()); };
   $('reset').onclick = () => { stop(); cur = 0; render(); };
