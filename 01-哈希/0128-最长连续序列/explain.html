@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>128. 最长连续序列</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .box.sm { width: 64px; height: 64px; font-size: 24px; }
+  .cell.dup .box { opacity: .25; text-decoration: line-through; }
+  .cell.skip .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.chain .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.probe .box { border-style: dashed; border-color: var(--muted); }
+  .check { margin-top: 16px; font-size: 24px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .check .q { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .check .q.yes { background: var(--amber-soft); color: var(--amber); }
+  .check .q.no { background: var(--green-soft); color: var(--green); }
+  .chainline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 56px; font-size: 24px; }
+  .chainline .n { padding: 6px 16px; border-radius: 12px; background: var(--green-soft); color: var(--green); font-weight: 700; }
+  .chainline .ar { color: var(--muted); }
+  .chainline .len { margin-left: 8px; color: var(--muted); font-size: 20px; }
+  .best { display: inline-block; padding: 4px 16px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); font-weight: 700; font-size: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>128. 最长连续序列</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">哈希</span>
+    <a href="https://leetcode.cn/problems/longest-consecutive-sequence/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">只从<b>起点</b>开始往后数：<b>x − 1</b> 不在集合里，x 才是一段序列的起点。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="numsIn">nums</label><input id="numsIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">nums</div>
+        <div class="array" id="nums"></div>
+      </div>
+      <div>
+        <div class="label">哈希集合 st &nbsp;（去重后）</div>
+        <div class="array" id="set"></div>
+        <div class="check mono" id="check"></div>
+      </div>
+      <div>
+        <div class="label">当前连续序列 &nbsp;<span class="best mono" id="best"></span></div>
+        <div class="chainline mono" id="chain"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">建集合 <b>O(n)</b></span><span class="op">+</span><span class="term">外层判起点 <b>O(n)</b></span><span class="op">+</span><span class="term">所有 while 合计 <b>O(n)</b></span><span class="op">=</span><span class="term"><b>O(n)</b></span></div>
+        <p class="why">while 看起来像嵌套循环，但只从<b>起点</b>出发往后数。每个数最多被往后数<b>一次</b>，所有 while 加起来不超过 n 步。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c g">1</span><span class="c ">2</span><span class="c ">3</span><span class="c ">4</span><span class="gap"></span><span class="c g">100</span><span class="gap"></span><span class="c g">200</span></div><span class="cap"><b style="color:var(--s)">绿色</b>是起点。2、3、4 不是起点直接跳过，只在 1 那一段里被数一次</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">集合存下所有不同的数</span></div>
+        <p class="why">重复的数只存<b>一次</b>，所以最多 n 个。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(n log n)</span></div>
+      <div>
+        <p class="why">先<b>排序</b>再数一遍也能做，但排序本身就超过 O(n)，不满足题目「O(n) 时间」的要求。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+
+  const CODE = [
+    '<span class="t">int</span> longestConsecutive(<span class="t">vector</span>&lt;<span class="t">int</span>&gt;&amp; nums) {',
+    '    <span class="t">unordered_set</span>&lt;<span class="t">int</span>&gt; st(nums.begin(), nums.end());',
+    '    <span class="t">int</span> best = 0;',
+    '    <span class="k">for</span> (<span class="t">int</span> x : st) {',
+    '        <span class="k">if</span> (st.count(x - 1)) <span class="k">continue</span>;  <span class="c">// 不是起点</span>',
+    '        <span class="t">int</span> y = x;',
+    '        <span class="k">while</span> (st.count(y + 1)) ++y;   <span class="c">// 往后数</span>',
+    '        best = max(best, y - x + 1);',
+    '    }',
+    '    <span class="k">return</span> best;',
+    '}',
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> longestConsecutive(<span class=\"t\">self</span>, nums):",
+      "    st = <span class=\"t\">set</span>(nums)",
+      "    best = 0",
+      "    <span class=\"k\">for</span> x <span class=\"k\">in</span> st:",
+      "        <span class=\"k\">if</span> x - 1 <span class=\"k\">in</span> st:  <span class=\"c\"># 不是起点</span>",
+      "            <span class=\"k\">continue</span>",
+      "        y = x",
+      "        <span class=\"k\">while</span> y + 1 <span class=\"k\">in</span> st:  <span class=\"c\"># 往后数</span>",
+      "            y += 1",
+      "        best = <span class=\"t\">max</span>(best, y - x + 1)",
+      "    <span class=\"k\">return</span> best"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行
+  const PYMAP = [0, 1, 2, 3, 4, 6, 7, 9, 9, 10, 10];
+  const EXAMPLES = [
+    [100, 4, 200, 1, 3, 2],
+    [0, 3, 7, 2, 5, 8, 4, 6, 0, 1],
+    [1, 0, 1, 2],
+    [9, 1, 4, 7, 3, 2, 8, 5],
+  ];
+
+  function build(nums) {
+    const s = [];
+    const uniq = [...new Set(nums)];
+    const st = new Set(uniq);
+    let best = 0;
+    const base = { nums, uniq };
+    s.push({ ...base, best, line: 1, msg: '先放进集合，重复的数去掉' });
+    for (const x of uniq) {
+      if (st.has(x - 1)) {
+        s.push({ ...base, best, x, skip: x, probe: x - 1, has: true, line: 4,
+          kind: 'miss', msg: `${x - 1} 存在，${x} 不是起点，跳过` });
+        continue;
+      }
+      s.push({ ...base, best, x, probe: x - 1, has: false, chain: [x], line: 4,
+        msg: `${x - 1} 不存在，${x} 是起点` });
+      let y = x;
+      const chain = [x];
+      while (st.has(y + 1)) {
+        y++; chain.push(y);
+        s.push({ ...base, best, x, chain: chain.slice(), line: 6, msg: `${y} 存在，接上` });
+      }
+      const len = y - x + 1;
+      const better = len > best;
+      best = Math.max(best, len);
+      s.push({ ...base, best, x, chain: chain.slice(), probe: y + 1, has: false, end: true, line: 7,
+        kind: better ? 'ok' : '', msg: `${y + 1} 不存在，长度 ${len}${better ? '，刷新最长' : ''}` });
+    }
+    s.push({ ...base, best, line: 9, kind: 'ok', msg: `✓ 最长连续序列长度 ${best}` });
+    return s;
+  }
+
+  function render(st) {
+    const dupIdx = new Set();
+    const seen = new Set();
+    st.nums.forEach((v, k) => { seen.has(v) ? dupIdx.add(k) : seen.add(v); });
+    $('nums').innerHTML = st.nums.map((v, k) =>
+      `<div class="cell ${dupIdx.has(k) ? 'dup' : ''}"><div class="box sm mono">${v}</div><div class="idx mono">${k}</div></div>`).join('');
+
+    const chain = new Set(st.chain || []);
+    $('set').innerHTML = st.uniq.map(v => {
+      let c = '';
+      if (v === st.skip) c = 'skip';
+      else if (chain.has(v)) c = 'chain';
+      if (v === st.x && !st.skip) c += ' cur';
+      return `<div class="cell ${c}"><span class="arrow">x</span><div class="box sm mono">${v}</div></div>`;
+    }).join('');
+
+    $('check').innerHTML = st.probe !== undefined
+      ? `${st.end ? '后面' : '前面'}的 <span class="q">${st.probe}</span> 在集合里吗？<span class="q ${st.has ? 'yes' : 'no'}">${st.has ? '在' : '不在'}</span>`
+      : '';
+
+    $('chain').innerHTML = st.chain
+      ? st.chain.map(v => `<span class="n">${v}</span>`).join('<span class="ar">→</span>') + `<span class="len">长度 ${st.chain.length}</span>`
+      : '<span style="color:var(--muted);font-size:18px">—</span>';
+    $('best').textContent = `best = ${st.best}`;
+  }
+
+  const fill = nums => { $('numsIn').value = nums.join(', '); };
+  const parse = () => {
+    const n = $('numsIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+    return n.length && n.length <= 12 && n.every(Number.isInteger) ? n : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+})();
+</script>
+</body>
+</html>

@@ -83,5 +83,5 @@ int main() {
         cout << "   " << (ok ? "\033[32m通过\033[0m" : "\033[31m失败\033[0m") << "\n\n";
     }
     cout << passed << "/" << cases.size() << " 通过\n";
-    return passed == (int)cases.size() ? 0 : 1;
+    return passed == cases.size() ? 0 : 1;
 }

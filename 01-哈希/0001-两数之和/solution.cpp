@@ -13,7 +13,7 @@ public:
     vector<int> twoSum(vector<int>& nums, int target) {
         unordered_map<int, int> seen;  // 数值 -> 下标
         seen.reserve(nums.size());     // 提前分配桶，避免反复扩容（rehash）
-        for (int i = 0; i < (int)nums.size(); ++i) {
+        for (int i = 0; i < nums.size(); ++i) {
             int need = target - nums[i];
             auto it = seen.find(need);
             if (it != seen.end()) {
@@ -65,5 +65,5 @@ int main() {
         cout << "   " << (ok ? "\033[32m通过\033[0m" : "\033[31m失败\033[0m") << "\n\n";
     }
     cout << passed << "/" << cases.size() << " 通过\n";
-    return passed == (int)cases.size() ? 0 : 1;
+    return passed == cases.size() ? 0 : 1;
 }
