@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Python 列表与排序</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  .pit.ok .bad { color: var(--blue); }
+  .head .what, .head .cx, .head .inc { white-space: nowrap; }
+  .cover .note { margin-top: 40px; font-size: 26px; color: var(--sub); }
+  .cover .note b { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">Python 列表与排序</p>
+  <h1>一个 list，四件事</h1>
+  <p class="lead">list 存数据，切片取一段，sort 排顺序，多重赋值让双指针写起来很短</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">list</p>
+      <p class="desc">动态数组<br>增删、查找、二维</p>
+      <div class="tags"><span class="tag lc mono">append</span><span class="tag lc mono">pop</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">a[l:r]</p>
+      <p class="desc">切片与拷贝<br>取一段、反转、复制</p>
+      <div class="tags"><span class="tag lc mono">a[::-1]</span><span class="tag lc mono">a[:]</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">sort</p>
+      <p class="desc">排序<br>原地 / 新列表、key</p>
+      <div class="tags"><span class="tag lc mono">sort()</span><span class="tag lc mono">sorted()</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">a, b = b, a</p>
+      <p class="desc">多重赋值与循环<br>交换、range、zip</p>
+      <div class="tags"><span class="tag lc mono">range(n)</span></div>
+    </div>
+  </div>
+  <p class="note">list 的<b>下标访问</b>是 O(1)，<b>头部增删</b>和 <b>x in a</b> 是 O(n)</p>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. list -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">Python 列表与排序 · 02</p>
+  <div class="head"><h1 class="mono">list</h1><span class="what">动态数组：下标 O(1)，尾部增删 O(1)</span><span class="cx fast mono">下标 O(1)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 创建
+a = []
+a = [0] * n                # n 个 0
+a = list(range(5))         # [0, 1, 2, 3, 4]
+# m 行 n 列
+g = [[0] * n for _ in range(m)]
+## 尾部增删：O(1)
+a.append(x)
+a.pop()                    # 删最后一个并返回
+a[-1]                      # 最后一个
+a.extend([1, 2])           # 接上另一个列表
+</script>
+<script type="text/x-py">
+## 头部 / 中间增删：O(n)
+a.insert(0, x)
+a.pop(0)                   # 要从头取用 deque
+del a[i]
+
+## 查找：O(n)
+x in a
+a.index(x)                 # 找不到抛 ValueError
+a.count(x)
+
+## 其他
+len(a)
+a.reverse()                # 原地反转
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>[[0] * n] * m</b><span>m 行是同一个列表，改一行全变，写 <code>[[0] * n for _ in range(m)]</code></span></div>
+      <div class="p"><b>a.pop(0) 当队列</b><span>每次 O(n)，用 <code>collections.deque</code> 的 <code>popleft()</code></span></div>
+      <div class="p"><b>循环里 x in a</b><span>每次 O(n)，频繁查找先转 <code>set(a)</code></span></div>
+      <div class="p"><b>空列表 a[-1]</b><span>抛 IndexError，先判 <code>if a:</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. a[l:r] -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">Python 列表与排序 · 03</p>
+  <div class="head"><h1 class="mono">a[l:r]</h1><span class="what">切片：取一段，生成新列表</span><span class="cx slow mono">切片 O(k)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 左闭右开 [l, r)
+a = [0, 1, 2, 3, 4]
+a[1:3]                     # [1, 2]
+a[:2]                      # [0, 1]
+a[2:]                      # [2, 3, 4]
+a[-2:]                     # [3, 4]
+a[::-1]                    # 反转的新列表
+a[::2]                     # [0, 2, 4]
+
+## 切片赋值：原地替换一段
+a[1:3] = [9, 9, 9]         # 长度可以不同
+</script>
+<script type="text/x-py">
+## 赋值 ≠ 拷贝
+b = a                      # 同一个列表，改 b 就是改 a
+b = a[:]                   # 浅拷贝
+b = a.copy()               # 同上
+
+## 二维要深拷贝
+from copy import deepcopy
+g2 = deepcopy(g)
+
+## 函数里原地改整个列表
+def f(nums):
+    nums[:] = sorted(nums) # 调用方能看到
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>b = a 再改 b</b><span>a 也跟着变，要独立的副本写 <code>a[:]</code></span></div>
+      <div class="p"><b>g[:] 拷贝二维</b><span>只拷了外层，每行还是共享，用 <code>deepcopy</code></span></div>
+      <div class="p"><b>nums = sorted(nums)</b><span>只是让局部变量指向新列表，原地修改写 <code>nums[:] = …</code></span></div>
+      <div class="p"><b>a[i:j] 在循环里</b><span>每次都复制 O(j − i)，长循环里用<code>下标</code>代替</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. sort -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">Python 列表与排序 · 04</p>
+  <div class="head"><h1 class="mono">sort</h1><span class="what">排序：原地 sort()，新列表 sorted()</span><span class="cx slow mono">O(n log n)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 原地排序，返回 None
+nums.sort()
+nums.sort(reverse=True)    # 降序
+
+## 生成新列表，原列表不变
+b = sorted(nums)
+b = sorted("bca")          # ['a', 'b', 'c']
+s = "".join(sorted(w))     # 'eat' -> 'aet'
+
+## 按 key 排
+words.sort(key=len)
+pairs.sort(key=lambda p: p[1])
+</script>
+<script type="text/x-py">
+## 多个条件：key 返回 tuple
+# 先按长度升序，再按字母降序
+words.sort(key=lambda w: (len(w), [-ord(c) for c in w]))
+# 数字降序 + 下标升序
+items.sort(key=lambda x: (-x[0], x[1]))
+
+## 排序后还要原下标
+idx = sorted(range(n), key=lambda i: nums[i])
+
+## 字典按值排序
+sorted(d.items(), key=lambda kv: -kv[1])
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>a = a.sort()</b><span>sort() 返回 None，a 变成 None；写 <code>a.sort()</code> 或 <code>a = sorted(a)</code></span></div>
+      <div class="p"><b>sort 传入的参数</b><span>调用方的列表也被改了，不想改就 <code>sorted(nums)</code></span></div>
+      <div class="p"><b>key=lambda x: -x</b><span>只对数字有效，字符串降序用 <code>reverse=True</code></span></div>
+      <div class="p"><b>sorted(字符串)</b><span>返回的是字符列表，要字符串用 <code>"".join(...)</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. a, b = b, a -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">Python 列表与排序 · 05</p>
+  <div class="head"><h1 class="mono">a, b = b, a</h1><span class="what">多重赋值与循环工具</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 多重赋值：右边先全部算完再赋值
+a, b = b, a                # 交换
+nums[i], nums[j] = nums[j], nums[i]
+l, r = 0, len(nums) - 1
+x = y = 0                  # 都是 0
+
+## range：左闭右开
+range(n)                   # 0 .. n-1
+range(1, n)                # 1 .. n-1
+range(n - 1, -1, -1)       # n-1 .. 0，倒序
+</script>
+<script type="text/x-py">
+## 遍历工具
+for i, x in enumerate(a):  # 下标 + 值
+    pass
+for x, y in zip(a, b):     # 两个列表一起走
+    pass
+for x in reversed(a):      # 倒序，不复制
+    pass
+
+## 最值 / 求和
+max(a);  min(a);  sum(a)
+max(a, key=len)            # 最长的
+max(a, default=0)          # 空列表不报错
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>a = b = []</b><span>两个变量是同一个列表，各自独立写 <code>a, b = [], []</code></span></div>
+      <div class="p"><b>range(n, 0)</b><span>起点大于终点得到空的，倒序要写步长 <code>range(n - 1, -1, -1)</code></span></div>
+      <div class="p"><b>max([])</b><span>抛 ValueError，写 <code>max(a, default=0)</code></span></div>
+      <div class="p"><b>a[i], a[a[i]] = …</b><span>左边从左到右赋值，a[i] 先被改了，下标会错；<code>先存到变量里</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">Python 列表与排序 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">m 行 n 列的二维列表</span><span class="use mono">[[0] * n for _ in range(m)]</span></div>
+      <div class="row"><span class="need">拷贝一份再改</span><span class="use mono">a[:]</span></div>
+      <div class="row"><span class="need">原地排序 / 要新列表</span><span class="use mono">a.sort() / sorted(a)</span></div>
+      <div class="row"><span class="need">按多个条件排序</span><span class="use mono">key=lambda x: (...)</span></div>
+      <div class="row"><span class="need">交换两个元素</span><span class="use mono">a[i], a[j] = a[j], a[i]</span></div>
+      <div class="row"><span class="need">倒序遍历</span><span class="use mono">range(n - 1, -1, -1)</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>l, r = 0, len(a) - 1</code> + <code>while l &lt; r:</code></p>
+        <p class="fix">相向双指针：两端往中间收，每次只动一边</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>if a[i]: a[i], a[j] = a[j], a[i]; j += 1</code></p>
+        <p class="fix">快慢指针：j 是下一个写入位置，i 往前扫</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>if i &gt; 0 and a[i] == a[i - 1]: continue</code></p>
+        <p class="fix">排序后跳过相邻的重复值</p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>for i in range(len(a)): a.pop(i)</code></p>
+        <p class="fix">边遍历边删，长度变了下标会错位；改成<code>生成新列表</code>或倒序删</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // Python 代码块：从 <script type="text/x-py"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('from import def return for in if elif else while not and or is None True False lambda del continue break'.split(' '));
+  const BI = new Set('dict set list tuple int str len enumerate zip sorted range hash frozenset print defaultdict Counter max min sum reversed abs copy deepcopy'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^## /.test(line)) return `<span class="sec"># ${esc(line.slice(3))}</span>`;
+    return line.replace(/(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\()|([A-Za-z_]\w*)|([^\w"'#]+)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        const w = fn || id;
+        if (w) return KW.has(w) ? `<span class="k">${w}</span>` : BI.has(w) ? `<span class="t">${w}</span>` : fn ? `<span class="f">${w}</span>` : w;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-py"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
