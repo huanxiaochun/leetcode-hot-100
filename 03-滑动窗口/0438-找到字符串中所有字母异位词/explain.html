@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>438. 找到字符串中所有字母异位词</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* 固定长度窗口 */
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .box.ch { width: 56px; height: 56px; font-size: 24px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .tl { background: var(--amber); }
+  .cell .tags .tr { background: var(--blue); }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.in .box { border-color: var(--blue); }
+  .cell.out .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.match .box { background: var(--green-soft); color: var(--green); }
+  .cell.start .idx { color: #fff; font-weight: 700; }
+  .cell.start .idx b { background: var(--green); padding: 1px 8px; border-radius: 8px; }
+  .cnt { display: grid; grid-template-columns: 80px repeat(var(--k), 52px); gap: 6px; align-items: center; font-size: 18px; }
+  .cnt .h { color: var(--muted); font-weight: 600; font-size: 15px; }
+  .cnt .ch { text-align: center; font-weight: 700; }
+  .cnt .n { text-align: center; padding: 6px 0; border-radius: 10px; background: var(--inset); font-weight: 700; }
+  .cnt .n.ok { background: var(--green-soft); color: var(--green); }
+  .cnt .n.bad { background: var(--amber-soft); color: var(--amber); }
+  .eqline { margin-top: 18px; font-size: 22px; min-height: 36px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .eqline .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; }
+  .eqline .v.yes { background: var(--green-soft); color: var(--green); }
+  .eqline .v.no { background: var(--amber-soft); color: var(--amber); }
+  .eqline .ans { margin-left: auto; padding: 4px 16px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>438. 找到字符串中所有字母异位词</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">滑动窗口</span>
+    <a href="https://leetcode.cn/problems/find-all-anagrams-in-a-string/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">窗口长度<b>固定</b>为 len(p)。每次右边进一个、左边出一个，窗口的<b>字母计数</b>和 p 一样就是一个答案。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="sIn">s</label><input id="sIn" autocomplete="off" style="flex:1">
+        <span class="sep"></span>
+        <label for="pIn">p</label><input id="pIn" autocomplete="off" style="width:110px">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">s &nbsp;（窗口长度固定为 len(p)）</div>
+        <div class="array ptrs" id="array"></div>
+      </div>
+      <div>
+        <div class="label">字母计数 &nbsp;（只列出 s 和 p 里出现的字母）</div>
+        <div class="cnt mono" id="cnt"></div>
+        <div class="eqline mono" id="eq"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>r</b> 走一遍 <b>n</b> 步</span><span class="op">×</span><span class="term">进 1 个、出 1 个、比较 <b>26</b> 位</span><span class="op">=</span><span class="term"><b>O(26n)</b></span><span class="op">=</span><span class="term"><b>O(n)</b></span></div>
+        <p class="why">窗口每次只<b>进一个、出一个</b>，计数数组改两格就行，不用把整个窗口重新数一遍。比较两个 26 位数组是常数时间。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">c</span><span class="c b">b</span><span class="c b">a</span><span class="c ">e</span><span class="ar">→</span><span class="c ">c</span><span class="c b">b</span><span class="c b">a</span><span class="c b">e</span></div><span class="cap">右移一格：e 进，c 出，只改两个计数</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div>
+        <div class="eq"><span class="term">两个长度 <b>26</b> 的计数数组</span></div>
+        <p class="why">不算答案的话，额外空间和字符串长度<b>无关</b>。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(nm)</span></div>
+      <div>
+        <p class="why">对每个起点都把长度 m 的子串<b>重新数</b>一遍（或排序）。滑动窗口复用了上一个窗口的计数，每步只<b>增量更新</b>两格。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; findAnagrams(<span class=\"t\">string</span> s, <span class=\"t\">string</span> p) {",
+      "    <span class=\"t\">int</span> m = p.size();",
+      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; need(26), win(26);",
+      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; ans;",
+      "    <span class=\"k\">for</span> (<span class=\"t\">char</span> c : p) need[c - 'a']++;",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> r = 0; r &lt; s.size(); ++r) {",
+      "        win[s[r] - 'a']++;              <span class=\"c\">// 右边进</span>",
+      "        <span class=\"k\">if</span> (r &gt;= m) win[s[r - m] - 'a']--;  <span class=\"c\">// 左边出</span>",
+      "        <span class=\"k\">if</span> (r &gt;= m - 1 &amp;&amp; win == need)",
+      "            ans.push_back(r - m + 1);",
+      "    }",
+      "    <span class=\"k\">return</span> ans;",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> findAnagrams(<span class=\"t\">self</span>, s, p):",
+      "    m, ans = <span class=\"t\">len</span>(p), []",
+      "    need, win = [0] * 26, [0] * 26",
+      "    <span class=\"k\">for</span> c <span class=\"k\">in</span> p:",
+      "        need[ord(c) - ord(\"a\")] += 1",
+      "    <span class=\"k\">for</span> r, c <span class=\"k\">in</span> <span class=\"t\">enumerate</span>(s):",
+      "        win[ord(c) - ord(\"a\")] += 1  <span class=\"c\"># 右边进</span>",
+      "        <span class=\"k\">if</span> r &gt;= m:  <span class=\"c\"># 左边出</span>",
+      "            win[ord(s[r - m]) - ord(\"a\")] -= 1",
+      "        <span class=\"k\">if</span> r &gt;= m - 1 <span class=\"k\">and</span> win == need:",
+      "            ans.append(r - m + 1)",
+      "    <span class=\"k\">return</span> ans"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 1, 4, 5, 6, 8, 9, 10, 11, 11, 11];
+
+  const EXAMPLES = [['cbaebabacd', 'abc'], ['abab', 'ab'], ['baa', 'aa'], ['a', 'ab']];
+
+  function build([str, p]) {
+    const m = p.length, s = [], ans = [];
+    const letters = [...new Set([...p, ...str])].sort();
+    const need = {}, win = {};
+    letters.forEach(c => { need[c] = 0; win[c] = 0; });
+    for (const c of p) need[c]++;
+    const snap = (o) => s.push({ str, p, m, letters, need: { ...need }, win: { ...win }, ans: ans.slice(), ...o });
+    if (str.length < m) {
+      snap({ r: -1, line: 1, kind: 'miss', msg: `s 比 p 短，不可能有答案` });
+      return s;
+    }
+    snap({ r: -1, line: 4, msg: `先数 p 的字母，窗口长度固定为 ${m}` });
+    for (let r = 0; r < str.length; r++) {
+      win[str[r]]++;
+      let out = -1;
+      if (r >= m) { out = r - m; win[str[out]]--; }
+      const full = r >= m - 1;
+      const l = Math.max(0, r - m + 1);
+      if (!full) { snap({ r, l, inK: str[r], line: 6, msg: `'${str[r]}' 进窗口，还不满 ${m} 个` }); continue; }
+      const eq = letters.every(c => win[c] === need[c]);
+      if (eq) ans.push(l);
+      snap({ r, l, out, inK: str[r], outK: out >= 0 ? str[out] : null, eq, full, line: eq ? 9 : 8, kind: eq ? 'ok' : '',
+        msg: (out >= 0 ? `'${str[r]}' 进、'${str[out]}' 出，` : `'${str[r]}' 进，窗口满了，`)
+          + (eq ? `计数相同，记下起点 ${l}` : `"${str.slice(l, r + 1)}" 计数不同`) });
+    }
+    snap({ r: -1, done: true, line: 11, kind: 'ok', msg: `✓ 答案 [${ans.join(', ')}]` });
+    return s;
+  }
+
+  function render(st) {
+    const live = st.r >= 0;
+    const starts = new Set(st.ans);
+    $('array').innerHTML = [...st.str].map((ch, k) => {
+      let c = '';
+      if (live && k >= st.l && k <= st.r) c = st.eq ? 'match' : 'win';
+      if (live && k === st.r) c += ' in';
+      if (live && k === st.out) c = 'out';
+      if (starts.has(k)) c += ' start';
+      const tags = (live && k === st.l ? '<span class="tl">l</span>' : '') + (live && k === st.r ? '<span class="tr">r</span>' : '');
+      return `<div class="cell ${c}"><div class="tags">${tags}</div><div class="box ch mono">${ch}</div><div class="idx mono">${starts.has(k) ? `<b>${k}</b>` : k}</div></div>`;
+    }).join('');
+    const L = st.letters;
+    $('cnt').style.setProperty('--k', L.length);
+    $('cnt').innerHTML = '<span class="h">字母</span>' + L.map(c => `<span class="ch">${c}</span>`).join('')
+      + '<span class="h">need</span>' + L.map(c => `<span class="n">${st.need[c]}</span>`).join('')
+      + '<span class="h">win</span>' + L.map(c => {
+          const cls = !st.full ? '' : st.win[c] === st.need[c] ? 'ok' : 'bad';
+          return `<span class="n ${cls}">${st.win[c]}</span>`;
+        }).join('');
+    $('eq').innerHTML = (st.full ? `win == need ?<span class="v ${st.eq ? 'yes' : 'no'}">${st.eq ? '相同' : '不同'}</span>` : '')
+      + `<span class="ans">ans = [${st.ans.join(', ')}]</span>`;
+  }
+
+  const fill = ([str, p]) => { $('sIn').value = str; $('pIn').value = p; };
+  const parse = () => {
+    const str = $('sIn').value.trim(), p = $('pIn').value.trim();
+    return /^[a-z]{1,14}$/.test(str) && /^[a-z]{1,5}$/.test(p) && new Set(str + p).size <= 8 ? [str, p] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+})();
+</script>
+</body>
+</html>
