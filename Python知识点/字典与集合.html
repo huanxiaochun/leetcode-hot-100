@@ -281,13 +281,17 @@ Counter(a) == Counter(b) # 组成是否相同
 cnt[c] = cnt.get(c, 0) + 1  # 普通 dict
 cnt[c] += 1                 # defaultdict(int)
 cnt = Counter(s)            # 一步到位
+
+## 计数可以减成负数，键不会自动删
+cnt["a"] -= 5            # 变成负数，仍在 cnt 里
+Counter(a) - Counter(b)  # 相减只留下 > 0 的项
 </script>
   </div>
   <div class="facts">
     <h3>易错点</h3>
     <div class="pits">
       <div class="p"><b>if g[k]:</b><span>读一下也会插入 k，判断存在用 <code>k in g</code></span></div>
-      <div class="p"><b>defaultdict(list())</b><span>要传函数本身，写 <code>defaultdict(list)</code></span></div>
+      <div class="p"><b>cnt[c] -= 1 减到 0</b><span>键还在，<code>len(cnt)</code>、<code>==</code> 都会算上它；要去掉写 <code>del cnt[c]</code></span></div>
       <div class="p"><b>d[Counter(s)] = ...</b><span>Counter 不能当键，转 <code>tuple(sorted(c.items()))</code></span></div>
       <div class="p"><b>只有 26 个小写字母</b><span><code>[0] * 26</code> 比 Counter 更快更省</span></div>
     </div>

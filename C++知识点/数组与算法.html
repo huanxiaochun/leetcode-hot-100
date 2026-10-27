@@ -267,6 +267,8 @@ max({a, b, c});               // 多个数用花括号
 reverse(v.begin(), v.end());
 fill(v.begin(), v.end(), 0);
 count(v.begin(), v.end(), x);
+# 比较：vector 能直接 ==，逐个比元素
+a == b;  a < b;               // 后者按字典序
 </script>
 <script type="text/x-cpp">
 # 排序后去重：unique 把重复的挪到末尾
@@ -281,6 +283,8 @@ accumulate(v.begin(), v.end(), 0LL);
 auto it = find(v.begin(), v.end(), x);
 // 迭代器相减得下标
 if (it != v.end()) cout << it - v.begin();
+# 最值的初始值：在 <climits>
+int best = INT_MAX, worst = INT_MIN;
 </script>
   </div>
   <div class="facts">
@@ -289,7 +293,7 @@ if (it != v.end()) cout << it - v.begin();
       <div class="p"><b>max(a, 1LL)</b><span>两边类型必须一样，int 和 long long 混用编译报错，写 <code>max(1LL * a, b)</code></span></div>
       <div class="p"><b>unique 之后 v.size()</b><span>unique 不改长度，要配合 <code>erase</code> 才真正删掉</span></div>
       <div class="p"><b>accumulate(…, 0)</b><span>初值是 int，和超出 int 会溢出，用 <code>0LL</code></span></div>
-      <div class="p"><b>max_element 空数组</b><span>返回 end()，解引用会崩，先判空</span></div>
+      <div class="p"><b>int a[26]; a == b</b><span>原生数组比较的是地址，永远为假；要比内容用 <code>vector</code> 或 <code>std::array</code></span></div>
     </div>
   </div>
 </section>
@@ -382,7 +386,7 @@ long long y = a * b;          // ✗ 先溢出再转
 <script>
   // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
   const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
-  const TY = new Set('int long char bool void double size_t string vector pair unordered_map unordered_set map set multiset multimap greater cout size_t long'.split(' '));
+  const TY = new Set('int long char bool void double size_t string vector pair INT_MAX INT_MIN unordered_map unordered_set map set multiset multimap greater cout size_t long'.split(' '));
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const hl = (line) => {
     if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题

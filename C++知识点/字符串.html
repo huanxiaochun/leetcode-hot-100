@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>C++ 字符串</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  /* 常见搭配 */
+  .pit.ok .bad { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">C++ 字符串</p>
+  <h1>string 就是一个 char 数组</h1>
+  <p class="lead">string 能像 vector 一样下标访问、push_back；char 本身是一个小整数，能直接做运算、当下标</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">string</p>
+      <p class="desc">创建、拼接、比较<br>和 vector 用法很像</p>
+      <div class="tags"><span class="tag lc mono">s[i]</span><span class="tag lc mono">s += t</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">substr / find</p>
+      <p class="desc">截取、查找<br>参数最容易写错</p>
+      <div class="tags"><span class="tag lc mono">substr(pos, len)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">char</p>
+      <p class="desc">字符就是整数<br>运算、判断、当下标</p>
+      <div class="tags"><span class="tag lc mono">c - 'a'</span><span class="tag lc mono">need[c]</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">stoi / to_string</p>
+      <p class="desc">数字和字符串互转<br>拆分</p>
+      <div class="tags"><span class="tag lc mono">stoi(s)</span><span class="tag lc mono">to_string(x)</span></div>
+    </div>
+  </div>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. string -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">C++ 字符串 · 02</p>
+  <div class="head"><h1 class="mono">string</h1><span class="what">可变字符串：下标 O(1)，尾部追加 O(1)</span><span class="cx fast mono">下标 O(1)</span><span class="inc mono">#include &lt;string&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 创建
+string s = "abc";
+string t(3, 'x');             // "xxx"
+string key(26, 0);            // 26 个 '\0'，可当计数数组
+string e;                     // 空串
+
+# 访问 / 长度
+s[0];  s.back();              // 'a'、'c'
+s.size();  s.empty();
+
+# 追加：O(1)
+s += 'd';  s += "ef";
+s.push_back('g');  s.pop_back();
+</script>
+<script type="text/x-cpp">
+# 比较：按字典序逐个比
+s == t;  s < t;               // "ab" < "abc" < "b"
+
+# 修改
+reverse(s.begin(), s.end());
+sort(s.begin(), s.end());     // "eat" -> "aet"
+s.insert(0, "x");             // 头部插入，O(n)
+s.erase(1, 2);                // 从下标 1 删 2 个
+
+# 遍历
+for (char c : s) {}           // 只读
+for (char& c : s) c = toupper(c);
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>s = s + c</b><span>每次复制整个串，循环里会变 O(n²)；写 <code>s += c</code></span></div>
+      <div class="p"><b>"a" + "b"</b><span>两个字面量是 char 指针，不能相加；至少一边是 <code>string("a")</code></span></div>
+      <div class="p"><b>s == 'a'</b><span>string 不能和 char 比较，写 <code>s == "a"</code> 或 <code>s[0] == 'a'</code></span></div>
+      <div class="p"><b>空串 s.back()</b><span>未定义行为，先判 <code>!s.empty()</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. substr / find -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">C++ 字符串 · 03</p>
+  <div class="head"><h1 class="mono">substr / find</h1><span class="what">截取和查找：第二个参数是长度</span><span class="cx slow mono">O(len)</span><span class="inc mono">#include &lt;string&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# substr(起点, 长度)，不是终点
+string s = "ADOBECODEBANC";
+s.substr(9, 4);               // "BANC"
+s.substr(9);                  // 从 9 到末尾
+s.substr(l, r - l + 1);       // 取 [l, r] 闭区间
+
+# 起点 > size() 抛异常，长度超出会自动截断
+s.substr(s.size());           // ""，合法
+s.substr(10, 100);            // "ANC"
+</script>
+<script type="text/x-cpp">
+# find：返回下标，找不到返回 npos
+size_t p = s.find("CODE");    // 5
+if (s.find('Z') == string::npos) {}
+s.find('B', 4);               // 从下标 4 开始找
+s.rfind('B');                 // 从后往前找
+
+# 判断前缀 / 后缀
+s.compare(0, 3, "ADO") == 0;  // 前缀
+s.starts_with("ADO");         // C++20 才有
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>s.substr(l, r)</b><span>第二个参数是长度，取 [l, r] 要写 <code>substr(l, r - l + 1)</code></span></div>
+      <div class="p"><b>if (s.find(x))</b><span>找到下标 0 时为假、找不到时 npos 为真，正好反了；和 <code>npos</code> 比</span></div>
+      <div class="p"><b>int p = s.find(x)</b><span>npos 转 int 变成 -1，能用但容易混；判断时<code>直接和 npos 比</code></span></div>
+      <div class="p"><b>循环里 s.substr</b><span>每次都复制一份子串，长串上很慢；只记 <code>start、len</code>，最后截一次</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. char -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">C++ 字符串 · 04</p>
+  <div class="head"><h1 class="mono">char</h1><span class="what">字符就是 0~127 的整数</span><span class="cx fast mono">O(1)</span><span class="inc mono">#include &lt;cctype&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 字符运算
+'a' + 1;                      // 98，即 'b'
+char c = 'a' + 2;             // 'c'
+c - 'a';                      // 2，字母 -> 0..25
+c - '0';                      // 数字字符 -> 0..9
+char d = '0' + 7;             // '7'
+
+# 判断 / 转换，在 <cctype>
+isdigit(c);  isalpha(c);  isalnum(c);
+islower(c);  isupper(c);
+tolower(c);  toupper(c);      // 返回 int，要存回 char
+</script>
+<script type="text/x-cpp">
+# 字符当数组下标
+vector<int> cnt(26, 0);       // 只有小写字母
+for (char c : s) cnt[c - 'a']++;
+
+vector<int> last(128, -1);    // 任意 ASCII
+for (char c : s) last[c] = 0;
+
+# 非 ASCII 字符会变成负数
+vector<int> any(256, 0);
+any[(unsigned char)c]++;      // 所有字节都安全
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>cnt[c - 'a'] 遇到大写</b><span>'A' - 'a' = -32，越界；不确定字符范围就开 <code>128</code> 直接用 <code>cnt[c]</code></span></div>
+      <div class="p"><b>cout &lt;&lt; 'a' + 1</b><span>输出 98 而不是 b，要字符写 <code>char('a' + 1)</code></span></div>
+      <div class="p"><b>中文 / é 当下标</b><span>char 有符号，UTF-8 字节是负数；转 <code>(unsigned char)c</code></span></div>
+      <div class="p"><b>'5' == 5</b><span>字符 '5' 是 53；比数字先 <code>c - '0'</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. stoi / to_string -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">C++ 字符串 · 05</p>
+  <div class="head"><h1 class="mono">stoi / to_string</h1><span class="what">数字 ↔ 字符串、按分隔符拆分</span><span class="inc mono">#include &lt;string&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 字符串 -> 数字
+stoi("42");  stoi("-7");      // int
+stol("123");  stoll("99999999999");
+stoi("12abc");                // 12，读到非数字就停
+
+# 数字 -> 字符串
+to_string(42);                // "42"
+to_string(3.5);               // "3.500000"
+
+# 手动逐位解析（不会抛异常）
+int x = 0;
+for (char c : s) x = x * 10 + (c - '0');
+</script>
+<script type="text/x-cpp">
+# 按空格 / 逗号拆分
+#include <sstream>
+stringstream ss("a b  c");
+string w;
+while (ss >> w) {}            // a, b, c，连续空格自动跳过
+
+stringstream ss2("1,2,3");
+while (getline(ss2, w, ',')) {}  // "1", "2", "3"
+
+# 拼接成一个串
+string out;
+for (auto& w : words) out += w + " ";
+if (!out.empty()) out.pop_back();
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>stoi("abc")</b><span>开头不是数字直接抛异常；不确定输入时<code>先判断或手动解析</code></span></div>
+      <div class="p"><b>stoi("99999999999")</b><span>超出 int 抛 out_of_range，用 <code>stoll</code></span></div>
+      <div class="p"><b>x = x * 10 + c</b><span>忘了减 '0'，加的是 ASCII 码；写 <code>c - '0'</code></span></div>
+      <div class="p"><b>to_string(char)</b><span>char 被当成整数，<code>to_string('a')</code> 是 "97"；要单字符串写 <code>string(1, c)</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">C++ 字符串 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">取 [l, r] 这一段</span><span class="use mono">s.substr(l, r - l + 1)</span></div>
+      <div class="row"><span class="need">判断有没有某个子串</span><span class="use mono">s.find(t) != npos</span></div>
+      <div class="row"><span class="need">小写字母计数</span><span class="use mono">cnt[c - 'a']</span></div>
+      <div class="row"><span class="need">任意字符计数 / 记下标</span><span class="use mono">vector&lt;int&gt;(128)</span></div>
+      <div class="row"><span class="need">数字字符转数字</span><span class="use mono">c - '0'</span></div>
+      <div class="row"><span class="need">按空格拆单词</span><span class="use mono">stringstream &gt;&gt; w</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>string key(26, 0); key[c - 'a']++;</code></p>
+        <p class="fix">用 string 当计数数组，直接能做 unordered_map 的 key</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>int start = 0, best = INT_MAX;</code> … <code>s.substr(start, best)</code></p>
+        <p class="fix">窗口里只记起点和长度，最后截一次</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>sort(w.begin(), w.end())</code></p>
+        <p class="fix">排序后的单词当 key，异位词会得到同一个串</p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>for (…) ans = ans + s[i];</code></p>
+        <p class="fix">每次复制整个串，O(n²)；改成 <code>ans += s[i]</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
+  const TY = new Set('int long char bool void double size_t string vector pair unordered_map unordered_set map set multiset multimap greater cout size_t npos stoi stol stoll to_string isdigit isalpha isalnum tolower toupper INT_MAX INT_MIN'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题
+    return line.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)|([^\w"'\/]+|\/)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        if (fn) return KW.has(fn) ? `<span class="k">${fn}</span>` : TY.has(fn) ? `<span class="t">${fn}</span>` : `<span class="f">${fn}</span>`;
+        if (id) return KW.has(id) ? `<span class="k">${id}</span>` : TY.has(id) ? `<span class="t">${id}</span>` : id;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-cpp"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
