@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Python 二维列表与网格</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  .pit.ok .bad { color: var(--blue); }
+  .head .what, .head .cx, .head .inc { white-space: nowrap; }
+  .cover .note { margin-top: 40px; font-size: 26px; color: var(--sub); }
+  .cover .note b { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">Python 二维列表与网格</p>
+  <h1>矩阵就是「列表的列表」</h1>
+  <p class="lead">每一行是一个独立的 list。创建和拷贝最容易出错，zip 和切片能把转置、旋转写成一行</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">创建与拷贝</p>
+      <p class="desc">m 行 n 列<br>为什么不能 * m</p>
+      <div class="tags"><span class="tag lc mono">[[0] * n for _ in range(m)]</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">遍历与判断</p>
+      <p class="desc">按行、按列、any / all<br>生成器表达式</p>
+      <div class="tags"><span class="tag lc mono">for row in g</span><span class="tag lc mono">any(...)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">zip(*g)</p>
+      <p class="desc">转置、旋转<br>一行写完</p>
+      <div class="tags"><span class="tag lc mono">zip(*g)</span><span class="tag lc mono">g[::-1]</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">方向与边界</p>
+      <p class="desc">上下左右四个邻居<br>越界判断</p>
+      <div class="tags"><span class="tag lc mono">DIRS</span><span class="tag lc mono">0 &lt;= x &lt; m</span></div>
+    </div>
+  </div>
+  <p class="note">zip、切片会<b>生成新列表</b>；题目要求<b>原地修改</b>时，要写回 <b>g[:]</b> 或逐个赋值</p>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. 创建与拷贝 -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">Python 二维列表与网格 · 02</p>
+  <div class="head"><h1 class="mono">创建与拷贝</h1><span class="what">m 行 n 列：每行必须是不同的 list</span><span class="cx fast mono">下标 O(1)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 创建
+m, n = 3, 4
+g = [[0] * n for _ in range(m)]   # 正确
+vis = [[False] * n for _ in range(m)]
+a = [[1, 2], [3, 4]]
+
+## 行数 / 列数
+len(g)                     # m
+len(g[0])                  # n
+g[i][j]                    # 第 i 行第 j 列
+</script>
+<script type="text/x-py">
+## 错误写法：m 行是同一个 list
+bad = [[0] * n] * m
+bad[0][0] = 1              # 每一行的第 0 个都变成 1
+
+## 拷贝
+b = [row[:] for row in a]  # 每行各拷一份
+from copy import deepcopy
+c = deepcopy(a)            # 嵌套更深时用
+same = a                   # 不是拷贝，同一个对象
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>[[0] * n] * m</b><span>m 行共用一个 list，改一处全变；写 <code>[[0] * n for _ in range(m)]</code></span></div>
+      <div class="p"><b>b = a[:]</b><span>只拷了外层，每行还是同一个；写 <code>[row[:] for row in a]</code></span></div>
+      <div class="p"><b>g[j][i] 写反</b><span>第一个下标是行、第二个是列；<code>i 配 m、j 配 n</code></span></div>
+      <div class="p"><b>空矩阵 len(g[0])</b><span>g 为空时 IndexError；可能为空就<code>先判 if not g</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 遍历与判断 -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">Python 二维列表与网格 · 03</p>
+  <div class="head"><h1 class="mono">遍历与判断</h1><span class="what">for row in g，配合 any / all / sum</span><span class="cx slow mono">O(mn)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 按行
+for row in g:              # row 就是 g 的一行
+    row[0] = 1             # 能改到 g
+for i, row in enumerate(g):
+    for j, x in enumerate(row): pass
+
+## 按列
+for j in range(n):
+    col = [g[i][j] for i in range(m)]
+</script>
+<script type="text/x-py">
+## any / all：有一个 / 全部满足
+any(x == 0 for x in g[0])  # 第 0 行有没有 0
+all(row[0] > 0 for row in g)
+any(0 in row for row in g) # 整个矩阵有没有 0
+
+## 求和 / 最值
+sum(map(sum, g))           # 所有数的和
+max(map(max, g))           # 最大值
+[sum(r) for r in g]        # 每行的和
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>for x in row: x = 0</b><span>x 只是变量，赋值改不到列表；要写 <code>row[j] = 0</code></span></div>
+      <div class="p"><b>any([... for ...])</b><span>方括号会先算完整个列表；写成<code>圆括号</code>的生成器，找到就停</span></div>
+      <div class="p"><b>max(g)</b><span>比较的是整行（字典序），得到一行；全局最大写 <code>max(map(max, g))</code></span></div>
+      <div class="p"><b>边遍历边置 0</b><span>新置的 0 会被当成原来的 0 继续扩散；<code>先记录，再统一修改</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. zip(*g) -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">Python 二维列表与网格 · 04</p>
+  <div class="head"><h1 class="mono">zip(*g)</h1><span class="what">转置、旋转：zip 把每一列打包成一行</span><span class="cx slow mono">O(mn)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 转置：zip(*g) 得到的每一项是一列
+g = [[1, 2, 3], [4, 5, 6]]
+t = [list(c) for c in zip(*g)]  # [[1,4],[2,5],[3,6]]
+
+## 旋转 90°
+# 顺时针 / 逆时针
+cw = [list(r) for r in zip(*g[::-1])]
+ccw = [list(r) for r in zip(*g)][::-1]
+
+## 翻转
+g[::-1]                    # 上下翻转（新列表）
+[r[::-1] for r in g]       # 每行左右翻转
+</script>
+<script type="text/x-py">
+## 原地版本（方阵）
+n = len(g)
+for i in range(n):
+    for j in range(i + 1, n):    # 只换上三角
+        g[i][j], g[j][i] = g[j][i], g[i][j]
+for row in g:
+    row.reverse()                # 顺时针 90° 完成
+
+## 要求原地时，把新结果写回
+g[:] = [list(r) for r in zip(*g[::-1])]
+
+## 按列取
+cols = list(zip(*g))       # 每一列是一个 tuple
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>zip(*g) 的结果是 tuple</b><span>每一项是 tuple，不能改；要列表写 <code>[list(c) for c in zip(*g)]</code></span></div>
+      <div class="p"><b>g = [... zip ...]</b><span>函数里重新赋值，调用方的矩阵没变；原地改写 <code>g[:] = ...</code></span></div>
+      <div class="p"><b>行长度不一样</b><span>zip 按最短的那行截断，会丢数据；先确认<code>每行一样长</code></span></div>
+      <div class="p"><b>转置时 j 从 0 开始</b><span>每对会被交换两次，等于没换；<code>j 从 i + 1 开始</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 方向与边界 -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">Python 二维列表与网格 · 05</p>
+  <div class="head"><h1 class="mono">方向与边界</h1><span class="what">上下左右四个邻居，先判越界再访问</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 方向：上、右、下、左
+DIRS = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+for dx, dy in DIRS:
+    x, y = i + dx, j + dy
+    if 0 <= x < m and 0 <= y < n:   # 链式比较
+        pass                        # 访问 g[x][y]
+
+## 八个方向
+DIRS8 = [(dx, dy) for dx in (-1, 0, 1)
+         for dy in (-1, 0, 1) if dx or dy]
+</script>
+<script type="text/x-py">
+## 螺旋走：碰到边界或访问过就右转
+d = x = y = 0
+for _ in range(m * n):
+    vis[x][y] = True
+    nx, ny = x + DIRS[d][0], y + DIRS[d][1]
+    out = not (0 <= nx < m and 0 <= ny < n)
+    if out or vis[nx][ny]:
+        d = (d + 1) % 4               # 右转
+    x, y = x + DIRS[d][0], y + DIRS[d][1]
+
+## 坐标当 key：直接用 tuple
+seen = {(0, 0)}
+(1, 2) in seen
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>g[-1][0] 不报错</b><span>负下标会取到最后一行，<code>越界不报错</code>，只能自己判断 0 &lt;= x</span></div>
+      <div class="p"><b>x &lt; m and g[x][y]</b><span>短路求值：越界判断<code>必须写在前面</code></span></div>
+      <div class="p"><b>seen.add([x, y])</b><span>list 不可哈希，TypeError；坐标用 <code>(x, y)</code></span></div>
+      <div class="p"><b>DIRS 顺序乱写</b><span>螺旋、右转依赖顺序；<code>按顺时针写</code>，右转就是 d + 1</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">Python 二维列表与网格 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">m 行 n 列全 0</span><span class="use mono">[[0] * n for _ in range(m)]</span></div>
+      <div class="row"><span class="need">拷贝一份矩阵</span><span class="use mono">[row[:] for row in g]</span></div>
+      <div class="row"><span class="need">转置 / 按列看</span><span class="use mono">zip(*g)</span></div>
+      <div class="row"><span class="need">顺时针转 90°</span><span class="use mono">zip(*g[::-1])</span></div>
+      <div class="row"><span class="need">判断有没有某个值</span><span class="use mono">any(... for ...)</span></div>
+      <div class="row"><span class="need">访问上下左右</span><span class="use mono">DIRS + 0 &lt;= x &lt; m</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>row0 = any(g[0][j] == 0 for j in range(n))</code></p>
+        <p class="fix">生成器表达式：边算边判断，找到就停</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>top, bottom, left, right = 0, m - 1, 0, n - 1</code></p>
+        <p class="fix">四条边界一层层往里收，螺旋遍历不用 vis</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>i, j = 0, n - 1</code> 从右上角出发</p>
+        <p class="fix">行列都有序的矩阵：比较一次排除一整行或一整列</p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>g = [[0] * n] * m</code></p>
+        <p class="fix">所有行是同一个列表，改一个格子整列都变</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // Python 代码块：从 <script type="text/x-py"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('from import def return for in if elif else while not and or is None True False lambda del continue break'.split(' '));
+  const BI = new Set('dict set list tuple int str len enumerate zip sorted range hash frozenset print defaultdict Counter max min sum any all map reversed zip'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^## /.test(line)) return `<span class="sec"># ${esc(line.slice(3))}</span>`;
+    return line.replace(/(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\()|([A-Za-z_]\w*)|([^\w"'#]+)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        const w = fn || id;
+        if (w) return KW.has(w) ? `<span class="k">${w}</span>` : BI.has(w) ? `<span class="t">${w}</span>` : fn ? `<span class="f">${w}</span>` : w;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-py"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

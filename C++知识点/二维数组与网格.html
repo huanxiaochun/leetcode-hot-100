@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>C++ 二维数组与网格</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  /* 常见搭配 */
+  .pit.ok .bad { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">C++ 二维数组与网格</p>
+  <h1>矩阵就是「数组的数组」</h1>
+  <p class="lead">vector&lt;vector&lt;int&gt;&gt; 的每一行是一个独立的 vector：先确定行数列数，再按行、按列、按方向走</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">创建与传参</p>
+      <p class="desc">m 行 n 列<br>拷贝、传引用</p>
+      <div class="tags"><span class="tag lc mono">g(m, vector&lt;int&gt;(n))</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">遍历</p>
+      <p class="desc">按行、按列、对角线<br>行引用</p>
+      <div class="tags"><span class="tag lc mono">auto&amp; row : g</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">原地变换</p>
+      <p class="desc">转置、翻转、旋转<br>只用 swap</p>
+      <div class="tags"><span class="tag lc mono">swap(g[i][j], g[j][i])</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">方向与边界</p>
+      <p class="desc">上下左右四个邻居<br>越界判断</p>
+      <div class="tags"><span class="tag lc mono">dx[4], dy[4]</span></div>
+    </div>
+  </div>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. 创建与传参 -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">C++ 二维数组与网格 · 02</p>
+  <div class="head"><h1 class="mono">创建与传参</h1><span class="what">m 行 n 列：外层是行，内层是列</span><span class="cx fast mono">下标 O(1)</span><span class="inc mono">#include &lt;vector&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 创建
+int m = 3, n = 4;
+vector<vector<int>> g(m, vector<int>(n));      // 全 0
+vector<vector<int>> h(m, vector<int>(n, -1));  // 全 -1
+vector<vector<int>> a = {{1, 2}, {3, 4}};
+vector<vector<bool>> vis(m, vector<bool>(n, false));
+
+# 行数 / 列数
+g.size();                     // m，行数
+g[0].size();                  // n，列数
+g[i][j];                      // 第 i 行第 j 列
+</script>
+<script type="text/x-cpp">
+# 传参：一般传引用
+void f(vector<vector<int>>& g);        // 能改，不拷贝
+void h(const vector<vector<int>>& g);  // 只读，不拷贝
+
+# 拷贝整个矩阵：直接赋值就是深拷贝
+auto b = a;                   // 改 b 不影响 a
+b[0][0] = 9;
+
+# 加一行 / 清空
+a.push_back({5, 6});
+a.clear();
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>g[j][i] 写反</b><span>第一个下标是行、第二个是列；习惯写 <code>g[i][j]</code>，i 配 m、j 配 n</span></div>
+      <div class="p"><b>空矩阵 g[0].size()</b><span>g 没有行时越界；题目没保证非空就<code>先判 g.empty()</code></span></div>
+      <div class="p"><b>void f(vector&lt;vector&lt;int&gt;&gt; g)</b><span>按值传会拷贝整个矩阵，递归里很慢；写 <code>&amp;</code></span></div>
+      <div class="p"><b>vector&lt;vector&lt;int&gt;&gt; g(m)</b><span>只有 m 个空行，<code>g[i][j]</code> 越界；要写 <code>vector&lt;int&gt;(n)</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 遍历 -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">C++ 二维数组与网格 · 03</p>
+  <div class="head"><h1 class="mono">遍历</h1><span class="what">按行最常见，其它方向靠下标</span><span class="cx slow mono">O(mn)</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 按行：外层 i，内层 j
+for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+        g[i][j] += 1;
+
+# 行引用：少写一层下标
+for (auto& row : g)           // row 就是 g 的一行
+    for (int& x : row) x = 0;
+
+# 只读
+for (const auto& row : g) {}
+</script>
+<script type="text/x-cpp">
+# 按列
+for (int j = 0; j < n; ++j)
+    for (int i = 0; i < m; ++i) {}
+
+# 主对角线 / 副对角线（方阵）
+for (int i = 0; i < n; ++i) g[i][i];
+for (int i = 0; i < n; ++i) g[i][n - 1 - i];
+
+# 只看上三角（不含对角线）
+for (int i = 0; i < n; ++i)
+    for (int j = i + 1; j < n; ++j) {}
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>for (auto row : g) row[0] = 1;</b><span>row 是拷贝，g 没变；改原矩阵写 <code>auto&amp; row</code></span></div>
+      <div class="p"><b>按列时 i &lt; n</b><span>列遍历里 i 是行号，上限是 <code>m</code>；m ≠ n 时最容易错</span></div>
+      <div class="p"><b>转置时 j 从 0 开始</b><span>每对 (i, j)、(j, i) 会被交换两次，等于没换；<code>j 从 i + 1 开始</code></span></div>
+      <div class="p"><b>边遍历边置 0</b><span>新置的 0 会被当成原来的 0 继续扩散；<code>先记录，再统一修改</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 原地变换 -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">C++ 二维数组与网格 · 04</p>
+  <div class="head"><h1 class="mono">原地变换</h1><span class="what">转置、翻转、旋转：都是 swap</span><span class="cx slow mono">O(n²)</span><span class="inc mono">#include &lt;algorithm&gt;</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 转置：(i, j) <-> (j, i)，只换上三角
+for (int i = 0; i < n; ++i)
+    for (int j = i + 1; j < n; ++j)
+        swap(g[i][j], g[j][i]);
+
+# 每行左右翻转
+for (auto& row : g) reverse(row.begin(), row.end());
+
+# 上下翻转：整行交换
+reverse(g.begin(), g.end());
+</script>
+<script type="text/x-cpp">
+# 旋转 = 转置 + 翻转（方阵）
+// 顺时针 90°：转置，再每行左右翻转
+// 逆时针 90°：转置，再上下翻转
+// 180°：上下翻转，再每行左右翻转
+
+# 坐标对应关系（n × n）
+// 顺时针 90°：(i, j) -> (j, n - 1 - i)
+// 转置：      (i, j) -> (j, i)
+
+# 非方阵转置：要新开 n × m 的矩阵
+vector<vector<int>> t(n, vector<int>(m));
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>非方阵原地转置</b><span>行列数变了，原地放不下；<code>新开 n × m</code> 的矩阵</span></div>
+      <div class="p"><b>顺时针写成上下翻转</b><span>转置后左右翻转是顺时针，上下翻转是逆时针；<code>拿 2×2 验证一下</code></span></div>
+      <div class="p"><b>swap 整行很慢？</b><span>vector 的 swap 只交换内部指针，<code>O(1)</code>，放心用</span></div>
+      <div class="p"><b>reverse(g[i])</b><span>reverse 要传迭代器，写 <code>reverse(g[i].begin(), g[i].end())</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 方向与边界 -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">C++ 二维数组与网格 · 05</p>
+  <div class="head"><h1 class="mono">方向与边界</h1><span class="what">上下左右四个邻居，先判越界再访问</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 方向数组：上、右、下、左
+int dx[4] = {-1, 0, 1, 0};
+int dy[4] = {0, 1, 0, -1};
+for (int d = 0; d < 4; ++d) {
+    int x = i + dx[d], y = j + dy[d];
+    if (x < 0 || x >= m || y < 0 || y >= n) continue;
+    // 访问 g[x][y]
+}
+
+# 八个方向
+int dx8[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
+int dy8[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
+</script>
+<script type="text/x-cpp">
+# 螺旋走：碰到边界或访问过就右转
+int d = 0, x = 0, y = 0;      // d 是当前方向下标
+for (int k = 0; k < m * n; ++k) {
+    vis[x][y] = true;
+    int nx = x + dx[d], ny = y + dy[d];
+    bool out = nx < 0 || nx >= m || ny < 0 || ny >= n;
+    if (out || vis[nx][ny]) d = (d + 1) % 4;  // 右转
+    x += dx[d], y += dy[d];
+}
+
+# 二维坐标压成一维：i * n + j
+int id = i * n + j;
+int r = id / n, c = id % n;
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>先访问 g[x][y] 再判越界</b><span>x = -1 时已经越界读内存；<code>越界判断写在前面</code></span></div>
+      <div class="p"><b>x &lt;= m</b><span>下标最大是 m − 1，判断写 <code>x &gt;= m</code> 才算越界</span></div>
+      <div class="p"><b>i * m + j</b><span>压成一维要乘<code>列数 n</code>，乘行数会冲突</span></div>
+      <div class="p"><b>dx、dy 顺序不一致</b><span>两个数组要一一对应；<code>按顺时针写</code>，右转就是 d + 1</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">C++ 二维数组与网格 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">m 行 n 列全 0</span><span class="use mono">vector&lt;vector&lt;int&gt;&gt; g(m, vector&lt;int&gt;(n))</span></div>
+      <div class="row"><span class="need">不改原矩阵地遍历</span><span class="use mono">for (const auto&amp; row : g)</span></div>
+      <div class="row"><span class="need">原地转置（方阵）</span><span class="use mono">j 从 i + 1 开始 swap</span></div>
+      <div class="row"><span class="need">顺时针转 90°</span><span class="use mono">转置 + 每行 reverse</span></div>
+      <div class="row"><span class="need">访问上下左右</span><span class="use mono">dx[4], dy[4] + 越界判断</span></div>
+      <div class="row"><span class="need">坐标当哈希表的 key</span><span class="use mono">i * n + j</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>vector&lt;vector&lt;bool&gt;&gt; vis(m, vector&lt;bool&gt;(n))</code></p>
+        <p class="fix">网格搜索里记哪些格子走过，和原矩阵一样大</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>int top = 0, bottom = m - 1, left = 0, right = n - 1;</code></p>
+        <p class="fix">四条边界一层层往里收，螺旋遍历不用 vis</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>int i = 0, j = n - 1;</code> 从右上角出发</p>
+        <p class="fix">行列都有序的矩阵：比较一次排除一整行或一整列</p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>int m = g.size(), n = g[0].size();</code> 写在判空之前</p>
+        <p class="fix">空矩阵直接越界；有可能为空时<code>先判 g.empty()</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
+  const TY = new Set('int long char bool void double size_t string vector pair unordered_map unordered_set map set multiset multimap greater cout boolalpha'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题
+    return line.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)|([^\w"'\/]+|\/)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        if (fn) return KW.has(fn) ? `<span class="k">${fn}</span>` : TY.has(fn) ? `<span class="t">${fn}</span>` : `<span class="f">${fn}</span>`;
+        if (id) return KW.has(id) ? `<span class="k">${id}</span>` : TY.has(id) ? `<span class="t">${id}</span>` : id;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-cpp"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

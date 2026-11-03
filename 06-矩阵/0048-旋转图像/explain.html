@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>48. 旋转图像</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  /* 坐标推导卡片 */
+  .card.coord { margin-top: 24px; }
+  .coord h2 { margin: 0 0 6px; font-size: 24px; }
+  .coord .lead2 { margin: 0 0 22px; font-size: 20px; color: var(--muted); }
+  .coord .lead2 b { color: var(--text); }
+  .coord .wrap { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); gap: 28px; align-items: center; }
+  @media (max-width: 1100px) { .coord .wrap { grid-template-columns: 1fr; } }
+  .coord .mg-t { font-size: 15px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .mg { display: inline-grid; grid-template-columns: 22px repeat(4, 46px); gap: 5px; }
+  .mg .ix { font: 600 13px "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--muted); display: grid; place-items: center; }
+  .mg button {
+    width: 46px; height: 46px; border-radius: 10px; border: none; cursor: pointer; background: var(--inset); color: var(--text);
+    font: 700 18px "JetBrains Mono", "SF Mono", Menlo, monospace; transition: all .25s;
+  }
+  .mg button:hover { outline: 2px solid var(--amber); }
+  .mg button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .mg button.row { background: var(--blue-soft); color: var(--blue); }
+  .mg button.col { background: var(--green-soft); color: var(--green); }
+  .mg button.pick { background: var(--amber); color: #fff; transform: scale(1.08); }
+  .coord .arrow2 { font-size: 30px; color: var(--muted); text-align: center; }
+  .coord .arrow2 small { display: block; font-size: 14px; margin-top: 4px; }
+  .dv { display: flex; flex-direction: column; gap: 12px; }
+  .dv .st { display: flex; gap: 14px; align-items: baseline; padding: 12px 16px; border-radius: 14px; background: var(--inset); font-size: 20px; line-height: 1.5; }
+  .dv .st .k { flex: none; font-size: 15px; font-weight: 700; padding: 2px 10px; border-radius: 8px; }
+  .dv .st.sb .k { background: var(--blue); color: #fff; }
+  .dv .st.sg .k { background: var(--green); color: #fff; }
+  .dv .st.sa { background: var(--amber-soft); }
+  .dv .st.sa .k { background: var(--amber); color: #fff; }
+  .dv .st.sx .k { background: var(--muted); color: #fff; }
+  .dv b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .dv .st.sb b { color: var(--blue); } .dv .st.sg b { color: var(--green); } .dv .st.sa b { color: var(--amber); }
+
+  .grid { display: inline-grid; gap: 6px; padding: 26px 0 0 30px; position: relative; }
+  .g { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; background: var(--inset);
+       font: 700 22px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; transition: all .3s; position: relative; }
+  .g.rh, .g.ch { background: none; border: none; width: auto; height: auto; font-size: 14px; color: var(--muted); font-weight: 600; }
+  .g.cur { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: scale(1.06); }
+  .g.hot { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .g.ok { background: var(--green-soft); color: var(--green); }
+  .g.dim { opacity: .28; }
+  .g.zero { color: var(--muted); }
+  .g.band { box-shadow: inset 0 0 0 2px rgba(217, 119, 6, .35); }
+  .g sub { position: absolute; right: 5px; bottom: 3px; font-size: 11px; color: var(--green); font-weight: 600; }
+
+  .g.diag { box-shadow: inset 0 0 0 2px rgba(79, 107, 237, .35); }
+  .g.r0 { color: #2f6bff; } .g.r1 { color: #16a34a; } .g.r2 { color: #d97706; } .g.r3 { color: #9333ea; } .g.r4 { color: #db2777; } .g.r5 { color: #0891b2; }
+  .phase { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .phase span { padding: 6px 14px; border-radius: 10px; background: var(--inset); color: var(--muted); font-weight: 600; font-size: 16px; }
+  .phase span.on { background: var(--blue); color: #fff; }
+  .phase span.done { background: var(--green-soft); color: var(--green); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>48. 旋转图像</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">矩阵</span>
+    <a href="https://leetcode.cn/problems/rotate-image/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">顺时针转 90° = 先沿<b>主对角线转置</b>，再把<b>每一行左右翻转</b>。两步都是原地交换。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="mIn">matrix</label><input id="mIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">matrix &nbsp;（同一种颜色是原来的同一行，转完会变成同一列）</div>
+        <div id="grid"></div>
+        <div class="phase" id="phase"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card coord" aria-labelledby="coordTitle">
+    <h2 id="coordTitle">坐标推导：为什么 (i, j) 会到 (j, n − 1 − i)</h2>
+    <p class="lead2">把一张纸顺时针转 90°：原来的<b>顶边</b>转到了<b>右边</b>，原来的<b>左边</b>转到了<b>顶边</b>。点任意格子看它去了哪。</p>
+    <div class="wrap">
+      <div><div class="mg-t">原矩阵（n = 4）</div><div class="mg" id="mgA"></div></div>
+      <div class="arrow2">→<small>顺时针 90°</small></div>
+      <div><div class="mg-t">转完以后</div><div class="mg" id="mgB"></div></div>
+      <div class="dv mono" id="dv" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n²)</span></div>
+      <div>
+        <div class="eq"><span class="term">转置交换 <b>n(n−1)/2</b> 次</span><span class="op">+</span><span class="term">翻转交换 <b>n · n/2</b> 次</span><span class="op">=</span><span class="term"><b>O(n²)</b></span></div>
+        <p class="why">顺时针转 90° 后，(i, j) 会到 (j, n−1−i)。<b>转置</b>把 (i, j) 变成 (j, i)，<b>左右翻转</b>再把列号 i 变成 n−1−i，两步合起来正好是旋转。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">1</span><span class="c ">2</span><span class="c ">3</span><span class="ar">→</span><span class="c b">1</span><span class="c ">4</span><span class="c ">7</span><span class="ar">→</span><span class="c ">7</span><span class="c ">4</span><span class="c b">1</span></div><span class="cap">第一行 1 2 3：转置后变成第一列，翻转后在最右列</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div>
+        <div class="eq"><span class="term">只做原地交换</span></div>
+        <p class="why">题目要求<b>原地</b>旋转，不能开新矩阵。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">四个一组</span></div>
+      <div>
+        <p class="why">也可以把每圈上 <b>4 个对应位置</b>一起转：(i, j) → (j, n−1−i) → (n−1−i, n−1−j) → (n−1−j, i)。同样 O(n²)、O(1)，但下标容易写错；转置 + 翻转更好记。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">void</span> rotate(<span class=\"t\">vector</span>&lt;<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&gt;&amp; matrix) {",
+      "    <span class=\"t\">int</span> n = matrix.size();",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 0; i &lt; n; ++i)",
+      "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = i + 1; j &lt; n; ++j)",
+      "            <span class=\"t\">swap</span>(matrix[i][j], matrix[j][i]);  <span class=\"c\">// 转置</span>",
+      "    <span class=\"k\">for</span> (<span class=\"k\">auto</span>&amp; row : matrix)",
+      "        reverse(row.begin(), row.end());  <span class=\"c\">// 每行翻转</span>",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> rotate(<span class=\"t\">self</span>, matrix):",
+      "    n = <span class=\"t\">len</span>(matrix)",
+      "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(n):",
+      "        <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(i + 1, n):  <span class=\"c\"># 转置</span>",
+      "            matrix[i][j], matrix[j][i] = (",
+      "                matrix[j][i], matrix[i][j])",
+      "    <span class=\"k\">for</span> row <span class=\"k\">in</span> matrix:",
+      "        row.reverse()  <span class=\"c\"># 每行翻转</span>"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 3, 4, 6, 7, 7];
+
+  // 画网格：cls(i, j) 返回格子的 class，txt(i, j) 返回格子里的内容
+  function grid(el, m, n, cls, txt) {
+    let h = `<div class="grid" style="grid-template-columns:24px repeat(${n}, 56px)">`;
+    h += '<div class="g ch"></div>' + Array.from({ length: n }, (_, j) => `<div class="g ch">${j}</div>`).join('');
+    for (let i = 0; i < m; i++) {
+      h += `<div class="g rh">${i}</div>`;
+      for (let j = 0; j < n; j++) h += `<div class="g ${cls(i, j)}">${txt(i, j)}</div>`;
+    }
+    $(el).innerHTML = h + '</div>';
+  }
+  const MAT_FIELD_PARSE = (id, maxN) => {
+    try {
+      const v = JSON.parse($(id).value);
+      const ok = Array.isArray(v) && v.length >= 1 && v.length <= maxN && v.every(r => Array.isArray(r) && r.length === v[0].length
+        && r.length >= 1 && r.length <= maxN && r.every(x => Number.isInteger(x) && Math.abs(x) <= 99));
+      return ok ? v : null;
+    } catch (e) { return null; }
+  };
+  const matStr = M => JSON.stringify(M).replace(/,/g, ', ');
+
+  const EXAMPLES = [
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+    [[5, 1, 9, 11], [2, 4, 8, 10], [13, 3, 6, 7], [15, 14, 12, 16]],
+    [[1, 2], [3, 4]],
+    [[1]],
+  ];
+
+  function build(input) {
+    const n = input.length, s = [];
+    const a = input.map((r, i) => r.map(v => ({ v, r: i })));
+    const snap = (o) => s.push({ a: a.map(r => r.map(x => ({ ...x }))), n, ...o });
+    snap({ phase: 0, line: 1, msg: '① 先转置：(i, j) 和 (j, i) 互换，对角线不动' });
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      [a[i][j], a[j][i]] = [a[j][i], a[i][j]];
+      snap({ phase: 0, sw: [[i, j], [j, i]], line: 4, msg: `交换 (${i}, ${j}) 和 (${j}, ${i})` });
+    }
+    snap({ phase: 1, line: 5, msg: '转置完：原来的第 i 行变成了第 i 列。② 再把每一行左右翻转' });
+    for (let i = 0; i < n; i++) {
+      let l = 0, r = n - 1;
+      if (l >= r) continue;
+      while (l < r) {
+        [a[i][l], a[i][r]] = [a[i][r], a[i][l]];
+        snap({ phase: 1, sw: [[i, l], [i, r]], line: 6, msg: `第 ${i} 行：交换第 ${l} 列和第 ${r} 列` });
+        l++; r--;
+      }
+    }
+    snap({ phase: 2, done: true, line: 7, kind: 'ok', msg: '✓ 顺时针转了 90°：原来的第 0 行变成了最后一列' });
+    return s;
+  }
+
+  function render(st) {
+    const sw = new Set((st.sw || []).map(p => p.join()));
+    grid('grid', st.n, st.n, (i, j) => {
+      let c = 'r' + (st.a[i][j].r % 6);
+      if (st.phase === 0 && i === j) c += ' diag';
+      if (sw.has(`${i},${j}`)) c = 'hot';
+      return c;
+    }, (i, j) => st.a[i][j].v);
+    $('phase').innerHTML = ['① 沿主对角线转置', '② 每行左右翻转'].map((t, p) => `<span class="${p === st.phase ? 'on' : p < st.phase ? 'done' : ''}">${t}</span>`).join('');
+  }
+
+  const fill = M => { $('mIn').value = matStr(M); };
+  const parse = () => { const v = MAT_FIELD_PARSE('mIn', 6); return v && v.length === v[0].length ? v : null; };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+  // 坐标推导：点格子，看 (i, j) -> (j, n-1-i)
+  (() => {
+    const n = 4;
+    let pi = 0, pj = 1;
+    const val = (r, c) => r * n + c + 1;
+    function mk(id, cellOf, onPick) {
+      let h = '<span></span>' + Array.from({ length: n }, (_, c) => `<span class="ix">${c}</span>`).join('');
+      for (let r = 0; r < n; r++) {
+        h += `<span class="ix">${r}</span>`;
+        for (let c = 0; c < n; c++) {
+          const [v, cls] = cellOf(r, c);
+          h += `<button type="button" class="${cls}" data-ri="${r}" data-ci="${c}" aria-label="第 ${r} 行第 ${c} 列，值 ${v}">${v}</button>`;
+        }
+      }
+      $(id).innerHTML = h;
+      $(id).querySelectorAll('button').forEach(b => b.onclick = () => { onPick(+b.dataset.ri, +b.dataset.ci); draw(); });
+    }
+    function draw() {
+      const ni = pj, nj = n - 1 - pi, v = val(pi, pj);
+      // 原矩阵：第 pi 行标蓝，第 pj 列标绿
+      mk('mgA', (r, c) => [val(r, c), r === pi && c === pj ? 'pick' : r === pi ? 'row' : c === pj ? 'col' : ''],
+         (r, c) => { pi = r; pj = c; });
+      // 转完：新 (r, c) 放的是原 (n-1-c, r)；蓝色行变成第 nj 列，绿色列变成第 ni 行
+      mk('mgB', (r, c) => [val(n - 1 - c, r), r === ni && c === nj ? 'pick' : c === nj ? 'row' : r === ni ? 'col' : ''],
+         (r, c) => { pi = n - 1 - c; pj = r; });
+      $('dv').innerHTML =
+        `<div class="st sb"><span class="k">行 i</span><span>${v} 在第 <b>i = ${pi}</b> 行，离顶边 ${pi} 行 → 顶边变右边，离右边 ${pi} 列 → 列号 = n − 1 − i = <b>${nj}</b></span></div>`
+        + `<div class="st sg"><span class="k">列 j</span><span>${v} 在第 <b>j = ${pj}</b> 列，离左边 ${pj} 列 → 左边变顶边，离顶边 ${pj} 行 → 行号 = j = <b>${ni}</b></span></div>`
+        + `<div class="st sa"><span class="k">合起来</span><span>(${pi}, ${pj}) → <b>(${ni}, ${nj})</b></span></div>`
+        + `<div class="st sx"><span class="k">两步</span><span>转置 (${pi}, ${pj}) → (${pj}, ${pi})，左右翻转 列号 ${pi} → ${n - 1} − ${pi} = ${nj}，得到 (${ni}, ${nj})</span></div>`;
+    }
+    draw();
+  })();
+
+})();
+</script>
+</body>
+</html>
