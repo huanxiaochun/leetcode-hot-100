@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>C++ 指针与链表</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  /* 常见搭配 */
+  .pit.ok .bad { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">C++ 指针与链表</p>
+  <h1>链表题就是在改指针</h1>
+  <p class="lead">节点放在堆上，靠 next 指针串起来。会读写 -&gt;、会判 nullptr、会用哨兵，链表题就成了一半</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">T*</p>
+      <p class="desc">指针基础<br>取地址、解引用、-&gt;</p>
+      <div class="tags"><span class="tag lc mono">&amp;x</span><span class="tag lc mono">*p</span><span class="tag lc mono">p-&gt;next</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">struct ListNode</p>
+      <p class="desc">节点定义<br>构造函数、new / delete</p>
+      <div class="tags"><span class="tag lc mono">new ListNode(x)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">dummy</p>
+      <p class="desc">哨兵节点<br>省掉头节点特判</p>
+      <div class="tags"><span class="tag lc mono">ListNode dummy(0, head)</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">改指针的顺序</p>
+      <p class="desc">先存后改<br>快慢指针</p>
+      <div class="tags"><span class="tag lc mono">nxt = cur-&gt;next</span></div>
+    </div>
+  </div>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. T* -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">C++ 指针与链表 · 02</p>
+  <div class="head"><h1 class="mono">T*</h1><span class="what">指针存的是地址，-> 是「解引用再取成员」</span><span class="inc mono">nullptr 是 C++11</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 取地址 / 解引用
+int x = 5;
+int* p = &x;                  // p 存 x 的地址
+*p = 7;                       // 通过 p 改 x，x == 7
+
+# 指向结构体：-> 等于 (*p).
+ListNode* node = new ListNode(1);
+node->val;                    // 等于 (*node).val
+node->next = nullptr;
+</script>
+<script type="text/x-cpp">
+# 空指针：用 nullptr，不用 NULL / 0
+ListNode* q = nullptr;
+if (q) {}                     // 非空才是 true
+if (!q) {}                    // 等于 q == nullptr
+
+# 指针比较的是地址
+ListNode* a = new ListNode(1);
+ListNode* b = new ListNode(1);
+// false：值一样，但不是同一个节点
+a == b;
+
+# 一行声明两个指针，每个都要带 *
+ListNode *slow = head, *fast = head;
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>ListNode* a, b;</b><span>b 不是指针而是 ListNode；每个都写星号 <code>ListNode *a, *b;</code></span></div>
+      <div class="p"><b>p-&gt;next-&gt;val</b><span>p 或 p->next 为空就崩；先判 <code>p &amp;&amp; p->next</code></span></div>
+      <div class="p"><b>a == b 判断相同节点</b><span>这本来就是比较地址；比较值要写 <code>a->val == b->val</code></span></div>
+      <div class="p"><b>int* p; *p = 1;</b><span>没初始化的指针指向随机地址；声明时就<code>赋值或给 nullptr</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. struct ListNode -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">C++ 指针与链表 · 03</p>
+  <div class="head"><h1 class="mono">struct ListNode</h1><span class="what">节点定义：LeetCode 已经写好，本地要自己写</span><span class="inc mono">struct / new / delete</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# LeetCode 给的定义
+struct ListNode {
+    int val;
+    ListNode* next;
+    ListNode() : val(0), next(nullptr) {}
+    ListNode(int x) : val(x), next(nullptr) {}
+    ListNode(int x, ListNode* nx) : val(x), next(nx) {}
+};
+
+# 创建：new 在堆上建节点，返回指针
+ListNode* a = new ListNode(1);
+ListNode* b = new ListNode(2, a);  // b→a
+</script>
+<script type="text/x-cpp">
+# 数组 -> 链表（测试常用）
+ListNode dummy;
+ListNode* tail = &dummy;
+for (int x : v)
+    tail = tail->next = new ListNode(x);
+ListNode* head = dummy.next;
+
+# 链表 -> 数组
+vector<int> out;
+for (auto p = head; p; p = p->next)
+    out.push_back(p->val);
+# 删除：new 出来的要 delete
+ListNode* del = prev->next;
+prev->next = del->next;  delete del;
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>delete 之后还用 del</b><span>内存已经还回去，再访问是未定义行为；<code>delete 放在最后</code></span></div>
+      <div class="p"><b>ListNode n(1); return &amp;n;</b><span>局部变量函数结束就没了，返回它的地址会悬空；要长期用就 <code>new</code></span></div>
+      <div class="p"><b>struct 末尾没写分号</b><span><code>};</code> 的分号不能少，否则报一串奇怪的错</span></div>
+      <div class="p"><b>new 了不 delete</b><span>刷题一般不扣分，工程里会内存泄漏；自己的代码<code>谁 new 谁 delete</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. dummy -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">C++ 指针与链表 · 04</p>
+  <div class="head"><h1 class="mono">dummy</h1><span class="what">哨兵：在头节点前面放一个假节点</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 用哨兵：头节点也有「前一个」
+ListNode dummy(0, head);      // 在栈上，不用 delete
+ListNode* prev = &dummy;      // 取它的地址
+while (prev->next) {
+    if (prev->next->val == target)
+        prev->next = prev->next->next;
+    else
+        prev = prev->next;
+}
+return dummy.next;            // 新的头
+</script>
+<script type="text/x-cpp">
+# 构造结果链表：tail 一直指向最后一个
+ListNode dummy;
+ListNode* tail = &dummy;
+tail->next = new ListNode(1);
+tail = tail->next;
+
+# 双向链表：head、tail 两个哨兵
+// head <-> a <-> b <-> tail
+// 插入、删除都不用判断是不是第一个 / 最后一个
+
+# 什么时候用哨兵
+// 头节点可能被删掉、换掉，或要从空开始拼结果
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>return &amp;dummy;</b><span>哨兵是假节点，答案是 <code>dummy.next</code></span></div>
+      <div class="p"><b>ListNode* dummy;</b><span>只声明了一个指针，没有节点；写 <code>ListNode dummy;</code> 再取 <code>&amp;dummy</code></span></div>
+      <div class="p"><b>dummy.next 和 dummy-&gt;next</b><span>对象用点，指针用箭头；<code>dummy</code> 是对象，<code>tail</code> 是指针</span></div>
+      <div class="p"><b>return 前 delete &amp;dummy</b><span>栈上的对象不能 delete；<code>只 delete new 出来的</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 改指针的顺序 -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">C++ 指针与链表 · 05</p>
+  <div class="head"><h1 class="mono">改指针的顺序</h1><span class="what">先存下一个，再改指向</span></div>
+  <div class="codes">
+<script type="text/x-cpp">
+# 反转：改 cur->next 之前先存起来
+ListNode *prev = nullptr, *cur = head;
+while (cur) {
+    ListNode* nxt = cur->next;  // ① 先存
+    cur->next = prev;           // ② 再改
+    prev = cur;                 // ③ 往前走
+    cur = nxt;
+}
+return prev;
+
+# 在 p 后面插入 x：先连后面，再连前面
+x->next = p->next;
+p->next = x;
+</script>
+<script type="text/x-cpp">
+# 快慢指针
+ListNode *slow = head, *fast = head;
+while (fast && fast->next) {    // 两个都要判
+    slow = slow->next;
+    fast = fast->next->next;
+}
+// 结束时 slow 在中点（偶数个时是后半段第一个）
+
+# 先走 n 步，再一起走：倒数第 n 个
+for (int i = 0; i < n; ++i) fast = fast->next;
+while (fast->next) fast = fast->next, slow = slow->next;
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>cur-&gt;next = prev; cur = cur-&gt;next;</b><span>已经改成指向 prev，往回走了；<code>先存 nxt</code></span></div>
+      <div class="p"><b>p-&gt;next = x; x-&gt;next = p-&gt;next;</b><span>第二句的 p->next 已经是 x，x 指向自己；<code>先连后面</code></span></div>
+      <div class="p"><b>while (fast-&gt;next)</b><span>fast 自己可能是 nullptr；写 <code>fast &amp;&amp; fast-&gt;next</code></span></div>
+      <div class="p"><b>有环链表转数组</b><span>for 循环永远停不下来；测试有环时<code>按节点个数计数</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 怎么选 -->
+<section class="slide pick" aria-label="第 6 页">
+  <p class="eyebrow">C++ 指针与链表 · 06</p>
+  <div class="head"><h1>怎么选 &amp; 常见搭配</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">头节点可能变</span><span class="use mono">ListNode dummy(0, head)</span></div>
+      <div class="row"><span class="need">从空开始拼结果</span><span class="use mono">dummy + tail</span></div>
+      <div class="row"><span class="need">找中点 / 判环</span><span class="use mono">快慢指针</span></div>
+      <div class="row"><span class="need">倒数第 n 个</span><span class="use mono">fast 先走 n 步</span></div>
+      <div class="row"><span class="need">反转一段</span><span class="use mono">prev / cur / nxt</span></div>
+      <div class="row"><span class="need">O(1) 删任意节点</span><span class="use mono">双向链表 + 哈希表</span></div>
+    </div>
+    <div class="panel">
+      <h2>常见搭配</h2>
+      <div class="pit ok">
+        <p class="bad"><code>ListNode dummy(0, head); … return dummy.next;</code></p>
+        <p class="fix">哨兵在栈上，函数结束自动回收，不用 delete</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>for (ListNode* p = head; p; p = p-&gt;next)</code></p>
+        <p class="fix">遍历链表的标准写法，条件 p 等于 p != nullptr</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad"><code>unordered_map&lt;int, Node*&gt;</code> + 双向链表</p>
+        <p class="fix">LRU：哈希表找节点，链表挪动和删除，都是 O(1)</p>
+      </div>
+      <div class="pit">
+        <p class="bad"><code>while (fast-&gt;next &amp;&amp; fast)</code></p>
+        <p class="fix">条件从左往右算，fast 为空时已经先访问了 fast->next；<code>判空写在前面</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // C++ 代码块：从 <script type="text/x-cpp"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('auto for if else while return break continue const using namespace true false new delete'.split(' '));
+  const TY = new Set('int long char bool void double size_t string vector pair unordered_map unordered_set map set multiset multimap greater cout ListNode Node nullptr struct class'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^# /.test(line)) return `<span class="sec">// ${esc(line.slice(2))}</span>`;  // "# 标题" 显示成小标题
+    return line.replace(/(\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)|([^\w"'\/]+|\/)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        if (fn) return KW.has(fn) ? `<span class="k">${fn}</span>` : TY.has(fn) ? `<span class="t">${fn}</span>` : `<span class="f">${fn}</span>`;
+        if (id) return KW.has(id) ? `<span class="k">${id}</span>` : TY.has(id) ? `<span class="t">${id}</span>` : id;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-cpp"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  // 点画面左三分之一后退，其余前进；选中文字（复制代码）时不翻页
+  addEventListener('click', (e) => {
+    if (e.target.closest('.nav') || getSelection().toString()) return;
+    go(e.clientX < innerWidth / 3 ? cur - 1 : cur + 1);
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
