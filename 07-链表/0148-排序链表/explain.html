@@ -271,6 +271,22 @@
   svg.ll .e.dim { opacity: .3; }
   svg.ll .pt text { font-size: 13px; font-weight: 700; fill: #fff; }
   .llnote { font-size: 15px; color: var(--muted); margin-top: 6px; }
+
+  .lvls { display: flex; flex-direction: column; gap: 12px; }
+  .lvl { display: flex; align-items: center; gap: 14px; min-height: 48px; }
+  .lvl .d { width: 54px; flex: none; color: var(--muted); font-size: 14px; font-weight: 600; }
+  .lvl .segs { display: flex; gap: 18px; flex-wrap: wrap; }
+  .seg { display: flex; align-items: center; gap: 3px; padding: 4px; border-radius: 12px; border: 2px dashed transparent; }
+  .seg .n { min-width: 38px; height: 38px; padding: 0 6px; border-radius: 9px; display: grid; place-items: center; background: var(--inset);
+            font: 700 17px "JetBrains Mono", "SF Mono", Menlo, monospace; transition: all .25s; }
+  .seg .ar { color: #b4bac6; font-size: 13px; }
+  .seg.cur { border-color: var(--blue); background: var(--blue-soft); }
+  .seg.cur .n { background: #fff; }
+  .seg.ok .n { background: var(--green-soft); color: var(--green); }
+  .seg.dim { opacity: .35; }
+  .seg .n.slow { box-shadow: inset 0 0 0 2.5px var(--amber); color: var(--amber); }
+  .seg .n.take { background: var(--amber); color: #fff; }
+  .seg .cutl { width: 3px; height: 34px; background: var(--amber); border-radius: 2px; margin: 0 4px; }
 </style>
 </head>
 <body>
@@ -281,7 +297,7 @@
     <span class="pill cat">链表</span>
     <a href="https://leetcode.cn/problems/sort-list/" target="_blank" rel="noopener">LeetCode ↗</a>
   </header>
-  <p class="idea"><b>自底向上归并</b>：每 1 个一段两两合并，再每 2 个、每 4 个……每轮都是把相邻两段<b>切下来、合并、接回去</b>。</p>
+  <p class="idea"><b>归并排序</b>三步：<b>快慢指针</b>找中点 → 从中间<b>切断</b> → 两半各自排好，再像 21 题一样<b>合并</b>。</p>
 
   <div class="layout">
   <div class="main-col">
@@ -296,7 +312,7 @@
 
     <div class="stage">
       <div>
-        <div class="label">head（蓝色是 left 段，橙色是 right 段，绿色是刚合并好的）</div>
+        <div class="label">每一行是一层递归：往下是切开，往上是合并（蓝色是正在处理的段，绿色是排好的）</div>
         <div class="llbox" id="ll"></div>
         <div class="pillrow mono" id="eq"></div>
       </div>
@@ -330,22 +346,22 @@
     <div class="cx-row time">
       <div class="cx-head"><span class="tag">时间</span><span class="val">O(n log n)</span></div>
       <div>
-        <div class="eq"><span class="term">每轮合并全部 <b>n</b> 个</span><span class="op">×</span><span class="term">step 翻倍，共 <b>log n</b> 轮</span><span class="op">=</span><span class="term"><b>O(n log n)</b></span></div>
-        <p class="why">链表不能随机访问，快排、堆排都不好做；<b>归并</b>只需要顺序遍历和改指向，最适合链表。</p>
+        <div class="eq"><span class="term">每层合并一共 <b>n</b> 个节点</span><span class="op">×</span><span class="term">每次对半切，共 <b>log n</b> 层</span></div>
+        <p class="why">链表不能随机访问，快排、堆排都不好做；<b>归并</b>只需要顺序走和改指针，最适合链表。找中点用 234 题的<b>快慢指针</b>，合并就是 21 题。</p>
       </div>
-      <div class="fig"><div class="cells"><span class="c b">4</span><span class="gap"></span><span class="c a">2</span><span class="gap"></span><span class="c b">1</span><span class="gap"></span><span class="c a">3</span><span class="ar">→</span><span class="c g">2</span><span class="c g">4</span><span class="gap"></span><span class="c g">1</span><span class="c g">3</span><span class="ar">→</span><span class="c g">1</span><span class="c g">2</span><span class="c g">3</span><span class="c g">4</span></div><span class="cap">step = 1、2 两轮</span></div>
+      <div class="fig"><div class="cells"><span class="c b">4</span><span class="c b">2</span><span class="c b">1</span><span class="c b">3</span><span class="ar">→</span><span class="c g">2</span><span class="c g">4</span><span class="gap"></span><span class="c g">1</span><span class="c g">3</span><span class="ar">→</span><span class="c g">1</span><span class="c g">2</span><span class="c g">3</span><span class="c g">4</span></div><span class="cap">切成两半各自排好，再合并</span></div>
     </div>
     <div class="cx-row space nofig">
-      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(log n)</span></div>
       <div>
-        <div class="eq"><span class="term">只用几个指针</span><span class="op">+</span><span class="term">没有递归</span></div>
-        <p class="why"><b>自底向上</b>用循环代替递归，满足题目进阶的 O(1) 空间要求。</p>
+        <div class="eq"><span class="term">递归深度 <b>log n</b> 层</span></div>
+        <p class="why"><b>fast 从 head.next 出发</b>：偶数个时 slow 停在左中点，是前半段的最后一个，可以直接断开。如果 fast 从 head 出发，[a, b] 会切成 [a, b] 和 []，永远递归下去。</p>
       </div>
     </div>
     <div class="cx-row cmp nofig">
-      <div class="cx-head"><span class="tag">对比</span><span class="val">递归 O(log n)</span></div>
+      <div class="cx-head"><span class="tag">进阶</span><span class="val">O(1) 空间</span></div>
       <div>
-        <p class="why">自顶向下：<b>快慢指针</b>找中点切成两半，分别递归排序再合并。更好写，但递归深度 log n，要 O(log n) 栈空间。</p>
+        <p class="why">题目进阶要求 O(1) 空间，就要用<b>自底向上</b>的归并：不递归，先每 1 个一段两两合并，再每 2 个、4 个……每轮把相邻两段切下来、合并、接回去。思路一样，但要自己管切段和接回，代码更容易写错。</p>
       </div>
     </div>
   </section>
@@ -355,189 +371,121 @@
 (() => {
   const CODE = [
       "ListNode* sortList(ListNode* head) {",
-      "    <span class=\"t\">int</span> n = 0;",
-      "    <span class=\"k\">for</span> (ListNode* p = head; p; p = p-&gt;next) ++n;",
-      "    ListNode dummy(0, head);",
-      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> step = 1; step &lt; n; step *= 2) {",
-      "        ListNode *tail = &amp;dummy, *cur = dummy.next;",
-      "        <span class=\"k\">while</span> (cur) {",
-      "            ListNode* left = cur;",
-      "            ListNode* right = split(left, step);",
-      "            cur = split(right, step);",
-      "            tail = merge(left, right, tail);",
-      "        }",
+      "    <span class=\"k\">if</span> (!head || !head-&gt;next) <span class=\"k\">return</span> head;",
+      "    ListNode *slow = head, *fast = head-&gt;next;",
+      "    <span class=\"k\">while</span> (fast &amp;&amp; fast-&gt;next) {  <span class=\"c\">// ① 找中点</span>",
+      "        slow = slow-&gt;next;",
+      "        fast = fast-&gt;next-&gt;next;",
       "    }",
-      "    <span class=\"k\">return</span> dummy.next;",
+      "    ListNode* right = slow-&gt;next;  <span class=\"c\">// ② 切断</span>",
+      "    slow-&gt;next = nullptr;",
+      "    <span class=\"k\">return</span> merge(sortList(head), sortList(right));  <span class=\"c\">// ③</span>",
       "}",
-      "<span class=\"c\">// split：保留 n 个并断开，返回后面部分的头</span>",
-      "<span class=\"c\">// merge：合并接到 tail 后面，返回新的尾</span>"
+      "ListNode* merge(ListNode* a, ListNode* b) {  <span class=\"c\">// 21 题</span>",
+      "    ListNode dummy;",
+      "    ListNode* tail = &amp;dummy;",
+      "    <span class=\"k\">while</span> (a &amp;&amp; b) {",
+      "        <span class=\"k\">if</span> (a-&gt;val &lt;= b-&gt;val) tail-&gt;next = a, a = a-&gt;next;",
+      "        <span class=\"k\">else</span> tail-&gt;next = b, b = b-&gt;next;",
+      "        tail = tail-&gt;next;",
+      "    }",
+      "    tail-&gt;next = a ? a : b;",
+      "    <span class=\"k\">return</span> dummy.next;",
+      "}"
   ];
   const PY = [
       "<span class=\"k\">def</span> sortList(<span class=\"t\">self</span>, head):",
-      "    n, p = 0, head",
-      "    <span class=\"k\">while</span> p:",
-      "        n, p = n + 1, p.next",
-      "    dummy = ListNode(0, head)",
-      "    step = 1",
-      "    <span class=\"k\">while</span> step &lt; n:",
-      "        tail, cur = dummy, dummy.next",
-      "        <span class=\"k\">while</span> cur:",
-      "            left = cur",
-      "            right = split(left, step)",
-      "            cur = split(right, step)",
-      "            tail = merge(left, right, tail)",
-      "        step *= 2",
+      "    <span class=\"k\">if</span> <span class=\"k\">not</span> head <span class=\"k\">or</span> <span class=\"k\">not</span> head.next:",
+      "        <span class=\"k\">return</span> head",
+      "    slow, fast = head, head.next",
+      "    <span class=\"k\">while</span> fast <span class=\"k\">and</span> fast.next:  <span class=\"c\"># ① 找中点</span>",
+      "        slow, fast = slow.next, fast.next.next",
+      "    right, slow.next = slow.next, None  <span class=\"c\"># ② 切断</span>",
+      "    <span class=\"k\">return</span> <span class=\"t\">self</span>.merge(<span class=\"t\">self</span>.sortList(head),",
+      "                      <span class=\"t\">self</span>.sortList(right))  <span class=\"c\"># ③</span>",
+      "<span class=\"k\">def</span> merge(<span class=\"t\">self</span>, a, b):  <span class=\"c\"># 21 题</span>",
+      "    dummy = tail = ListNode()",
+      "    <span class=\"k\">while</span> a <span class=\"k\">and</span> b:",
+      "        <span class=\"k\">if</span> a.val &lt;= b.val:",
+      "            tail.next, a = a, a.next",
+      "        <span class=\"k\">else</span>:",
+      "            tail.next, b = b, b.next",
+      "        tail = tail.next",
+      "    tail.next = a <span class=\"k\">or</span> b",
       "    <span class=\"k\">return</span> dummy.next"
   ];
   // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
-  const PYMAP = [0, 1, 2, 4, 6, 7, 8, 9, 10, 11, 12, 12, 13, 14, 14, -1, -1];
-
-  // ---------- 链表画布 ----------
-  // g = { nodes: [{id, val, x, y, cls}], edges: [{from, to, cls}], ptrs: [{name, id, c}] }
-  const LL = (() => {
-    const W = 62, H = 44, GX = 96, GY = 140, PX = 12, PY = 86;
-    const X = n => PX + n.x * GX, Y = n => PY + n.y * GY;
-    const COL = { b: '#2f6bff', a: '#d97706', g: '#16a34a', p: '#9333ea', m: '#86868b' };
-    const MK = { hot: 'a', ok: 'g', b: 'b', r: 'p', rc: 'g', pv: 'n', dim: 'n' };
-    function clip(a, b) {                     // a 的边框上、朝 b 中心方向的点
-      const ax = X(a) + W / 2, ay = Y(a) + H / 2, bx = X(b) + W / 2, by = Y(b) + H / 2;
-      const dx = bx - ax, dy = by - ay;
-      const s = Math.min(dx ? (W / 2) / Math.abs(dx) : Infinity, dy ? (H / 2) / Math.abs(dy) : Infinity);
-      return [ax + dx * s, ay + dy * s];
-    }
-    function path(a, b, both) {
-      const yb = Y(a) + H;
-      if (a.id === b.id) {                    // 自己指向自己
-        const x = X(a) + W / 2;
-        return [`M${x - 10},${yb} C${x - 34},${yb + 54} ${x + 34},${yb + 54} ${x + 10},${yb + 2}`, 60];
-      }
-      if (a.y === b.y) {
-        const d = b.x - a.x, ym = Y(a) + H / 2, off = both ? (d > 0 ? -7 : 7) : 0;
-        if (d === 1) return [`M${X(a) + W},${ym + off} L${X(b) - 1},${ym + off}`, 0];
-        if (d === -1) return [`M${X(a)},${ym + off} L${X(b) + W + 1},${ym + off}`, 0];
-        const x1 = X(a) + W / 2 + (d > 0 ? 9 : -9), x2 = X(b) + W / 2 + (d > 0 ? -9 : 9), k = Math.min(78, 30 + 12 * Math.abs(d));
-        return [`M${x1},${yb} C${x1},${yb + k} ${x2},${yb + k} ${x2},${yb + 2}`, k];
-      }
-      const [x1, y1] = clip(a, b), [x2, y2] = clip(b, a);
-      return [`M${x1},${y1} L${x2},${y2}`, 0];
-    }
-    function draw(el, g) {
-      const pos = {};
-      g.nodes.forEach(n => pos[n.id] = n);
-      const maxX = Math.max(0, ...g.nodes.map(n => n.x)), maxY = Math.max(0, ...g.nodes.map(n => n.y));
-      const has = new Set(g.edges.map(e => e.from + '>' + e.to));
-      let below = 0, body = '';
-      g.edges.forEach(e => {
-        const a = pos[e.from], b = pos[e.to];
-        if (!a || !b) return;
-        const [d, k] = path(a, b, has.has(e.to + '>' + e.from));
-        if (a.y === maxY) below = Math.max(below, k * 0.75);
-        body += `<path class="e ${e.cls || ''}" d="${d}" marker-end="url(#ah-${MK[e.cls] || 'n'})"/>`;
-      });
-      g.nodes.forEach(n => {
-        body += `<g class="nd ${n.cls || ''}"><rect x="${X(n)}" y="${Y(n)}" width="${W}" height="${H}" rx="12"/>`
-          + `<text x="${X(n) + W / 2}" y="${Y(n) + H / 2}">${n.val}</text></g>`;
-      });
-      const stack = {};
-      g.ptrs.forEach(p => {
-        const n = pos[p.id];
-        if (!n) return;
-        const k = stack[p.id] = (stack[p.id] || 0) + 1;
-        const tw = 14 + p.name.length * 8.4, y = Y(n) - 6 - k * 25;
-        body += `<g class="pt"><rect x="${X(n) + W / 2 - tw / 2}" y="${y}" width="${tw}" height="21" rx="6" fill="${COL[p.c] || COL.b}"/>`
-          + `<text x="${X(n) + W / 2}" y="${y + 10.5}">${p.name}</text></g>`;
-      });
-      const w = PX * 2 + maxX * GX + W, h = PY + maxY * GY + H + below + 14;
-      const defs = Object.entries({ n: '#b4bac6', ...COL }).map(([k, c]) =>
-        `<marker id="ah-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`).join('');
-      el.innerHTML = `<svg class="ll" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px" role="img" aria-label="链表示意图"><defs>${defs}</defs>${body}</svg>`;
-    }
-    return { draw };
-  })();
-
-  // 按行摆放节点：rows = [{ y, x, ids }]；nx[id] 是下一个节点的 id（null 表示没有）
-  // ptrs = { 名字: id }，颜色按出现顺序取 蓝、橙、绿、紫
-  function G({ rows, val, nx, ncls = {}, ecls = {}, ptrs = {}, extra = [], hide = new Set() }) {
-    const nodes = [], seen = new Set();
-    rows.forEach(({ y, x = 0, ids }) => ids.forEach((id, k) => {
-      nodes.push({ id, val: val[id], x: x + k, y, cls: ncls[id] || '' });
-      seen.add(id);
-    }));
-    const edges = [];
-    nodes.forEach(n => {
-      const t = nx[n.id];
-      if (t != null && seen.has(t) && !hide.has(n.id)) edges.push({ from: n.id, to: t, cls: ecls[n.id] || '' });
-    });
-    extra.forEach(e => edges.push(e));
-    const C = ['b', 'a', 'g', 'p', 'm'];
-    const P = Object.entries(ptrs).map(([name, id], i) => ({ name, id, c: C[i % C.length] })).filter(p => p.id != null && seen.has(p.id));
-    return { nodes, edges, ptrs: P };
-  }
-  const chainOf = (nx, start, limit = 99) => {   // 从 start 顺着 next 走，最多 limit 个，遇到重复就停
-    const out = [], seen = new Set();
-    for (let p = start; p != null && !seen.has(p) && out.length < limit; p = nx[p]) { out.push(p); seen.add(p); }
-    return out;
-  };
-  const mkList = (vals, pre) => {               // 建链表：返回 ids、val、nx
-    const ids = vals.map((_, i) => pre + i), val = {}, nx = {};
-    ids.forEach((id, i) => { val[id] = vals[i]; nx[id] = i + 1 < ids.length ? ids[i + 1] : null; });
-    return { ids, val, nx };
-  };
-  const P = (c, t) => `<span class="v ${c}">${t}</span>`;  // 信息栏里的小标签
-  const parseNums = (id, lo = 0, hi = 9) => {
-    const s = $(id).value.replace(/[\[\]]/g, '').trim();
-    if (!s) return lo === 0 ? [] : null;
-    const n = s.split(/[,，\s]+/).filter(Boolean).map(Number);
-    return n.length >= lo && n.length <= hi && n.every(x => Number.isInteger(x) && Math.abs(x) <= 99) ? n : null;
-  };
+  const PYMAP = [0, 1, 3, 4, 5, 5, 5, 6, 6, 7, 8, 9, 10, 10, 11, 13, 15, 16, 16, 17, 18, 18];
 
   const EXAMPLES = [[4, 2, 1, 3], [-1, 5, 3, 4, 0], [5, 1, 4, 2, 8, 3], [3, 3, 1, 2, 1]];
 
+  // 递归树：每个节点是一段；层号 = 递归深度。画的时候把同一层的段从左到右排开
   function build(vals) {
-    const L = mkList(vals, 'n'), val = { ...L.val, D: 'dummy' }, nx = { ...L.nx, D: L.ids[0] }, n = vals.length, s = [];
-    const split = (h, k) => { while (--k && h != null) h = nx[h]; if (h == null) return null; const r = nx[h]; nx[h] = null; return r; };
-    const merge = (a, b, t) => {
-      while (a != null && b != null) {
-        if (val[a] <= val[b]) { nx[t] = a; a = nx[a]; } else { nx[t] = b; b = nx[b]; }
-        t = nx[t];
+    const s = [], segs = [];                 // segs: {d, items, st}  st: '' 待处理 / cur / ok
+    const snap = o => s.push({ segs: segs.map(x => ({ ...x, items: x.items.slice() })), ...o });
+    const go = (items, d) => {
+      const me = { d, items: items.slice(), st: 'cur' };
+      segs.push(me);
+      if (items.length <= 1) {
+        me.st = 'ok';
+        snap({ line: 1, msg: items.length ? `[${items[0]}] 只有一个节点，本身就是有序的，直接返回` : '空链表，直接返回' });
+        return items;
       }
-      nx[t] = a ?? b;
-      while (nx[t] != null) t = nx[t];
-      return t;
+      let slow = 0, fast = 1;
+      snap({ line: 2, me, slow, msg: `[${items.join(', ')}]：slow 从第 1 个出发，fast 从第 2 个出发` });
+      while (fast < items.length && fast + 1 < items.length) {
+        slow++; fast += 2;
+        snap({ line: 4, me, slow, msg: `slow 走一步到 ${items[slow]}，fast 走两步` });
+      }
+      me.cut = slow + 1;
+      snap({ line: 7, me, slow, msg: `fast 走不动了，slow 停在 ${items[slow]}：从它后面切断，左边 ${slow + 1} 个、右边 ${items.length - slow - 1} 个` });
+      me.st = '';
+      const L = go(items.slice(0, slow + 1), d + 1), R = go(items.slice(slow + 1), d + 1);
+      me.st = 'cur'; me.cut = undefined;
+      const out = [];
+      let i = 0, j = 0;
+      me.items = [];
+      snap({ line: 11, me, msg: `回到这一层：合并 [${L.join(', ')}] 和 [${R.join(', ')}]` });
+      while (i < L.length && j < R.length) {
+        const a = L[i], b = R[j], left = a <= b;
+        out.push(left ? L[i++] : R[j++]);
+        me.items = out.slice();
+        snap({ line: left ? 15 : 16, me, take: out.length - 1,
+          msg: `两段的头 ${a} 和 ${b} 比，取${left ? '左边' : '右边'}的 ${left ? a : b}${a === b ? '（相等取左边，保证稳定）' : ''}` });
+      }
+      out.push(...L.slice(i), ...R.slice(j));
+      me.items = out.slice(); me.st = 'ok';
+      snap({ line: 19, me, msg: `剩下的直接接上，得到有序的 [${out.join(', ')}]` });
+      return out;
     };
-    const vs = ids => '[' + ids.map(i => val[i]).join(', ') + ']';
-    const mark = (ids, c) => Object.fromEntries(ids.map(i => [i, c]));
-    const snap = o => s.push({ g: G({ rows: [{ y: 0, ids: ['D', ...o.order] }], val, nx, ncls: { D: 'dummy', ...(o.ncls || {}) }, ptrs: o.P || {} }), ...o });
-    snap({ line: 2, order: chainOf(nx, nx.D), msg: `先数出长度 n = ${n}` });
-    for (let step = 1; step < n; step *= 2) {
-      let tail = 'D', cur = nx.D;
-      const done = [];
-      snap({ line: 4, order: chainOf(nx, nx.D), info: `step = ${P('b', step)}`, msg: `step = ${step}：每 ${step} 个一段，相邻两段合并` });
-      while (cur != null) {
-        const left = cur, right = split(left, step);
-        cur = split(right, step);
-        const Lc = chainOf(nx, left), Rc = chainOf(nx, right), rest = chainOf(nx, cur);
-        snap({ line: 9, order: [...done, ...Lc, ...Rc, ...rest], ncls: { ...mark(Lc, 'cur'), ...mark(Rc, 'hot') }, P: { tail, cur },
-          info: `step = ${P('b', step)}`, msg: Rc.length ? `切出 left = ${vs(Lc)}，right = ${vs(Rc)}` : `只剩 left = ${vs(Lc)}，right 为空` });
-        const start = done.length ? done[done.length - 1] : 'D';
-        tail = merge(left, right, tail);
-        const merged = chainOf(nx, nx[start]);
-        done.push(...merged);
-        snap({ line: 10, order: [...done, ...rest], ncls: mark(merged, 'ok'), P: { tail, cur }, info: `step = ${P('b', step)}`,
-          msg: `合并成 ${vs(merged)}，接到 tail 后面` });
-      }
-    }
-    snap({ line: 13, order: chainOf(nx, nx.D), kind: 'ok', msg: `✓ ${vs(chainOf(nx, nx.D))}` });
+    const res = go(vals, 0);
+    snap({ line: 9, kind: 'ok', msg: `✓ [${res.join(', ')}]` });
     return s;
+  }
+
+  function render(st) {
+    const maxD = Math.max(...st.segs.map(x => x.d));
+    let h = '';
+    for (let d = 0; d <= maxD; d++) {
+      const row = st.segs.filter(x => x.d === d);
+      h += `<div class="lvl"><span class="d">第 ${d} 层</span><div class="segs">` + row.map(x => {
+        const me = st.me && x.st === 'cur' && x.d === st.me.d;    // 正在处理的那一段
+        const cls = x.st === 'cur' ? 'cur' : x.st === 'ok' ? 'ok' : 'dim';
+        const items = x.items.map((v, k) => {
+          let c = '';
+          if (me && st.slow === k) c = 'slow';
+          if (me && st.take === k) c = 'take';
+          return (x.cut === k ? '<span class="cutl"></span>' : (k ? '<span class="ar">→</span>' : '')) + `<span class="n ${c}">${v}</span>`;
+        }).join('');
+        return `<div class="seg ${cls}">${items || '<span class="n" style="opacity:.4">…</span>'}</div>`;
+      }).join('') + '</div></div>';
+    }
+    $('ll').innerHTML = `<div class="lvls mono">${h}</div>`;
+    $('eq').innerHTML = '';
   }
 
   const fill = v => { $('lIn').value = v.join(', '); };
   const parse = () => parseNums('lIn', 1, 8);
-
-  function render(st) {
-    LL.draw($('ll'), st.g);
-    $('eq').innerHTML = st.info || '';
-  }
 
 
   const $ = id => document.getElementById(id);

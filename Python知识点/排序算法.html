@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python 排序算法 · 动画演示</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  main { max-width: 1480px; }
+  .algos { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 16px; padding: 5px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); width: fit-content; }
+  .algos button { font: inherit; font-size: 18px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .algos button:hover { color: var(--text); }
+  .algos button.on { background: var(--blue); color: #fff; }
+  .algos button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .toolbar .row { display: flex; gap: 10px; width: 100%; align-items: center; flex-wrap: wrap; }
+  .rnd { font: inherit; font-size: 15px; font-weight: 600; height: 40px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); cursor: pointer; }
+  .rnd:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* 柱子 */
+  .bars { position: relative; height: 300px; margin-top: 34px; }
+  .bar { position: absolute; bottom: 30px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+         transition: left .45s cubic-bezier(.3,.7,.2,1), opacity .25s, transform .25s; }
+  .bar .col { width: 100%; border-radius: 6px 6px 0 0; background: #c9ced8; transition: background .25s; }
+  .bar .v { font: 700 17px "JetBrains Mono", "SF Mono", Menlo, monospace; margin-bottom: 4px; color: var(--text); }
+  .bar .v sup { font-size: 11px; color: #9333ea; margin-left: 1px; }
+  .bar .tg { position: absolute; top: -30px; font: 700 13px "JetBrains Mono", Menlo, monospace; padding: 1px 7px; border-radius: 6px; color: #fff; white-space: nowrap; }
+  .bar.cmp .col { background: var(--blue); }
+  .bar.swp .col, .bar.hot .col { background: var(--amber); }
+  .bar.swp { transform: translateY(-8px); }
+  .bar.hot { transform: translateY(-14px); }
+  .bar.min .col, .bar.piv .col { background: #9333ea; }
+  .bar.done .col { background: var(--green); }
+  .bar.pre .col { background: #9fd8b3; }
+  .bar.hl .col { background: #a9bdfd; }
+  .bar.hr .col { background: #f6c98a; }
+  .bar.used { opacity: .25; }
+  .bar.out { opacity: .28; }
+  .slots { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; border-top: 2px solid var(--line); }
+  .slots span { position: absolute; top: 4px; text-align: center; font: 14px "JetBrains Mono", Menlo, monospace; color: var(--muted); }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 15px; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+
+  .aux { margin-top: 14px; min-height: 40px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 18px; }
+  .aux .lbl { color: var(--muted); font-size: 15px; font-weight: 600; }
+  .aux .ch { min-width: 40px; text-align: center; padding: 5px 10px; border-radius: 10px; background: var(--green-soft); color: var(--green); font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .aux .ch.new { box-shadow: inset 0 0 0 2.5px var(--green); }
+  .counters { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 18px; }
+  .counters span { padding: 6px 14px; border-radius: 12px; background: var(--inset); font-weight: 600; }
+  .counters b { font-family: "JetBrains Mono", Menlo, monospace; color: var(--blue); }
+  .counters .stab.yes { background: var(--green-soft); color: var(--green); }
+  .counters .stab.no { background: var(--amber-soft); color: var(--amber); }
+
+  /* 堆的树形视图 */
+  #heapBox { margin-top: 10px; }
+  svg.hp text { font-family: "JetBrains Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; font-weight: 700; font-size: 15px; }
+  svg.hp line { stroke: #c4c9d3; stroke-width: 2; }
+  svg.hp circle { fill: #e7e9ee; stroke: #c9ced8; stroke-width: 2; }
+  svg.hp .cmp circle { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 3; }
+  svg.hp .swp circle, svg.hp .hot circle { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 3; }
+  svg.hp .lab { font-size: 11px; fill: var(--muted); font-weight: 400; }
+
+  /* 同一组数据的对比 */
+  .cmpcard h2, .tblcard h2 { margin: 0 0 4px; font-size: 22px; }
+  .cmpcard .sub, .tblcard .sub { color: var(--muted); font-size: 16px; margin: 0 0 16px; }
+  .race { display: grid; grid-template-columns: 110px minmax(0, 1fr) 150px; gap: 10px 14px; align-items: center; }
+  .race .nm { font-weight: 700; font-size: 17px; }
+  .race .nm.on { color: var(--blue); }
+  .race .track { height: 22px; position: relative; }
+  .race .fill { height: 100%; border-radius: 0 4px 4px 0; background: #b9c3d6; min-width: 2px; transition: width .4s; }
+  .race .fill.on { background: var(--blue); }
+  .race .num { font: 600 15px "JetBrains Mono", Menlo, monospace; color: var(--muted); }
+  .race .num b { color: var(--text); font-size: 17px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 17px; }
+  .tbl th { text-align: left; color: var(--muted); font-size: 15px; font-weight: 600; padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--line); }
+  .tbl td.mono { font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
+  .tbl tr.on td { background: var(--blue-soft); }
+  .tbl tr { cursor: pointer; }
+  .tbl .bad { color: var(--amber); } .tbl .good { color: var(--green); }
+  .tbl .yes { color: var(--green); font-weight: 700; } .tbl .no { color: var(--muted); }
+  .card.cmpcard, .card.tblcard { margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>排序算法 · 动画演示</h1>
+    <span class="pill cat">Python 知识点</span>
+  </header>
+  <div class="algos" id="algos" role="tablist" aria-label="排序算法"></div>
+  <p class="idea" id="idea"></p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="row"><div class="seg" id="seg" role="tablist" aria-label="示例数据"></div><button class="rnd" id="rnd" type="button">随机一组</button></div>
+      <form class="field" id="field">
+        <label for="nIn">nums</label><input id="nIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="legend">
+      <span><i style="background:#c9ced8"></i>未处理</span>
+      <span><i style="background:var(--blue)"></i>正在比较</span>
+      <span><i style="background:var(--amber)"></i>交换 / 移动</span>
+      <span id="legendPiv"><i style="background:#9333ea"></i>基准</span>
+      <span id="legendHalves"><i style="background:#a9bdfd"></i><i style="background:#f6c98a;margin-left:-4px"></i>左段 / 右段</span>
+      <span id="legendPre"><i style="background:#9fd8b3"></i>局部有序</span>
+      <span><i style="background:var(--green)"></i>到了最终位置</span>
+      <span><sup style="color:#9333ea;font-weight:700">a b</sup> 相同数的原始先后</span>
+    </div>
+    <div class="aux mono" id="aux"></div>
+    <div id="heapBox"></div>
+    <div class="counters" id="counters"></div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--muted)">慢
+      <input type="range" id="speed" min="150" max="1400" step="50" value="700" style="flex:1;direction:rtl" aria-label="播放速度"> 快</label>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cmpcard">
+    <h2>同一组数据，各算法比较了多少次</h2>
+    <p class="sub" id="raceSub"></p>
+    <div class="race" id="race"></div>
+  </section>
+
+  <section class="card tblcard">
+    <h2>怎么选</h2>
+    <p class="sub">点一行切换到那个算法。<b>稳定</b>：相同的数排完以后先后顺序不变（选「有重复」那组数据看角标 a、b）</p>
+    <table class="tbl">
+      <thead><tr><th>算法</th><th>平均</th><th>最坏</th><th>额外空间</th><th>稳定性</th><th>什么时候用</th></tr></thead>
+      <tbody><tr data-k="bubble"><td><b>冒泡排序</b></td><td class="mono bad">O(n²)</td><td class="mono bad">O(n²)</td><td class="mono">O(1)</td><td class="yes">稳定</td><td>几乎有序时一轮就能结束；实际很少用</td></tr><tr data-k="selection"><td><b>选择排序</b></td><td class="mono bad">O(n²)</td><td class="mono bad">O(n²)</td><td class="mono">O(1)</td><td class="no">不稳定</td><td>交换次数最少（最多 n − 1 次），但比较次数固定 n²/2</td></tr><tr data-k="insertion"><td><b>插入排序</b></td><td class="mono bad">O(n²)</td><td class="mono bad">O(n²)</td><td class="mono">O(1)</td><td class="yes">稳定</td><td>数据<b>几乎有序</b>或很少时最快；sorted() 用的 Timsort 里，短的段就用它</td></tr><tr data-k="merge"><td><b>归并排序</b></td><td class="mono good">O(n log n)</td><td class="mono good">O(n log n)</td><td class="mono">O(n)</td><td class="yes">稳定</td><td>时间稳定在 n log n，要额外数组；Timsort 也是归并的思路，所以 sorted() 是稳定的</td></tr><tr data-k="quick"><td><b>快速排序</b></td><td class="mono good">O(n log n)</td><td class="mono bad">O(n²)</td><td class="mono">O(log n)</td><td class="no">不稳定</td><td>平均最快；有序数组 + 选最后一个当基准会退化，所以要随机选基准</td></tr><tr data-k="heap"><td><b>堆排序</b></td><td class="mono good">O(n log n)</td><td class="mono good">O(n log n)</td><td class="mono">O(1)</td><td class="no">不稳定</td><td>最坏也是 n log n 且不占额外空间；<b>heapq</b> 用的就是堆</td></tr></tbody>
+    </table>
+    <p class="sub" style="margin:16px 0 0">实际写题直接用 <b>sorted()</b> 或 <b>list.sort()</b>（Timsort：归并 + 插入的混合，最坏 O(n log n)，<b>稳定</b>）；只要最小的 k 个可以用 <b>heapq.nsmallest(k, a)</b>。</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const ALGOS = {"bubble": {"name": "冒泡排序", "idea": "相邻两个比一比，大的往右换。每一轮，剩下里<b>最大的</b>会像气泡一样冒到最右边。", "code": ["<span class=\"k\">def</span> bubble_sort(a):", "    n = <span class=\"t\">len</span>(a)", "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(n - 1):", "        swapped = False", "        <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(n - 1 - i):", "            <span class=\"k\">if</span> a[j] &gt; a[j + 1]:", "                a[j], a[j + 1] = a[j + 1], a[j]", "                swapped = True", "        <span class=\"k\">if</span> <span class=\"k\">not</span> swapped:  <span class=\"c\"># 一轮没换：已经有序</span>", "            <span class=\"k\">break</span>"], "map": [0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 8, 2]}, "selection": {"name": "选择排序", "idea": "每一轮在没排好的部分里<b>找最小的</b>，和这部分的第一个交换。像从一堆牌里每次挑出最小的一张。", "code": ["<span class=\"k\">def</span> selection_sort(a):", "    n = <span class=\"t\">len</span>(a)", "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(n - 1):", "        mn = i  <span class=\"c\"># 在 [i, n) 里找最小的</span>", "        <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(i + 1, n):", "            <span class=\"k\">if</span> a[j] &lt; a[mn]:", "                mn = j", "        a[i], a[mn] = a[mn], a[i]  <span class=\"c\"># 放到第 i 位</span>"], "map": [0, 1, 2, 3, 4, 5, 7, 7, 2]}, "insertion": {"name": "插入排序", "idea": "像理扑克牌：左边是已经排好的牌，每次拿起右边一张，把比它大的<b>往后挪</b>，插到合适的位置。", "code": ["<span class=\"k\">def</span> insertion_sort(a):", "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(1, <span class=\"t\">len</span>(a)):", "        x, j = a[i], i - 1  <span class=\"c\"># 拿起 a[i]</span>", "        <span class=\"k\">while</span> j &gt;= 0 <span class=\"k\">and</span> a[j] &gt; x:", "            a[j + 1] = a[j]  <span class=\"c\"># 比 x 大的往后挪</span>", "            j -= 1", "        a[j + 1] = x  <span class=\"c\"># 放进空出来的位置</span>"], "map": [0, 1, 2, 3, 4, 5, 5, 6, 1, 1]}, "merge": {"name": "归并排序", "idea": "<b>先拆再合</b>：一直对半拆到只剩一个数，再把两个有序的小段像拉拉链一样<b>合并</b>成一个有序的大段。", "code": ["<span class=\"k\">def</span> merge_sort(a, l, r):", "    <span class=\"k\">if</span> l &gt;= r:  <span class=\"c\"># 只剩一个数</span>", "        <span class=\"k\">return</span>", "    m = (l + r) // 2", "    merge_sort(a, l, m)  <span class=\"c\"># 排左半</span>", "    merge_sort(a, m + 1, r)  <span class=\"c\"># 排右半</span>", "    t, i, j = [], l, m + 1  <span class=\"c\"># 合并两个有序段</span>", "    <span class=\"k\">while</span> i &lt;= m <span class=\"k\">and</span> j &lt;= r:  <span class=\"c\"># &lt;= 保证稳定</span>", "        <span class=\"k\">if</span> a[i] &lt;= a[j]:", "            t.append(a[i]); i += 1", "        <span class=\"k\">else</span>:", "            t.append(a[j]); j += 1", "    t += a[i:m + 1] + a[j:r + 1]  <span class=\"c\"># 剩下的接上</span>", "    a[l:r + 1] = t"], "map": [0, 1, 3, 4, 5, 6, 6, 7, 8, 12, 12, 13, 13]}, "quick": {"name": "快速排序", "idea": "选一个<b>基准</b>，比它小的都换到左边，大的留在右边，基准就落在了最终位置。再对左右两边做同样的事。", "code": ["<span class=\"k\">def</span> quick_sort(a, l, r):", "    <span class=\"k\">if</span> l &gt;= r:", "        <span class=\"k\">return</span>", "    p, i = a[r], l  <span class=\"c\"># 最后一个当基准</span>", "    <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(l, r):", "        <span class=\"k\">if</span> a[j] &lt; p:  <span class=\"c\"># 小的换到左边</span>", "            a[i], a[j] = a[j], a[i]", "            i += 1", "    a[i], a[r] = a[r], a[i]  <span class=\"c\"># 基准放到中间</span>", "    quick_sort(a, l, i - 1)", "    quick_sort(a, i + 1, r)"], "map": [0, 1, 3, 4, 5, 8, 9, 10, 10]}, "heap": {"name": "堆排序", "idea": "把数组看成一棵<b>完全二叉树</b>，先调整成大顶堆（父 ≥ 子），堆顶就是最大值。把堆顶换到最后，再让新堆顶<b>下沉</b>，重复。", "code": ["<span class=\"k\">def</span> sift_down(a, i, n):", "    <span class=\"k\">while</span> 2 * i + 1 &lt; n:", "        c = 2 * i + 1  <span class=\"c\"># 左孩子</span>", "        <span class=\"k\">if</span> c + 1 &lt; n <span class=\"k\">and</span> a[c + 1] &gt; a[c]:", "            c += 1", "        <span class=\"k\">if</span> a[i] &gt;= a[c]:  <span class=\"c\"># 父 ≥ 子，沉好了</span>", "            <span class=\"k\">break</span>", "        a[i], a[c] = a[c], a[i]", "        i = c", "<span class=\"k\">def</span> heap_sort(a):", "    n = <span class=\"t\">len</span>(a)", "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(n // 2 - 1, -1, -1):  <span class=\"c\"># ① 建堆</span>", "        sift_down(a, i, n)", "    <span class=\"k\">for</span> end <span class=\"k\">in</span> <span class=\"t\">range</span>(n - 1, 0, -1):", "        a[0], a[end] = a[end], a[0]  <span class=\"c\"># ② 最大的放到最后</span>", "        sift_down(a, 0, end)"], "map": [0, 1, 2, 3, 5, 7, 8, 8, 8, 9, 10, 11, 12, 13, 14, 15, 15, 15]}};
+  const ORDER = Object.keys(ALGOS);
+  const EXAMPLES = [
+    ['随机', [6, 3, 8, 2, 9, 1, 7, 4]],
+    ['有重复', [5, 9, 5, 1, 4, 8]],
+    ['几乎有序', [1, 2, 3, 5, 4, 6, 7, 8]],
+    ['完全逆序', [8, 7, 6, 5, 4, 3, 2, 1]],
+  ];
+
+  // ---------- 记录器：a[位置] = 柱子的编号；柱子按编号移动，就能看出谁换到了哪 ----------
+  function rec(vals) {
+    const R = { a: vals.map((_, i) => i), steps: [], cmp: 0, mov: 0, done: new Set() };
+    R.v = p => vals[R.a[p]];
+    R.swap = (i, j) => { [R.a[i], R.a[j]] = [R.a[j], R.a[i]]; R.mov++; };
+    R.snap = o => R.steps.push({ order: R.a.slice(), done: new Set(R.done), cmp: R.cmp, mov: R.mov, ...o });
+    R.finish = (line, extra = '') => {
+      R.a.forEach(id => R.done.add(id));
+      R.snap({ line, kind: 'ok', final: true, msg: `✓ 排好了：[${R.a.map(id => vals[id]).join(', ')}]${extra}` });
+      return R.steps;
+    };
+    return R;
+  }
+
+  const B = {};
+  B.bubble = vals => {
+    const R = rec(vals), n = vals.length;
+    R.snap({ line: 1, msg: '从左往右，相邻两个比一比，大的往右换' });
+    for (let i = 0; i < n - 1; i++) {
+      let sw = false;
+      const end = n - 1 - i;
+      R.snap({ line: 2, out: [0, end], msg: `第 ${i + 1} 轮：只看下标 0 ~ ${end}，右边绿色的已经排好` });
+      for (let j = 0; j + 1 < n - i; j++) {
+        R.cmp++;
+        const big = R.v(j) > R.v(j + 1);
+        R.snap({ line: 5, out: [0, end], cls: { [j]: 'cmp', [j + 1]: 'cmp' }, tags: { [j]: 'j', [j + 1]: 'j+1' },
+          msg: `比较 ${R.v(j)} 和 ${R.v(j + 1)}：${big ? '左边大，交换' : '不用换'}` });
+        if (big) {
+          R.swap(j, j + 1); sw = true;
+          R.snap({ line: 6, out: [0, end], cls: { [j]: 'swp', [j + 1]: 'swp' }, tags: { [j + 1]: 'j+1' }, msg: `${R.v(j + 1)} 往右挪了一格` });
+        }
+      }
+      if (!sw) return R.finish(9, '。这一轮一次都没换，说明已经有序，提前结束');
+      R.done.add(R.a[end]);
+      R.snap({ line: 2, out: [0, end], cls: { [end]: 'done' }, msg: `第 ${i + 1} 轮结束：最大的 ${R.v(end)} 冒到了下标 ${end}` });
+    }
+    return R.finish(11);
+  };
+
+  B.selection = vals => {
+    const R = rec(vals), n = vals.length;
+    R.snap({ line: 1, msg: '每一轮在右边没排好的部分里找最小的' });
+    for (let i = 0; i < n - 1; i++) {
+      let mn = i;
+      R.snap({ line: 3, out: [i, n - 1], cls: { [i]: 'min' }, tags: { [i]: 'mn' }, msg: `第 ${i + 1} 轮：在下标 ${i} ~ ${n - 1} 里找最小的，先假设是 ${R.v(i)}` });
+      for (let j = i + 1; j < n; j++) {
+        R.cmp++;
+        const less = R.v(j) < R.v(mn);
+        R.snap({ line: 5, out: [i, n - 1], cls: { [mn]: 'min', [j]: 'cmp' }, tags: { [mn]: 'mn', [j]: 'j' },
+          msg: `${R.v(j)} 和当前最小 ${R.v(mn)} 比：${less ? '更小，最小值换成它' : '不比它小'}` });
+        if (less) mn = j;
+      }
+      if (mn !== i) {
+        const a = R.v(i), b = R.v(mn);
+        R.swap(i, mn);
+        R.snap({ line: 6, out: [i, n - 1], cls: { [i]: 'swp', [mn]: 'swp' }, msg: `最小的是 ${b}，和第 ${i} 位的 ${a} 交换` });
+      } else {
+        R.mov++;
+        R.snap({ line: 6, out: [i, n - 1], cls: { [i]: 'swp' }, msg: `最小的 ${R.v(i)} 本来就在第 ${i} 位（自己和自己交换）` });
+      }
+      R.done.add(R.a[i]);
+    }
+    return R.finish(8);
+  };
+
+  B.insertion = vals => {
+    const R = rec(vals), n = vals.length;
+    R.snap({ line: 1, pre: 0, msg: '第一个数自己就是「排好的一张牌」' });
+    for (let i = 1; i < n; i++) {
+      let p = i;
+      R.snap({ line: 2, pre: i - 1, cls: { [i]: 'hot' }, tags: { [i]: 'x' }, msg: `拿起 ${R.v(i)}，插进左边已经排好的 ${i} 个里` });
+      while (p > 0) {
+        R.cmp++;
+        if (R.v(p - 1) > R.v(p)) {
+          R.snap({ line: 3, pre: i, cls: { [p - 1]: 'cmp', [p]: 'hot' }, tags: { [p]: 'x' }, msg: `${R.v(p - 1)} > ${R.v(p)}，往后挪一格` });
+          R.swap(p - 1, p); p--;
+          R.snap({ line: 4, pre: i, cls: { [p + 1]: 'swp', [p]: 'hot' }, tags: { [p]: 'x' }, msg: `${R.v(p + 1)} 挪到了下标 ${p + 1}` });
+        } else {
+          R.snap({ line: 3, pre: i, cls: { [p - 1]: 'cmp', [p]: 'hot' }, tags: { [p]: 'x' }, msg: `${R.v(p - 1)} ≤ ${R.v(p)}，不用再往前了` });
+          break;
+        }
+      }
+      R.snap({ line: 7, pre: i, cls: { [p]: 'hot' }, msg: `${R.v(p)} 放在下标 ${p}，左边 ${i + 1} 个都排好了` });
+    }
+    return R.finish(9);
+  };
+
+  B.merge = vals => {
+    const R = rec(vals);
+    R.snap({ line: 0, msg: '先对半拆，拆到每段只剩一个数（一个数自己就是有序的）' });
+    const ms = (l, r) => {
+      if (l >= r) return;
+      const m = (l + r) >> 1;
+      R.snap({ line: 2, out: [l, r], halves: [l, m, r], msg: `拆开 [${l}, ${r}]：左边 ${l} ~ ${m}，右边 ${m + 1} ~ ${r}` });
+      ms(l, m); ms(m + 1, r);
+      const t = [], used = new Set();
+      let i = l, j = m + 1;
+      const S = (o) => R.snap({ out: [l, r], halves: [l, m, r], used: new Set(used), temp: t.map(id => vals[id]), ...o });
+      S({ line: 5, msg: `合并两个有序段 [${R.a.slice(l, m + 1).map(id => vals[id]).join(', ')}] 和 [${R.a.slice(m + 1, r + 1).map(id => vals[id]).join(', ')}]` });
+      while (i <= m && j <= r) {
+        R.cmp++;
+        const left = R.v(i) <= R.v(j), p = left ? i : j;
+        S({ line: 8, cls: { [i]: 'cmp', [j]: 'cmp' }, tags: { [i]: 'i', [j]: 'j' }, msg: `两段的头 ${R.v(i)} 和 ${R.v(j)} 比，取${left ? '左边' : '右边'}的 ${R.v(p)}${R.v(i) === R.v(j) ? '（相等取左边，保证稳定）' : ''}` });
+        t.push(R.a[p]); used.add(R.a[p]);
+        if (left) i++; else j++;
+      }
+      while (i <= m) { t.push(R.a[i]); used.add(R.a[i]); i++; }
+      while (j <= r) { t.push(R.a[j]); used.add(R.a[j]); j++; }
+      S({ line: 9, newTemp: true, msg: '一段用完了，另一段剩下的直接接到后面' });
+      for (let k = 0; k < t.length; k++) R.a[l + k] = t[k];
+      R.mov += t.length;
+      const cls = {};
+      for (let k = l; k <= r; k++) cls[k] = 'pre';
+      R.snap({ line: 11, out: [l, r], cls, msg: `写回原数组：下标 ${l} ~ ${r} 现在是有序的 [${t.map(id => vals[id]).join(', ')}]` });
+    };
+    ms(0, vals.length - 1);
+    return R.finish(11);
+  };
+
+  B.quick = vals => {
+    const R = rec(vals);
+    R.snap({ line: 0, msg: '每次选区间最后一个当基准，把比它小的换到左边' });
+    const qs = (l, r) => {
+      if (l > r) return;
+      if (l === r) { R.done.add(R.a[l]); R.snap({ line: 1, out: [l, r], msg: `[${l}, ${r}] 只有一个数 ${R.v(l)}，位置已经定了` }); return; }
+      const p = R.v(r);
+      let i = l;
+      R.snap({ line: 2, out: [l, r], cls: { [r]: 'piv' }, tags: { [r]: '基准', [i]: 'i' }, msg: `区间 [${l}, ${r}]：选最后一个 ${p} 当基准。i 左边放「比 ${p} 小的」` });
+      for (let j = l; j < r; j++) {
+        R.cmp++;
+        const less = R.v(j) < p, tags = { [r]: '基准', [i]: 'i', [j]: i === j ? 'i,j' : 'j' };
+        R.snap({ line: 4, out: [l, r], cls: { [r]: 'piv', [j]: 'cmp' }, tags,
+          msg: less ? `${R.v(j)} < ${p}：换到 i 的位置，i 往右一格` : `${R.v(j)} ≥ ${p}：留在右边` });
+        if (less) {
+          R.swap(i, j); i++;
+          R.snap({ line: 4, out: [l, r], cls: { [r]: 'piv', [i - 1]: 'swp', ...(i - 1 !== j ? { [j]: 'swp' } : {}) }, tags: { [r]: '基准', [i]: 'i' },
+            msg: i - 1 === j ? `${R.v(i - 1)} 本来就在 i 的位置` : `${R.v(i - 1)} 换到了左边` });
+        }
+      }
+      R.swap(i, r);
+      R.done.add(R.a[i]);
+      R.snap({ line: 5, out: [l, r], cls: { [i]: 'piv' }, msg: `基准 ${p} 换到下标 ${i}：左边都比它小，右边都 ≥ 它，它的位置定了` });
+      qs(l, i - 1); qs(i + 1, r);
+    };
+    qs(0, vals.length - 1);
+    return R.finish(8);
+  };
+
+  B.heap = vals => {
+    const R = rec(vals), n = vals.length;
+    let N = n, phase = '① 建堆';
+    const S = o => R.snap({ heap: N, phase, out: [0, N - 1], ...o });
+    const sift = (i, m, line) => {
+      while (2 * i + 1 < m) {
+        let c = 2 * i + 1;
+        if (c + 1 < m) { R.cmp++; if (R.v(c + 1) > R.v(c)) c++; }
+        R.cmp++;
+        if (R.v(i) >= R.v(c)) {
+          S({ line: 4, cls: { [i]: 'hot', [c]: 'cmp' }, msg: `${R.v(i)} 的孩子里更大的是 ${R.v(c)}，${R.v(i)} ≥ ${R.v(c)}，沉好了` });
+          return;
+        }
+        S({ line: 3, cls: { [i]: 'hot', [c]: 'cmp' }, msg: `${R.v(i)} 的孩子里更大的是 ${R.v(c)}，比它小，要交换` });
+        R.swap(i, c);
+        S({ line: 5, cls: { [i]: 'swp', [c]: 'hot' }, msg: `${R.v(i)} 上来，${R.v(c)} 沉到下标 ${c}` });
+        i = c;
+      }
+      S({ line: 1, cls: { [i]: 'hot' }, msg: `${R.v(i)} 已经没有孩子了，沉好了` });
+    };
+    S({ line: 10, msg: '数组看成一棵完全二叉树：下标 i 的孩子是 2i+1 和 2i+2' });
+    for (let i = (n >> 1) - 1; i >= 0; i--) {
+      S({ line: 11, cls: { [i]: 'hot' }, msg: `① 建堆：让 ${R.v(i)}（下标 ${i}）下沉，保证它比孩子大` });
+      sift(i, n);
+    }
+    phase = '② 取堆顶';
+    S({ line: 13, cls: { 0: 'piv' }, msg: `堆建好了：堆顶 ${R.v(0)} 是最大的` });
+    for (let end = n - 1; end > 0; end--) {
+      R.swap(0, end); R.done.add(R.a[end]);
+      N = end;
+      S({ line: 14, cls: { [end]: 'done', 0: 'hot' }, msg: `② 堆顶 ${R.v(end)} 换到最后（下标 ${end}），堆缩小一格；新堆顶 ${R.v(0)} 要下沉` });
+      sift(0, end);
+    }
+    N = 0;
+    return R.finish(16);
+  };
+
+  // ---------- 状态 ----------
+  let algo = 'bubble', vals = EXAMPLES[0][1], steps = [], cur = 0, timer = null, exIdx = 0;
+  const speed = () => +$('speed').value;
+
+  // 重复值加上 a、b、c 角标，用来看稳定性
+  const supOf = () => {
+    const cnt = {}, seen = {}, out = {};
+    vals.forEach(v => cnt[v] = (cnt[v] || 0) + 1);
+    vals.forEach((v, id) => { if (cnt[v] > 1) { seen[v] = (seen[v] || 0) + 1; out[id] = 'abcdefgh'[seen[v] - 1]; } });
+    return out;
+  };
+  const stableOf = order => {                  // 相同的值，编号是否还是从小到大
+    const last = {};
+    for (const id of order) { const v = vals[id]; if (v in last && last[v] > id) return false; last[v] = id; }
+    return true;
+  };
+  const hasDup = () => new Set(vals).size !== vals.length;
+
+  function W() { return Math.max(30, Math.min(64, Math.floor(620 / vals.length))); }
+
+  function drawBars(st) {
+    const w = W(), gap = Math.max(4, Math.round(w * .16)), max = Math.max(...vals.map(Math.abs), 1), sup = supOf();
+    const posOf = {};
+    st.order.forEach((id, p) => posOf[id] = p);
+    const box = $('bars');
+    box.style.width = (vals.length * w) + 'px';
+    if (box.dataset.n !== String(vals.length) || box.dataset.k !== vals.join()) {
+      box.innerHTML = vals.map((v, id) => `<div class="bar" data-id="${id}"><span class="tg"></span><span class="v"></span><div class="col"></div></div>`).join('')
+        + '<div class="slots"></div>';
+      box.dataset.n = vals.length; box.dataset.k = vals.join();
+    }
+    box.querySelector('.slots').innerHTML = st.order.map((_, p) => `<span style="left:${p * w}px;width:${w}px">${p}</span>`).join('');
+    box.querySelectorAll('.bar').forEach(el => {
+      const id = +el.dataset.id, p = posOf[id], v = vals[id];
+      let c = '';
+      if (st.halves) c = p <= st.halves[1] ? 'hl' : 'hr';
+      if (st.pre !== undefined && p <= st.pre) c = 'pre';
+      if (st.done.has(id)) c = 'done';
+      if (st.cls && st.cls[p]) c = st.cls[p];
+      if (st.used && st.used.has(id)) c += ' used';
+      if (st.out && (p < st.out[0] || p > st.out[1]) && !st.done.has(id)) c += ' out';
+      el.className = 'bar ' + c;
+      el.style.left = (p * w + gap / 2) + 'px';
+      el.style.width = (w - gap) + 'px';
+      el.querySelector('.col').style.height = Math.max(6, Math.abs(v) / max * 210) + 'px';
+      el.querySelector('.v').innerHTML = v + (sup[id] ? `<sup>${sup[id]}</sup>` : '');
+      const tg = el.querySelector('.tg'), t = st.tags && st.tags[p];
+      tg.textContent = t || '';
+      tg.style.display = t ? '' : 'none';
+      tg.style.background = t === '基准' ? '#9333ea' : t === 'mn' ? '#9333ea' : t === 'x' ? '#d97706' : '#2f6bff';
+    });
+  }
+
+  function drawHeap(st) {
+    const box = $('heapBox');
+    if (algo !== 'heap' || !st.heap) { box.innerHTML = ''; return; }
+    const N = st.heap, depth = Math.floor(Math.log2(N)) + 1, Wd = 560, R = 18, GY = 58;
+    const xy = i => { const d = Math.floor(Math.log2(i + 1)), k = i + 1 - 2 ** d; return [(k + .5) / 2 ** d * Wd, 26 + d * GY]; };
+    let s = '';
+    for (let i = 1; i < N; i++) { const [x1, y1] = xy((i - 1) >> 1), [x2, y2] = xy(i); s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
+    for (let i = 0; i < N; i++) {
+      const [x, y] = xy(i), c = (st.cls && st.cls[i]) || '';
+      s += `<g class="${c}"><circle cx="${x}" cy="${y}" r="${R}"/><text x="${x}" y="${y}">${vals[st.order[i]]}</text><text class="lab" x="${x + R + 9}" y="${y - R + 4}">${i}</text></g>`;
+    }
+    box.innerHTML = `<div class="lbl" style="color:var(--muted);font-size:15px;font-weight:600">${st.phase}：前 ${N} 个看成一棵树（右上角小字是下标）</div>`
+      + `<svg class="hp" viewBox="0 0 ${Wd} ${26 + (depth - 1) * GY + R + 8}" style="width:100%;max-width:${Wd}px">${s}</svg>`;
+  }
+
+  function draw() {
+    const st = steps[cur];
+    drawBars(st);
+    drawHeap(st);
+    $('aux').innerHTML = st.temp ? `<span class="lbl">临时数组 t</span>${st.temp.map((v, k) => `<span class="ch ${k === st.temp.length - 1 && !st.newTemp ? 'new' : ''}">${v}</span>`).join('') || '<span class="lbl">空</span>'}` : '';
+    let stab = '';
+    if (st.final && hasDup()) {
+      const ok = stableOf(st.order);
+      stab = `<span class="stab ${ok ? 'yes' : 'no'}">${ok ? '相同的数先后没变：稳定' : '相同的数先后变了：不稳定'}</span>`;
+    }
+    $('counters').innerHTML = `<span>比较 <b>${st.cmp}</b> 次</span><span>交换 / 移动 <b>${st.mov}</b> 次</span><span>n = <b>${vals.length}</b></span>${stab}`;
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = ALGOS[algo].map ? ALGOS[algo].map[st.line] : st.line;   // Python 版按行号表换算
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${cur / Math.max(1, steps.length - 1) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+
+  const PLAY = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M7 4.5v15l13-7.5z\"/></svg>";
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  function stop() { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; }
+  function play() {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, speed());
+  }
+
+  function race() {
+    const res = ORDER.map(k => { const s = B[k](vals.slice()); const f = s[s.length - 1]; return { k, cmp: f.cmp, mov: f.mov }; });
+    const max = Math.max(...res.map(r => r.cmp), 1), n = vals.length;
+    $('race').innerHTML = res.map(r => `<span class="nm ${r.k === algo ? 'on' : ''}">${ALGOS[r.k].name}</span>`
+      + `<div class="track" title="${ALGOS[r.k].name}：比较 ${r.cmp} 次，交换 / 移动 ${r.mov} 次"><div class="fill ${r.k === algo ? 'on' : ''}" style="width:${r.cmp / max * 100}%"></div></div>`
+      + `<span class="num">比较 <b>${r.cmp}</b> · 移动 ${r.mov}</span>`).join('');
+    $('raceSub').innerHTML = `n = ${n}：n² / 2 ≈ ${Math.round(n * n / 2)}，n·log₂n ≈ ${Math.round(n * Math.log2(n))}。换「完全逆序」或「几乎有序」看看谁变快谁变慢`;
+  }
+
+  function load() {
+    stop();
+    steps = B[algo](vals.slice());
+    cur = 0;
+    $('nIn').value = vals.join(', ');
+    $('field').classList.remove('bad');
+    $('idea').innerHTML = ALGOS[algo].idea;
+    $('code').innerHTML = ALGOS[algo].code.map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.algos button').forEach(b => b.classList.toggle('on', b.dataset.k === algo));
+    document.querySelectorAll('.tbl tr[data-k]').forEach(r => r.classList.toggle('on', r.dataset.k === algo));
+    $('legendHalves').style.display = algo === 'merge' ? '' : 'none';
+    $('legendPre').style.display = algo === 'insertion' || algo === 'merge' ? '' : 'none';
+    $('legendPiv').style.display = algo === 'quick' || algo === 'selection' ? '' : 'none';
+    $('legendPiv').lastChild.textContent = algo === 'quick' ? '基准' : '当前最小';
+    race();
+    draw();
+  }
+
+  // ---------- 控件 ----------
+  ORDER.forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.k = k; b.textContent = ALGOS[k].name;
+    b.onclick = () => { algo = k; load(); };
+    $('algos').appendChild(b);
+  });
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach(([name, v], k) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = name; b.title = v.join(', ');
+    b.onclick = () => { setOn(k); vals = v.slice(); load(); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+  $('rnd').onclick = () => {
+    const n = 8 + Math.floor(Math.random() * 5);
+    vals = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 20));
+    setOn(-1); load();
+  };
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('nIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+    const ok = v.length >= 2 && v.length <= 14 && v.every(x => Number.isInteger(x) && x >= 1 && x <= 99);
+    $('field').classList.toggle('bad', !ok);
+    if (!ok) return;
+    setOn(-1); vals = v; load();
+  });
+  document.querySelectorAll('.tbl tr[data-k]').forEach(r => r.onclick = () => { algo = r.dataset.k; load(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  $('speed').oninput = () => { if (timer) { stop(); play(); } };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>

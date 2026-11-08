@@ -8,48 +8,26 @@ class ListNode:                                    # LeetCode 已经定义好，
         self.next = next
 
 
-def split(head, n):
-    """从 head 起保留 n 个节点并断开，返回后面部分的头"""
-    for _ in range(n - 1):
-        if not head:
-            break
-        head = head.next
-    if not head:
-        return None
-    rest, head.next = head.next, None
-    return rest
-
-
-def merge(a, b, tail):
-    """合并 a、b 接到 tail 后面，返回合并后的最后一个节点"""
-    while a and b:
-        if a.val <= b.val:
-            tail.next, a = a, a.next
-        else:
-            tail.next, b = b, b.next
-        tail = tail.next
-    tail.next = a or b
-    while tail.next:
-        tail = tail.next
-    return tail
-
-
 class Solution:
-    # 自底向上归并：每轮把长度为 step 的段两两合并，step = 1, 2, 4, ...
+    # 归并排序：从中间切成两半，各自排好，再合并
     def sortList(self, head):
-        n, p = 0, head
-        while p:
-            n, p = n + 1, p.next
-        dummy = ListNode(0, head)
-        step = 1
-        while step < n:
-            tail, cur = dummy, dummy.next          # tail：已合并部分的最后一个节点
-            while cur:
-                left = cur
-                right = split(left, step)          # 切出两段，各 step 个
-                cur = split(right, step)
-                tail = merge(left, right, tail)
-            step *= 2
+        if not head or not head.next:              # 0 或 1 个节点，本身有序
+            return head
+        slow, fast = head, head.next               # fast 先走一步：偶数个时 slow 停在左中点
+        while fast and fast.next:
+            slow, fast = slow.next, fast.next.next
+        right, slow.next = slow.next, None         # 从中间切断
+        return self.merge(self.sortList(head), self.sortList(right))
+
+    def merge(self, a, b):                         # 合并两个有序链表（21 题）
+        dummy = tail = ListNode()
+        while a and b:
+            if a.val <= b.val:                     # <= 保证稳定
+                tail.next, a = a, a.next
+            else:
+                tail.next, b = b, b.next
+            tail = tail.next
+        tail.next = a or b
         return dummy.next
 
 

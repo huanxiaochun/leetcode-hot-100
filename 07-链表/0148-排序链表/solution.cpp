@@ -18,43 +18,30 @@ struct ListNode {
 
 class Solution {
 public:
-    // 自底向上归并：每轮把长度为 step 的段两两合并，step = 1, 2, 4, ...
+    // 归并排序：从中间切成两半，各自排好，再合并
     ListNode* sortList(ListNode* head) {
-        int n = 0;
-        for (ListNode* p = head; p; p = p->next) ++n;
-        ListNode dummy(0, head);
-        for (int step = 1; step < n; step *= 2) {
-            ListNode *tail = &dummy, *cur = dummy.next;   // tail：已合并部分的最后一个节点
-            while (cur) {
-                ListNode* left = cur;
-                ListNode* right = split(left, step);      // 切出两段，各 step 个
-                cur = split(right, step);
-                tail = merge(left, right, tail);
-            }
+        if (!head || !head->next) return head;      // 0 或 1 个节点，本身有序
+        ListNode *slow = head, *fast = head->next;  // fast 先走一步：偶数个时 slow 停在左中点
+        while (fast && fast->next) {
+            slow = slow->next;
+            fast = fast->next->next;
         }
-        return dummy.next;
+        ListNode* right = slow->next;               // 从中间切断
+        slow->next = nullptr;
+        return merge(sortList(head), sortList(right));
     }
 
 private:
-    // 从 head 起保留 n 个节点并断开，返回后面部分的头
-    ListNode* split(ListNode* head, int n) {
-        while (--n && head) head = head->next;
-        if (!head) return nullptr;
-        ListNode* rest = head->next;
-        head->next = nullptr;
-        return rest;
-    }
-
-    // 合并 a、b 接到 tail 后面，返回合并后的最后一个节点
-    ListNode* merge(ListNode* a, ListNode* b, ListNode* tail) {
+    ListNode* merge(ListNode* a, ListNode* b) {     // 合并两个有序链表（21 题）
+        ListNode dummy;
+        ListNode* tail = &dummy;
         while (a && b) {
-            if (a->val <= b->val) tail->next = a, a = a->next;
+            if (a->val <= b->val) tail->next = a, a = a->next;   // <= 保证稳定
             else tail->next = b, b = b->next;
             tail = tail->next;
         }
         tail->next = a ? a : b;
-        while (tail->next) tail = tail->next;
-        return tail;
+        return dummy.next;
     }
 };
 
