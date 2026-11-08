@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python 二叉树遍历 · 递归与迭代</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* 二叉树画布 */
+  svg.tr { display: block; overflow: visible; margin-top: 6px; }
+  svg.tr text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.tr .ed { stroke: #c4c9d3; stroke-width: 2.5; }
+  svg.tr .ed.hot { stroke: #d97706; stroke-width: 3.5; }
+  svg.tr .ed.ok { stroke: #16a34a; stroke-width: 3.5; }
+  svg.tr .nd circle { fill: var(--inset); stroke: #d0d4dc; stroke-width: 2; }
+  svg.tr .nd text { font-size: 17px; font-weight: 700; fill: var(--text); }
+  svg.tr .nd.cur circle { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 3; }
+  svg.tr .nd.cur text { fill: var(--blue); }
+  svg.tr .nd.hot circle { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 3; }
+  svg.tr .nd.hot text { fill: var(--amber); }
+  svg.tr .nd.stk circle { fill: #fff7ea; stroke: var(--amber); stroke-dasharray: 4 3; }
+  svg.tr .nd.ok circle { fill: var(--green-soft); stroke: var(--green); stroke-width: 2.5; }
+  svg.tr .nd.ok text { fill: var(--green); }
+  svg.tr .nd.vis { opacity: .45; }
+  svg.tr .lb { font-size: 12px; font-weight: 700; fill: #9333ea; }
+  svg.tr .pt text { font-size: 12px; font-weight: 700; fill: #fff; }
+  .empty-t { color: var(--muted); font-size: 18px; padding: 24px 4px; }
+  .aux { margin-top: 12px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; min-height: 34px; font-size: 17px; }
+  .aux .lbl { color: var(--muted); font-size: 15px; font-weight: 600; margin-right: 2px; }
+  .aux .ch { padding: 3px 10px; border-radius: 8px; background: var(--inset); font-weight: 700; }
+  .aux .ch.a { background: var(--amber-soft); color: var(--amber); }
+  .aux .ch.b { background: var(--blue-soft); color: var(--blue); }
+  .aux .ch.g { background: var(--green-soft); color: var(--green); }
+  .aux .ch.p { background: #f3e8ff; color: #9333ea; }
+  .aux .ch.e { background: none; color: var(--muted); font-weight: 400; }
+  .aux .sp { width: 18px; }
+
+  main { max-width: 1480px; }
+  .algos { display: flex; gap: 6px; flex-wrap: wrap; padding: 5px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  .algos button { font: inherit; font-size: 18px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .algos button:hover { color: var(--text); }
+  .algos button.on { background: var(--blue); color: #fff; }
+  .algos button:focus-visible, .mode button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .topbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 6px 0 14px; }
+  .mode { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--card); box-shadow: var(--shadow); }
+  .mode button { font: inherit; font-size: 16px; font-weight: 700; padding: 8px 18px; border: none; border-radius: 9px; background: none; color: var(--muted); cursor: pointer; }
+  .mode button.on { background: var(--green-soft); color: var(--green); }
+  .outrow { margin-top: 10px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; min-height: 40px; font-size: 18px; }
+  .outrow .lbl { color: var(--muted); font-size: 15px; font-weight: 600; margin-right: 2px; }
+  .outrow .ch { padding: 4px 12px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-weight: 700; }
+  .outrow .ch.new { box-shadow: inset 0 0 0 2.5px var(--green); }
+  .outrow .ch.e { background: none; color: var(--muted); font-weight: 400; }
+
+  .card.euler, .card.tblcard { margin-top: 24px; }
+  .euler h2, .tblcard h2 { margin: 0 0 4px; font-size: 22px; }
+  .euler .sub, .tblcard .sub { color: var(--muted); font-size: 17px; margin: 0 0 14px; line-height: 1.6; }
+  .euler .sub b { color: var(--text); }
+  .euler .wrap { display: grid; grid-template-columns: 560px minmax(0, 1fr); gap: 40px; align-items: center; }
+  @media (max-width: 1100px) { .euler .wrap { grid-template-columns: 1fr; } }
+  svg.eu text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.eu .ed { stroke: #c4c9d3; stroke-width: 2.5; }
+  svg.eu .route { fill: none; stroke: #b4bac6; stroke-width: 2; stroke-dasharray: 5 5; }
+  svg.eu .nd circle { fill: var(--inset); stroke: #d0d4dc; stroke-width: 2; }
+  svg.eu .nd text { font-size: 17px; font-weight: 700; fill: var(--text); }
+  svg.eu .dot text { font-size: 11px; font-weight: 700; fill: #fff; }
+  .seqs { display: flex; flex-direction: column; gap: 14px; }
+  .seq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 18px; }
+  .seq .tag { width: 200px; flex: none; font-weight: 700; font-size: 19px; }
+  .seq .tag small { display: block; font-size: 14px; font-weight: 600; color: var(--muted); }
+  .seq .ch { min-width: 34px; text-align: center; padding: 4px 8px; border-radius: 8px; font: 700 17px "JetBrains Mono", Menlo, monospace; color: #fff; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 17px; }
+  .tbl th { text-align: left; color: var(--muted); font-size: 15px; font-weight: 600; padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.55; }
+  .tbl td:first-child { font-weight: 700; white-space: nowrap; }
+  .tbl .mono { font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; white-space: nowrap; }
+  .tbl tr { cursor: pointer; }
+  .tbl tr.on td { background: var(--blue-soft); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>二叉树遍历 · 递归与迭代</h1>
+    <span class="pill cat">Python 知识点</span>
+  </header>
+  <div class="topbar">
+    <div class="algos" id="orders" role="tablist" aria-label="遍历方式"></div>
+    <div class="mode" id="mode" role="tablist" aria-label="写法"></div>
+  </div>
+  <p class="idea" id="idea"></p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="tIn">root</label><input id="tIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+    <div class="label">树（虚线橙圈：在栈 / 队列里；绿色：已经访问，下方是访问顺序）</div>
+    <div id="tr"></div>
+    <div class="aux mono" id="aux"></div>
+    <div class="outrow mono" id="out"></div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--muted)">慢
+      <input type="range" id="speed" min="150" max="1400" step="50" value="700" style="flex:1;direction:rtl" aria-label="播放速度"> 快</label>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card euler">
+    <h2>三种顺序，只差在「什么时候访问根」</h2>
+    <p class="sub">从根的左边出发，沿着树的外轮廓<b>绕一圈</b>（虚线）。每个节点会被经过 <b>3 次</b>：左边、下边、右边。
+      在<b style="color:#2f6bff">左边</b>记下来就是前序，在<b style="color:#16a34a">下边</b>记下来是中序，在<b style="color:#d97706">右边</b>记下来是后序。递归代码里，这三个时刻正好对应「进入函数时」「左子树返回后」「右子树返回后」。</p>
+    <div class="wrap">
+      <div id="eulerSvg"></div>
+      <div class="seqs" id="seqs"></div>
+    </div>
+  </section>
+
+  <section class="card tblcard">
+    <h2>怎么记、什么时候用</h2>
+    <p class="sub">点一行切换到那种遍历。四种遍历的时间都是 <b>O(n)</b>；递归和栈的空间是 <b>O(h)</b>（h 是树高，最坏等于 n），层序的队列是 <b>O(w)</b>（w 是最宽那一层的节点数）。</p>
+    <table class="tbl">
+      <thead><tr><th>遍历</th><th>顺序</th><th>迭代用</th><th>迭代写法的关键</th><th>典型题</th></tr></thead>
+      <tbody><tr data-k="pre"><td>前序</td><td class="mono">根 左 右</td><td class="mono">栈</td><td>弹出就访问；<b>先压右、再压左</b>，左孩子先出栈</td><td>复制一棵树、序列化；114 展开为链表、105 从前序建树</td></tr><tr data-k="in"><td>中序</td><td class="mono">左 根 右</td><td class="mono">栈 + cur</td><td>一路往左压栈，<b>弹出时访问</b>，再转到右子树</td><td>二叉搜索树的中序是<b>升序</b>：94、98 验证 BST、230 第 K 小</td></tr><tr data-k="post"><td>后序</td><td class="mono">左 右 根</td><td class="mono">栈 + prev</td><td>看栈顶不急着弹：右子树没走过就先走右边，<b>走过了才访问</b></td><td>要先拿到孩子的结果再算自己：104 深度、543 直径、124 路径和、236 公共祖先</td></tr><tr data-k="level"><td>层序</td><td class="mono">一层一层</td><td class="mono">队列</td><td>从队头取、孩子放队尾；按层分组时<b>先记下这一层有几个</b></td><td>102 层序遍历、199 右视图；求最少步数的 BFS</td></tr></tbody>
+    </table>
+    <p class="sub" style="margin:16px 0 0">后序还有一种好记的迭代写法：按「根 → 右 → 左」做前序（先压左、再压右），最后把结果<b>整个反转</b>，就是「左 → 右 → 根」。Python 默认<b>递归深度上限是 1000</b>（sys.getrecursionlimit()）。树可能很深时，用 <b>sys.setrecursionlimit</b> 调大，或者直接用迭代写法。</p>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  // ---------- 二叉树画布 ----------
+  // g = { nodes: {id: {val, l, r}}, root, ncls, ecls（按孩子 id）, labels, ptrs: [{name, id, c}] }
+  const TR = (() => {
+    const R = 21, GX = 56, GY = 74, PX = 34, PY = 74;
+    const COL = { b: '#2f6bff', a: '#d97706', g: '#16a34a', p: '#9333ea', m: '#86868b' };
+    function draw(el, g) {
+      const pos = {};
+      let n = 0, maxD = 0;
+      const walk = (id, d) => {
+        if (id == null || pos[id]) return;
+        const x = g.nodes[id];
+        walk(x.l, d + 1);
+        pos[id] = { x: n++, y: d };
+        maxD = Math.max(maxD, d);
+        walk(x.r, d + 1);
+      };
+      walk(g.root, 0);
+      if (!n) { el.innerHTML = '<div class="empty-t">空树</div>'; return; }
+      const X = id => PX + pos[id].x * GX, Y = id => PY + pos[id].y * GY;
+      let body = '';
+      Object.keys(pos).forEach(id => [g.nodes[id].l, g.nodes[id].r].forEach(c => {
+        if (c == null || !pos[c]) return;
+        const dx = X(c) - X(id), dy = Y(c) - Y(id), L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+        body += `<line class="ed ${g.ecls[id + '>' + c] || g.ecls[c] || ''}" x1="${X(id) + ux * R}" y1="${Y(id) + uy * R}" x2="${X(c) - ux * R}" y2="${Y(c) - uy * R}"/>`;
+      }));
+      Object.keys(pos).forEach(id => {
+        body += `<g class="nd ${g.ncls[id] || ''}"><circle cx="${X(id)}" cy="${Y(id)}" r="${R}"/><text x="${X(id)}" y="${Y(id)}">${g.nodes[id].val}</text></g>`;
+        if (g.labels[id] != null) body += `<text class="lb" x="${X(id)}" y="${Y(id) + R + 12}">${g.labels[id]}</text>`;
+      });
+      const stack = {};
+      g.ptrs.forEach(p => {
+        if (p.id == null || !pos[p.id]) return;
+        const k = stack[p.id] = (stack[p.id] || 0) + 1;
+        const tw = 14 + p.name.length * 8, y = Y(p.id) - R - 4 - k * 23;
+        body += `<g class="pt"><rect x="${X(p.id) - tw / 2}" y="${y}" width="${tw}" height="20" rx="6" fill="${COL[p.c] || COL.b}"/>`
+          + `<text x="${X(p.id)}" y="${y + 10}">${p.name}</text></g>`;
+      });
+      const w = PX * 2 + (n - 1) * GX, h = PY + maxD * GY + R + 24;
+      el.innerHTML = `<svg class="tr" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px" role="img" aria-label="二叉树示意图">${body}</svg>`;
+    }
+    return { draw };
+  })();
+
+  function mkTree(arr) {                       // 层序数组 -> { nodes, root }
+    const nodes = {};
+    let k = 0;
+    const mk = v => { const id = 't' + k++; nodes[id] = { val: v, l: null, r: null }; return id; };
+    if (!arr.length || arr[0] == null) return { nodes, root: null };
+    const root = mk(arr[0]), q = [root];
+    for (let i = 1; i < arr.length; i += 2) {
+      const cur = q.shift();
+      if (cur === undefined) break;
+      if (arr[i] != null) q.push(nodes[cur].l = mk(arr[i]));
+      if (i + 1 < arr.length && arr[i + 1] != null) q.push(nodes[cur].r = mk(arr[i + 1]));
+    }
+    return { nodes, root };
+  }
+  function levelArr(t) {                       // 树 -> 层序数组
+    const out = [], q = [t.root];
+    while (q.length) {
+      const id = q.shift();
+      if (id == null) { out.push(null); continue; }
+      out.push(t.nodes[id].val);
+      q.push(t.nodes[id].l, t.nodes[id].r);
+    }
+    while (out.length && out[out.length - 1] == null) out.pop();
+    return out;
+  }
+  const cloneT = t => ({ root: t.root, nodes: Object.fromEntries(Object.entries(t.nodes).map(([k, v]) => [k, { ...v }])) });
+  const PC = ['b', 'a', 'g', 'p', 'm'];
+  function SN(t, o) {                          // 一步的快照
+    const pc = o.pc || PC;
+    const ptrs = Object.entries(o.ptrs || {}).map(([name, id], i) => ({ name, id, c: pc[i % pc.length] }));
+    return { ...o, g: { ...cloneT(t), ncls: o.ncls || {}, ecls: o.ecls || {}, labels: o.labels || {}, ptrs } };
+  }
+  const chips = (arr, cls = '') => arr.length ? arr.map(x => `<span class="ch ${cls}">${x}</span>`).join('') : '<span class="ch e">空</span>';
+  const AUX = (label, html) => `<span class="lbl">${label}</span>${html}`;
+  const P = (c, t) => `<span class="v ${c}">${t}</span>`;
+  const V = (t, id) => id == null ? 'null' : t.nodes[id].val;
+  const stkCls = path => Object.fromEntries(path.map(id => [id, 'stk']));
+  const treeStr = a => a.map(x => x == null ? 'null' : x).join(', ');
+  function parseList(s) {
+    s = s.replace(/[\[\]]/g, '').trim();
+    if (!s) return [];
+    return s.split(/[,，\s]+/).filter(Boolean).map(x => /^null$/i.test(x) ? null : Number(x));
+  }
+  function parseTree(id, maxN = 10, uniq = false) {
+    const a = parseList($(id).value);
+    const vals = a.filter(x => x !== null);
+    const ok = a.every(x => x === null || (Number.isInteger(x) && Math.abs(x) <= 999)) && vals.length <= maxN
+      && (!a.length || a[0] !== null) && (!uniq || new Set(vals).size === vals.length);
+    return ok ? a : null;
+  }
+
+  const VAR = {"pre_rec": {"code": ["<span class=\"k\">def</span> preorder(root, ans):", "    <span class=\"k\">if</span> <span class=\"k\">not</span> root:", "        <span class=\"k\">return</span>", "    ans.append(root.val)  <span class=\"c\"># 根</span>", "    preorder(root.left, ans)  <span class=\"c\"># 左</span>", "    preorder(root.right, ans)  <span class=\"c\"># 右</span>"], "keys": ["enter", "null", "null", "visit", "left", "right,ret"]}, "in_rec": {"code": ["<span class=\"k\">def</span> inorder(root, ans):", "    <span class=\"k\">if</span> <span class=\"k\">not</span> root:", "        <span class=\"k\">return</span>", "    inorder(root.left, ans)  <span class=\"c\"># 左</span>", "    ans.append(root.val)  <span class=\"c\"># 根</span>", "    inorder(root.right, ans)  <span class=\"c\"># 右</span>"], "keys": ["enter", "null", "null", "left", "visit", "right,ret"]}, "post_rec": {"code": ["<span class=\"k\">def</span> postorder(root, ans):", "    <span class=\"k\">if</span> <span class=\"k\">not</span> root:", "        <span class=\"k\">return</span>", "    postorder(root.left, ans)  <span class=\"c\"># 左</span>", "    postorder(root.right, ans)  <span class=\"c\"># 右</span>", "    ans.append(root.val)  <span class=\"c\"># 根</span>"], "keys": ["enter", "null", "null", "left", "right", "visit,ret"]}, "level_rec": {"code": ["<span class=\"k\">def</span> dfs(root, d, ans):", "    <span class=\"k\">if</span> <span class=\"k\">not</span> root:", "        <span class=\"k\">return</span>", "    <span class=\"k\">if</span> d == <span class=\"t\">len</span>(ans):  <span class=\"c\"># 第一次到这一层</span>", "        ans.append([])", "    ans[d].append(root.val)", "    dfs(root.left, d + 1, ans)", "    dfs(root.right, d + 1, ans)"], "keys": ["enter", "null", "null", "newlvl", "newlvl", "visit", "left", "right,ret"]}, "pre_it": {"code": ["<span class=\"k\">def</span> preorder(root):", "    ans, st = [], [root] <span class=\"k\">if</span> root <span class=\"k\">else</span> []", "    <span class=\"k\">while</span> st:", "        x = st.pop()", "        ans.append(x.val)", "        <span class=\"k\">if</span> x.right:  <span class=\"c\"># 先压右</span>", "            st.append(x.right)", "        <span class=\"k\">if</span> x.left:  <span class=\"c\"># 后压左，先出栈</span>", "            st.append(x.left)", "    <span class=\"k\">return</span> ans"], "keys": ["", "init", "", "pop", "visit", "pushR", "pushR", "pushL", "pushL", "done"]}, "in_it": {"code": ["<span class=\"k\">def</span> inorder(root):", "    ans, st, cur = [], [], root", "    <span class=\"k\">while</span> cur <span class=\"k\">or</span> st:", "        <span class=\"k\">while</span> cur:  <span class=\"c\"># 一路往左压栈</span>", "            st.append(cur)", "            cur = cur.left", "        cur = st.pop()", "        ans.append(cur.val)", "        cur = cur.right  <span class=\"c\"># 再去右子树</span>", "    <span class=\"k\">return</span> ans"], "keys": ["", "init", "", "pushL", "pushL", "pushL", "pop", "visit", "right", "done"]}, "post_it": {"code": ["<span class=\"k\">def</span> postorder(root):", "    ans, st, cur, prev = [], [], root, <span class=\"k\">None</span>", "    <span class=\"k\">while</span> cur <span class=\"k\">or</span> st:", "        <span class=\"k\">while</span> cur:  <span class=\"c\"># 一路往左压栈</span>", "            st.append(cur)", "            cur = cur.left", "        cur = st[-1]  <span class=\"c\"># 先看，不弹</span>", "        <span class=\"k\">if</span> cur.right <span class=\"k\">and</span> cur.right <span class=\"k\">is</span> <span class=\"k\">not</span> prev:", "            cur = cur.right  <span class=\"c\"># 右子树还没走</span>", "        <span class=\"k\">else</span>:", "            st.pop()", "            ans.append(cur.val)  <span class=\"c\"># 左右都走完了</span>", "            prev, cur = cur, <span class=\"k\">None</span>", "    <span class=\"k\">return</span> ans"], "keys": ["", "init", "", "pushL", "pushL", "pushL", "top", "right", "right", "", "visit", "visit", "visit", "done"]}, "level_it": {"code": ["<span class=\"k\">def</span> levelorder(root):", "    ans, q = [], <span class=\"t\">deque</span>([root] <span class=\"k\">if</span> root <span class=\"k\">else</span> [])", "    <span class=\"k\">while</span> q:", "        x = q.popleft()", "        ans.append(x.val)", "        <span class=\"k\">if</span> x.left:", "            q.append(x.left)", "        <span class=\"k\">if</span> x.right:", "            q.append(x.right)", "    <span class=\"k\">return</span> ans"], "keys": ["", "init", "", "pop", "visit", "pushL", "pushL", "pushR", "pushR", "done"]}}, IDEA = {"pre_rec": "<b>根 → 左 → 右</b>：一进入节点就访问它，再递归左子树、右子树。", "in_rec": "<b>左 → 根 → 右</b>：先把左子树全部走完，回到节点时再访问它，然后走右子树。", "post_rec": "<b>左 → 右 → 根</b>：左右子树都走完，最后离开节点之前才访问它。", "level_rec": "带着<b>深度 d</b> 做前序遍历：第一次到某一层就新开一个列表，节点放进第 d 层的列表。", "pre_it": "用<b>栈</b>代替递归：弹出就访问，然后<b>先压右孩子、再压左孩子</b>，这样左孩子先出栈。", "in_it": "一路往左<b>压栈</b>；左边走到底就<b>弹出访问</b>，再转到它的右子树。", "post_it": "和中序一样一路往左压栈。看栈顶时多问一句：<b>右子树走过了吗</b>？没走就先去右边；走过了（prev 是右孩子）才弹出访问。", "level_it": "用<b>队列</b>：从队头取一个访问，再把它的孩子放到队尾。先进先出，所以一层一层地出来。"};
+  const ORDERS = [['pre', '前序'], ['in', '中序'], ['post', '后序'], ['level', '层序']];
+  const EXAMPLES = [
+    ['满二叉树', [1, 2, 3, 4, 5, 6, 7]],
+    ['不完整', [5, 3, 8, 1, 4, null, 9]],
+    ['只有右孩子', [1, null, 2, 3]],
+    ['一条向左的链', [1, 2, null, 3, null, 4]],
+  ];
+  let order = 'pre', mode = 'rec', arr = EXAMPLES[0][1], steps = [], cur = 0, timer = null;
+
+  // ---------- 生成每一步 ----------
+  function run(t) {
+    const s = [], out = [], groups = [], done = {}, labels = {}, path = [], st = [], q = [];
+    const isLevel = order === 'level';
+    const auxOf = () => mode === 'rec'
+      ? AUX('调用栈（右边是栈顶）', chips(path.map(id => V(t, id)), 'a'))
+      : isLevel ? AUX('队列（左边是队头）', chips(q.map(id => V(t, id)), 'a'))
+      : AUX('栈（右边是栈顶）', chips(st.map(id => V(t, id)), 'a'));
+    const snap = o => {
+      const live = mode === 'rec' ? path : isLevel ? q : st;
+      s.push({ ...SN(t, { ptrs: o.ptrs || {}, labels: { ...labels },
+        ncls: { ...Object.fromEntries(live.map(id => [id, 'stk'])), ...done, ...(o.ncls || {}) } }),
+        aux: auxOf(), out: out.slice(), groups: groups.map(g => g.slice()), ...o });
+    };
+    const visit = (id, msg, extra = {}) => {
+      out.push(V(t, id)); done[id] = 'ok'; labels[id] = '#' + out.length;
+      snap({ k: 'visit', ncls: { [id]: 'hot' }, newOut: true, msg: msg || `访问 ${V(t, id)}，放进输出`, ...extra });
+    };
+    const N = id => t.nodes[id];
+
+    if (mode === 'rec' && !isLevel) {
+      const go = id => {
+        const v = V(t, id);
+        path.push(id);
+        snap({ k: 'enter', ncls: { [id]: 'cur' }, msg: `进入 ${v}（第 1 次经过）` });
+        for (const step of { pre: ['visit', 'left', 'right'], in: ['left', 'visit', 'right'], post: ['left', 'right', 'visit'] }[order]) {
+          if (step === 'visit') {
+            visit(id, { pre: `第 1 次经过 ${v}：前序在这时访问`, in: `左子树走完，回到 ${v}（第 2 次经过）：中序在这时访问`,
+              post: `左右子树都走完，回到 ${v}（第 3 次经过）：后序在这时访问` }[order]);
+            continue;
+          }
+          const c = step === 'left' ? N(id).l : N(id).r, side = step === 'left' ? '左' : '右';
+          if (c == null) { snap({ k: 'null', ncls: { [id]: 'cur' }, msg: `${v} 的${side}孩子为空：这次调用碰到 null 直接返回` }); continue; }
+          snap({ k: step, ncls: { [id]: 'cur' }, msg: `${v} 递归处理${side}子树 ${V(t, c)}` });
+          go(c);
+          if (step === 'left' && order !== 'in') snap({ k: 'left', ncls: { [id]: 'cur' }, msg: `左子树走完，回到 ${v}（第 2 次经过）` });
+        }
+        path.pop();
+        snap({ k: 'ret', msg: `${v} 这次调用结束${path.length ? `，返回到 ${V(t, path[path.length - 1])}` : ''}` });
+      };
+      snap({ k: 'enter', msg: '从根开始递归' });
+      if (t.root != null) go(t.root);
+    } else if (mode === 'rec') {                 // 层序的递归写法：带深度的前序
+      const go = (id, d) => {
+        const v = V(t, id);
+        path.push(id);
+        snap({ k: 'enter', ncls: { [id]: 'cur' }, msg: `进入 ${v}，深度 d = ${d}` });
+        if (d === groups.length) { groups.push([]); snap({ k: 'newlvl', ncls: { [id]: 'cur' }, msg: `第一次到第 ${d} 层，新开一个列表` }); }
+        groups[d].push(N(id).val); done[id] = 'ok'; labels[id] = 'd=' + d;
+        snap({ k: 'visit', ncls: { [id]: 'hot' }, msg: `${v} 放进第 ${d} 层` });
+        for (const [k, c, side] of [['left', N(id).l, '左'], ['right', N(id).r, '右']]) {
+          if (c == null) { snap({ k: 'null', ncls: { [id]: 'cur' }, msg: `${v} 的${side}孩子为空，直接返回` }); continue; }
+          snap({ k, ncls: { [id]: 'cur' }, msg: `递归${side}孩子 ${V(t, c)}，深度 + 1` });
+          go(c, d + 1);
+        }
+        path.pop();
+        snap({ k: 'ret', msg: `${v} 这次调用结束` });
+      };
+      snap({ k: 'enter', msg: '从根开始，深度 0' });
+      if (t.root != null) go(t.root, 0);
+    } else if (order === 'pre') {
+      if (t.root != null) st.push(t.root);
+      snap({ k: 'init', msg: '根先压栈' });
+      while (st.length) {
+        const x = st.pop();
+        snap({ k: 'pop', ncls: { [x]: 'cur' }, msg: `弹出栈顶 ${V(t, x)}` });
+        visit(x);
+        if (N(x).r != null) { st.push(N(x).r); snap({ k: 'pushR', ncls: { [x]: 'ok' }, msg: `先压右孩子 ${V(t, N(x).r)}` }); }
+        if (N(x).l != null) { st.push(N(x).l); snap({ k: 'pushL', ncls: { [x]: 'ok' }, msg: `再压左孩子 ${V(t, N(x).l)}：它在栈顶，下一个先出来` }); }
+      }
+    } else if (order === 'in' || order === 'post') {
+      let c = t.root, prev = null;
+      const P2 = () => order === 'post' ? { cur: c, prev } : { cur: c };
+      snap({ k: 'init', ptrs: P2(), msg: order === 'post' ? 'cur 从根出发，prev 记录上一个访问的节点' : 'cur 从根出发' });
+      while (c != null || st.length) {
+        while (c != null) {
+          st.push(c);
+          const x = c;
+          c = N(c).l;
+          snap({ k: 'pushL', ptrs: P2(), ncls: { [x]: 'cur' }, msg: `${V(t, x)} 压栈，往左走${c == null ? '：左边空了' : ''}` });
+        }
+        if (order === 'in') {
+          c = st.pop();
+          snap({ k: 'pop', ptrs: P2(), ncls: { [c]: 'cur' }, msg: `左边到底了，弹出栈顶 ${V(t, c)}` });
+          visit(c, null, { ptrs: P2() });
+          c = N(c).r;
+          snap({ k: 'right', ptrs: P2(), msg: c == null ? '右子树为空，下一轮回到栈顶' : `去右子树 ${V(t, c)}` });
+        } else {
+          c = st[st.length - 1];
+          snap({ k: 'top', ptrs: P2(), ncls: { [c]: 'cur' }, msg: `看一眼栈顶 ${V(t, c)}，先不弹` });
+          const r = N(c).r;
+          if (r != null && r !== prev) {
+            c = r;
+            snap({ k: 'right', ptrs: P2(), msg: `它的右孩子 ${V(t, r)} 还没走过，先去右子树` });
+          } else {
+            st.pop();
+            visit(c, r == null ? `${V(t, c)} 没有右孩子：弹出并访问` : `右孩子 ${V(t, r)} 刚访问过（prev）：左右都完了，弹出并访问 ${V(t, c)}`, { ptrs: { cur: c, prev } });
+            prev = c; c = null;
+          }
+        }
+      }
+    } else {
+      if (t.root != null) q.push(t.root);
+      snap({ k: 'init', msg: '根先进队' });
+      while (q.length) {
+        const x = q.shift();
+        snap({ k: 'pop', ncls: { [x]: 'cur' }, msg: `从队头取出 ${V(t, x)}` });
+        visit(x);
+        if (N(x).l != null) { q.push(N(x).l); snap({ k: 'pushL', ncls: { [x]: 'ok' }, msg: `左孩子 ${V(t, N(x).l)} 放到队尾` }); }
+        if (N(x).r != null) { q.push(N(x).r); snap({ k: 'pushR', ncls: { [x]: 'ok' }, msg: `右孩子 ${V(t, N(x).r)} 放到队尾` }); }
+      }
+    }
+    const res = order === 'level' && mode === 'rec' ? groups.map(g => `[${g.join(', ')}]`).join(', ') : out.join(', ');
+    snap({ k: mode === 'rec' ? 'ret' : 'done', kind: 'ok', final: true, msg: `✓ ${{ pre: '前序', in: '中序', post: '后序', level: '层序' }[order]}：[${res}]` });
+    return s;
+  }
+
+  // ---------- 画 ----------
+  function draw() {
+    const st = steps[cur], v = VAR[`${order}_${mode}`];
+    TR.draw($('tr'), st.g);
+    $('aux').innerHTML = st.aux;
+    $('out').innerHTML = '<span class="lbl">输出</span>' + (order === 'level' && mode === 'rec'
+      ? (st.groups.length ? st.groups.map(g => `<span class="ch">[${g.join(', ')}]</span>`).join('') : '<span class="ch e">空</span>')
+      : (st.out.length ? st.out.map((x, i) => `<span class="ch ${st.newOut && i === st.out.length - 1 ? 'new' : ''}">${x}</span>`).join('') : '<span class="ch e">空</span>'));
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    document.querySelectorAll('#code .l').forEach((el, i) => el.classList.toggle('on', !!st.k && v.keys[i].split(',').includes(st.k)));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${cur / Math.max(1, steps.length - 1) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  function stop() { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; }
+  function play() {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, +$('speed').value);
+  }
+
+  function load() {
+    stop();
+    const key = `${order}_${mode}`;
+    steps = run(mkTree(arr));
+    cur = 0;
+    $('tIn').value = treeStr(arr);
+    $('field').classList.remove('bad');
+    $('idea').innerHTML = IDEA[key];
+    $('code').innerHTML = VAR[key].code.map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('#orders button').forEach(b => b.classList.toggle('on', b.dataset.k === order));
+    document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+    document.querySelectorAll('.tbl tr[data-k]').forEach(r => r.classList.toggle('on', r.dataset.k === order));
+    draw();
+  }
+
+  // ---------- 绕树一圈的示意图 ----------
+  function euler() {
+    const t = mkTree([1, 2, 3, 4, 5, 6, 7]), pos = {}, R = 20, OFF = 31, GX = 74, GY = 92, PX = 46, PY = 44;
+    let n = 0;
+    const walk = (id, d) => { if (id == null) return; walk(t.nodes[id].l, d + 1); pos[id] = [PX + n++ * GX, PY + d * GY]; walk(t.nodes[id].r, d + 1); };
+    walk(t.root, 0);
+    const pts = [], seq = { pre: [], in: [], post: [] };
+    const tour = id => {
+      if (id == null) return;
+      const [x, y] = pos[id], v = t.nodes[id].val;
+      pts.push([x - OFF, y, 'pre', v]); seq.pre.push(v);
+      tour(t.nodes[id].l);
+      pts.push([x, y + OFF, 'in', v]); seq.in.push(v);
+      tour(t.nodes[id].r);
+      pts.push([x + OFF, y, 'post', v]); seq.post.push(v);
+    };
+    tour(t.root);
+    const COL = { pre: '#2f6bff', in: '#16a34a', post: '#d97706' }, cnt = { pre: 0, in: 0, post: 0 };
+    let s = `<polyline class="route" points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}"/>`;
+    Object.keys(pos).forEach(id => [t.nodes[id].l, t.nodes[id].r].forEach(c => {
+      if (c != null) s += `<line class="ed" x1="${pos[id][0]}" y1="${pos[id][1]}" x2="${pos[c][0]}" y2="${pos[c][1]}"/>`;
+    }));
+    Object.keys(pos).forEach(id => { s += `<g class="nd"><circle cx="${pos[id][0]}" cy="${pos[id][1]}" r="${R}"/><text x="${pos[id][0]}" y="${pos[id][1]}">${t.nodes[id].val}</text></g>`; });
+    pts.forEach(([x, y, k]) => { cnt[k]++; s += `<g class="dot"><circle cx="${x}" cy="${y}" r="9" fill="${COL[k]}"/><text x="${x}" y="${y}">${cnt[k]}</text></g>`; });
+    const w = PX * 2 + (n - 1) * GX, h = PY + 2 * GY + OFF + 20;
+    $('eulerSvg').innerHTML = `<svg class="eu" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px" role="img" aria-label="沿着树绕一圈">${s}</svg>`;
+    const row = (k, name, sub) => `<div class="seq"><span class="tag" style="color:${COL[k]}">${name}<small>${sub}</small></span>`
+      + seq[k].map(v => `<span class="ch" style="background:${COL[k]}">${v}</span>`).join('') + '</div>';
+    $('seqs').innerHTML = row('pre', '前序 根左右', '左边的点（第 1 次经过）') + row('in', '中序 左根右', '下边的点（第 2 次经过）') + row('post', '后序 左右根', '右边的点（第 3 次经过）');
+  }
+
+  // ---------- 控件 ----------
+  ORDERS.forEach(([k, name]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.k = k; b.textContent = name;
+    b.onclick = () => { order = k; load(); };
+    $('orders').appendChild(b);
+  });
+  [['rec', '递归'], ['it', '迭代']].forEach(([m, name]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.m = m; b.textContent = name;
+    b.onclick = () => { mode = m; load(); };
+    $('mode').appendChild(b);
+  });
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach(([name, a], k) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = name; b.title = treeStr(a);
+    b.onclick = () => { setOn(k); arr = a; load(); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const a = parseTree('tIn', 12);
+    $('field').classList.toggle('bad', !a || !a.length);
+    if (!a || !a.length) return;
+    setOn(-1); arr = a; load();
+  });
+  document.querySelectorAll('.tbl tr[data-k]').forEach(r => r.onclick = () => { order = r.dataset.k; load(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  $('speed').oninput = () => { if (timer) { stop(); play(); } };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  euler();
+  load();
+})();
+</script>
+</body>
+</html>

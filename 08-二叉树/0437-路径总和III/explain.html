@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>437. 路径总和 III</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: 200px minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  /* 二叉树画布 */
+  svg.tr { display: block; overflow: visible; margin-top: 6px; }
+  svg.tr text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.tr .ed { stroke: #c4c9d3; stroke-width: 2.5; }
+  svg.tr .ed.hot { stroke: #d97706; stroke-width: 3.5; }
+  svg.tr .ed.ok { stroke: #16a34a; stroke-width: 3.5; }
+  svg.tr .nd circle { fill: var(--inset); stroke: #d0d4dc; stroke-width: 2; }
+  svg.tr .nd text { font-size: 17px; font-weight: 700; fill: var(--text); }
+  svg.tr .nd.cur circle { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 3; }
+  svg.tr .nd.cur text { fill: var(--blue); }
+  svg.tr .nd.hot circle { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 3; }
+  svg.tr .nd.hot text { fill: var(--amber); }
+  svg.tr .nd.stk circle { fill: #fff7ea; stroke: var(--amber); stroke-dasharray: 4 3; }
+  svg.tr .nd.ok circle { fill: var(--green-soft); stroke: var(--green); stroke-width: 2.5; }
+  svg.tr .nd.ok text { fill: var(--green); }
+  svg.tr .nd.vis { opacity: .45; }
+  svg.tr .lb { font-size: 12px; font-weight: 700; fill: #9333ea; }
+  svg.tr .pt text { font-size: 12px; font-weight: 700; fill: #fff; }
+  .empty-t { color: var(--muted); font-size: 18px; padding: 24px 4px; }
+  .aux { margin-top: 12px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; min-height: 34px; font-size: 17px; }
+  .aux .lbl { color: var(--muted); font-size: 15px; font-weight: 600; margin-right: 2px; }
+  .aux .ch { padding: 3px 10px; border-radius: 8px; background: var(--inset); font-weight: 700; }
+  .aux .ch.a { background: var(--amber-soft); color: var(--amber); }
+  .aux .ch.b { background: var(--blue-soft); color: var(--blue); }
+  .aux .ch.g { background: var(--green-soft); color: var(--green); }
+  .aux .ch.p { background: #f3e8ff; color: #9333ea; }
+  .aux .ch.e { background: none; color: var(--muted); font-weight: 400; }
+  .aux .sp { width: 18px; }
+
+  /* 递归演示的辅助面板 */
+  .panes { margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 1100px) { .panes { grid-template-columns: 1fr; } }
+  .pane { border-radius: 14px; background: var(--inset); padding: 12px 14px; min-height: 120px; }
+  .pane .t { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 8px; font-family: -apple-system, "PingFang SC", sans-serif; }
+  .frames { display: flex; flex-direction: column-reverse; gap: 5px; }
+  .fr { display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 9px; background: var(--card); font-size: 16px; border-left: 4px solid #c9ced8; }
+  .fr.top { border-left-color: var(--blue); background: var(--blue-soft); }
+  .fr .r { color: var(--muted); }
+  .fr .r b { color: var(--green); }
+  .cnt { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cnt span { padding: 4px 10px; border-radius: 9px; background: var(--card); font-size: 16px; font-weight: 600; border: 2px solid transparent; }
+  .cnt span.look { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cnt span.add { border-color: var(--blue); }
+  .cnt span.sub { border-color: #dc2626; color: #dc2626; text-decoration: line-through; }
+  .cnt .miss { color: var(--amber); font-size: 15px; padding: 4px 6px; }
+  .pathbar { margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 16px; }
+  .pathbar .lbl { color: var(--muted); font-size: 14px; font-weight: 600; font-family: -apple-system, "PingFang SC", sans-serif; }
+  .pathbar .pn { display: flex; flex-direction: column; align-items: center; padding: 4px 10px; border-radius: 9px; background: var(--card); font-weight: 700; }
+  .pathbar .pn small { font-size: 12px; color: #9333ea; font-weight: 600; }
+  .pathbar .pn.hit { background: var(--green-soft); color: var(--green); }
+  .pathbar .ar { color: var(--muted); }
+
+  /* 解释卡片 */
+  .card.why { margin-top: 24px; }
+  .why h2 { margin: 0 0 14px; font-size: 24px; }
+  .why .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 1100px) { .why .steps { grid-template-columns: 1fr; } }
+  .why .st { border-radius: 14px; background: var(--inset); padding: 14px 18px; font-size: 18px; line-height: 1.65; }
+  .why .st .n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; font-size: 15px; margin-right: 8px; }
+  .why .st b { color: var(--blue); }
+  .why .st code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: 16px; background: var(--card); padding: 1px 6px; border-radius: 6px; }
+  .why .demo { margin-top: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 18px; }
+  .why .demo .pn { display: flex; flex-direction: column; align-items: center; padding: 6px 14px; border-radius: 10px; background: var(--inset); font-weight: 700; font-family: "JetBrains Mono", Menlo, monospace; }
+  .why .demo .pn small { font-size: 13px; color: #9333ea; }
+  .why .demo .pn.in { background: var(--green-soft); color: var(--green); }
+  .why .demo .ar { color: var(--muted); }
+  .why .demo .eqn { margin-left: 12px; color: var(--muted); }
+  .why .demo .eqn b { color: var(--green); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>437. 路径总和 III</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">二叉树</span>
+    <a href="https://leetcode.cn/problems/path-sum-iii/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">和 560 题一样用<b>前缀和</b>：走到 node 时，看从根到这里的祖先里，有几个前缀和等于 <b>sum − target</b>。离开 node 时记得<b>回溯</b>。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="tIn">root</label><input id="tIn" autocomplete="off" style="flex:1">
+        <span class="sep"></span>
+        <label for="gIn">target</label><input id="gIn" autocomplete="off" style="width:66px">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">root（虚线橙圈是当前递归路径；节点下方 s 是根到它的前缀和；绿色是刚数到的路径）</div>
+        <div id="tr"></div>
+        <div class="pathbar mono" id="pathbar"></div>
+        <div class="panes mono">
+          <div class="pane"><div class="t">调用栈（最上面是正在执行的）</div><div class="frames" id="frames"></div></div>
+          <div class="pane"><div class="t">cnt：当前路径上每个前缀和出现几次</div><div class="cnt" id="cnt"></div></div>
+        </div>
+        <div class="pillrow mono" id="eq"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card why" aria-labelledby="why437">
+    <h2 id="why437">先弄懂两件事：前缀和之差、为什么要回溯</h2>
+    <div class="steps">
+      <div class="st"><span class="n">1</span>从根往下走，把一路上的值累加，叫<b>前缀和 s</b>。一条<b>从上往下</b>的路径「u 的下一个 → v」的和 = <code>s[v] − s[u]</code>。</div>
+      <div class="st"><span class="n">2</span>想要它等于 target，就是 <code>s[u] = s[v] − target</code>。所以走到 v 时，只要问：<b>v 的祖先里，有几个前缀和等于 s[v] − target</b>？哈希表 cnt 一查就知道。</div>
+      <div class="st"><span class="n">3</span>cnt 里必须<b>只放当前这条根到 v 的路径</b>上的前缀和。离开 v 时把 s[v] 删掉（回溯），否则左子树的前缀和会留给右子树，数出「拐弯」的路径。</div>
+    </div>
+    <div class="demo mono" id="whyDemo"></div>
+  </section>
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">每个节点</span><span class="op">→</span><span class="term">查一次表、改两次表</span></div>
+        <p class="why">每个节点只当一次「路径的下端」。它能配上的「上端」都在<b>根到它的这条路径</b>上，哈希表里正好就是这些前缀和，一次查询就数完了。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c ">0</span><span class="ar">→</span><span class="c ">10</span><span class="ar">→</span><span class="c g">15</span><span class="ar">→</span><span class="c g">18</span></div><span class="cap">走到 3：s = 18，找 18 − 8 = 10，数到 5 → 3 这一条</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(h)</span></div>
+      <div>
+        <div class="eq"><span class="term">哈希表和递归栈都只装当前路径</span></div>
+        <p class="why">和超过 int 范围时要用 <b>long long</b>：测试里有一个节点值都是 10⁹ 的用例，加几次就超出 int 了。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(n²)</span></div>
+      <div>
+        <p class="why">暴力：以<b>每个节点</b>为起点往下 DFS 求和，每个起点 O(n)，最坏 O(n²)。前缀和把「从哪里开始」这一层循环换成了一次哈希查询。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">int</span> dfs(TreeNode* node, long long sum, <span class=\"t\">int</span> target) {",
+      "    <span class=\"k\">if</span> (!node) <span class=\"k\">return</span> 0;",
+      "    sum += node-&gt;val;",
+      "    <span class=\"t\">int</span> ans = cnt[sum - target];  <span class=\"c\">// 以 node 结尾的条数</span>",
+      "    cnt[sum]++;",
+      "    ans += dfs(node-&gt;left, sum, target);",
+      "    ans += dfs(node-&gt;right, sum, target);",
+      "    cnt[sum]--;  <span class=\"c\">// 回溯</span>",
+      "    <span class=\"k\">return</span> ans;",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> dfs(node, s):",
+      "    <span class=\"k\">if</span> <span class=\"k\">not</span> node:",
+      "        <span class=\"k\">return</span> 0",
+      "    s += node.val",
+      "    ans = cnt[s - targetSum]  <span class=\"c\"># 以 node 结尾的条数</span>",
+      "    cnt[s] += 1",
+      "    ans += dfs(node.left, s)",
+      "    ans += dfs(node.right, s)",
+      "    cnt[s] -= 1  <span class=\"c\"># 回溯</span>",
+      "    <span class=\"k\">return</span> ans"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 3, 4, 5, 6, 7, 8, 9, 9];
+
+  // ---------- 二叉树画布 ----------
+  // g = { nodes: {id: {val, l, r}}, root, ncls, ecls（按孩子 id）, labels, ptrs: [{name, id, c}] }
+  const TR = (() => {
+    const R = 21, GX = 56, GY = 74, PX = 34, PY = 74;
+    const COL = { b: '#2f6bff', a: '#d97706', g: '#16a34a', p: '#9333ea', m: '#86868b' };
+    function draw(el, g) {
+      const pos = {};
+      let n = 0, maxD = 0;
+      const walk = (id, d) => {
+        if (id == null || pos[id]) return;
+        const x = g.nodes[id];
+        walk(x.l, d + 1);
+        pos[id] = { x: n++, y: d };
+        maxD = Math.max(maxD, d);
+        walk(x.r, d + 1);
+      };
+      walk(g.root, 0);
+      if (!n) { el.innerHTML = '<div class="empty-t">空树</div>'; return; }
+      const X = id => PX + pos[id].x * GX, Y = id => PY + pos[id].y * GY;
+      let body = '';
+      Object.keys(pos).forEach(id => [g.nodes[id].l, g.nodes[id].r].forEach(c => {
+        if (c == null || !pos[c]) return;
+        const dx = X(c) - X(id), dy = Y(c) - Y(id), L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+        body += `<line class="ed ${g.ecls[id + '>' + c] || g.ecls[c] || ''}" x1="${X(id) + ux * R}" y1="${Y(id) + uy * R}" x2="${X(c) - ux * R}" y2="${Y(c) - uy * R}"/>`;
+      }));
+      Object.keys(pos).forEach(id => {
+        body += `<g class="nd ${g.ncls[id] || ''}"><circle cx="${X(id)}" cy="${Y(id)}" r="${R}"/><text x="${X(id)}" y="${Y(id)}">${g.nodes[id].val}</text></g>`;
+        if (g.labels[id] != null) body += `<text class="lb" x="${X(id)}" y="${Y(id) + R + 12}">${g.labels[id]}</text>`;
+      });
+      const stack = {};
+      g.ptrs.forEach(p => {
+        if (p.id == null || !pos[p.id]) return;
+        const k = stack[p.id] = (stack[p.id] || 0) + 1;
+        const tw = 14 + p.name.length * 8, y = Y(p.id) - R - 4 - k * 23;
+        body += `<g class="pt"><rect x="${X(p.id) - tw / 2}" y="${y}" width="${tw}" height="20" rx="6" fill="${COL[p.c] || COL.b}"/>`
+          + `<text x="${X(p.id)}" y="${y + 10}">${p.name}</text></g>`;
+      });
+      const w = PX * 2 + (n - 1) * GX, h = PY + maxD * GY + R + 24;
+      el.innerHTML = `<svg class="tr" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px" role="img" aria-label="二叉树示意图">${body}</svg>`;
+    }
+    return { draw };
+  })();
+
+  function mkTree(arr) {                       // 层序数组 -> { nodes, root }
+    const nodes = {};
+    let k = 0;
+    const mk = v => { const id = 't' + k++; nodes[id] = { val: v, l: null, r: null }; return id; };
+    if (!arr.length || arr[0] == null) return { nodes, root: null };
+    const root = mk(arr[0]), q = [root];
+    for (let i = 1; i < arr.length; i += 2) {
+      const cur = q.shift();
+      if (cur === undefined) break;
+      if (arr[i] != null) q.push(nodes[cur].l = mk(arr[i]));
+      if (i + 1 < arr.length && arr[i + 1] != null) q.push(nodes[cur].r = mk(arr[i + 1]));
+    }
+    return { nodes, root };
+  }
+  function levelArr(t) {                       // 树 -> 层序数组
+    const out = [], q = [t.root];
+    while (q.length) {
+      const id = q.shift();
+      if (id == null) { out.push(null); continue; }
+      out.push(t.nodes[id].val);
+      q.push(t.nodes[id].l, t.nodes[id].r);
+    }
+    while (out.length && out[out.length - 1] == null) out.pop();
+    return out;
+  }
+  const cloneT = t => ({ root: t.root, nodes: Object.fromEntries(Object.entries(t.nodes).map(([k, v]) => [k, { ...v }])) });
+  const PC = ['b', 'a', 'g', 'p', 'm'];
+  function SN(t, o) {                          // 一步的快照
+    const pc = o.pc || PC;
+    const ptrs = Object.entries(o.ptrs || {}).map(([name, id], i) => ({ name, id, c: pc[i % pc.length] }));
+    return { ...o, g: { ...cloneT(t), ncls: o.ncls || {}, ecls: o.ecls || {}, labels: o.labels || {}, ptrs } };
+  }
+  const chips = (arr, cls = '') => arr.length ? arr.map(x => `<span class="ch ${cls}">${x}</span>`).join('') : '<span class="ch e">空</span>';
+  const AUX = (label, html) => `<span class="lbl">${label}</span>${html}`;
+  const P = (c, t) => `<span class="v ${c}">${t}</span>`;
+  const V = (t, id) => id == null ? 'null' : t.nodes[id].val;
+  const stkCls = path => Object.fromEntries(path.map(id => [id, 'stk']));
+  const treeStr = a => a.map(x => x == null ? 'null' : x).join(', ');
+  function parseList(s) {
+    s = s.replace(/[\[\]]/g, '').trim();
+    if (!s) return [];
+    return s.split(/[,，\s]+/).filter(Boolean).map(x => /^null$/i.test(x) ? null : Number(x));
+  }
+  function parseTree(id, maxN = 10, uniq = false) {
+    const a = parseList($(id).value);
+    const vals = a.filter(x => x !== null);
+    const ok = a.every(x => x === null || (Number.isInteger(x) && Math.abs(x) <= 999)) && vals.length <= maxN
+      && (!a.length || a[0] !== null) && (!uniq || new Set(vals).size === vals.length);
+    return ok ? a : null;
+  }
+
+  const EXAMPLES = [[[10, 5, -3, 3, 2, null, 11, 3, -2, null, 1], 8], [[1, 2, 3], 3], [[1, -1, 1, null, 1], 1], [[5, 4, 8, 11, null, 13, 4], 9]];
+
+  function build([arr, target]) {
+    const t = mkTree(arr), s = [], labels = {}, cnt = new Map([[0, 1]]), path = [], frames = [], gone = {};
+    let total = 0;
+    const snap = o => s.push(SN(t, { ...o, labels: { ...labels },
+      ncls: { ...gone, ...stkCls(path.map(x => x.id)), ...(o.ncls || {}) },   // gone：已经返回的节点变淡
+      frames: frames.map(f => ({ ...f })), cnt: [...cnt].filter(([, c]) => c > 0),
+      path: path.map(x => ({ v: V(t, x.id), s: x.s })),
+      info: `target = ${P('b', target)} 一共找到 ${P('g', total + ' 条')}` }));
+    snap({ line: 0, msg: 'cnt 先放一个「空前缀」0 → 1 次：代表根上面那个虚拟位置，这样从根开始的路径也能数到' });
+    const dfs = (id, sum, side) => {
+      const fr = { v: id == null ? '∅' : V(t, id), side, ans: null };
+      frames.push(fr);
+      if (id == null) {
+        snap({ line: 1, msg: `${side}孩子是空的：dfs(null) 直接返回 0`, ret: 0 });
+        frames.pop();
+        return 0;
+      }
+      const v = t.nodes[id].val, before = sum;
+      snap({ line: 0, ncls: { [id]: 'cur' }, msg: `进入 dfs(${v})，带着父节点传下来的前缀和 sum = ${before}` });
+      sum += v;
+      labels[id] = 's=' + sum;
+      fr.sum = sum;
+      snap({ line: 2, ncls: { [id]: 'cur' }, msg: `sum += ${v}：从根到 ${v} 的前缀和是 ${before} + ${v} = ${sum}` });
+      const need = sum - target, c = cnt.get(need) || 0, ncls = { [id]: c ? 'ok' : 'cur' }, hits = [];
+      [{ id: null, s: 0 }, ...path].forEach((x, j) => { if (x.s === need) { hits.push(j); path.slice(j).forEach(y => ncls[y.id] = 'ok'); ncls[id] = 'ok'; } });
+      fr.ans = c;
+      total += c;
+      snap({ line: 3, ncls, kind: c ? 'ok' : 'miss', look: need, hitFrom: hits,
+        msg: c ? `查 cnt[${sum} − ${target}] = cnt[${need}] = ${c}：以 ${v} 结尾、和为 ${target} 的路径有 ${c} 条（绿色）`
+               : `查 cnt[${sum} − ${target}] = cnt[${need}]：没有，以 ${v} 结尾的路径凑不出 ${target}` });
+      cnt.set(sum, (cnt.get(sum) || 0) + 1);
+      path.push({ id, s: sum });
+      snap({ line: 4, ncls: { [id]: 'cur' }, add: sum, msg: `cnt[${sum}]++：把 ${v} 的前缀和记下来，留给它下面的节点查` });
+      snap({ line: 5, ncls: { [id]: 'cur' }, msg: `递归左孩子：dfs(${V(t, t.nodes[id].l)}, ${sum})` });
+      const l = dfs(t.nodes[id].l, sum, '左');
+      fr.ans += l;
+      snap({ line: 5, ncls: { [id]: 'cur' }, msg: `左子树返回 ${l}，现在 ans = ${fr.ans}。再递归右孩子：dfs(${V(t, t.nodes[id].r)}, ${sum})` });
+      const r = dfs(t.nodes[id].r, sum, '右');
+      fr.ans += r;
+      path.pop();
+      cnt.set(sum, cnt.get(sum) - 1);
+      snap({ line: 7, ncls: { [id]: 'vis' }, sub: sum,
+        msg: `右子树返回 ${r}。回溯：cnt[${sum}]--，${v} 马上要离开当前路径，它的前缀和不能留给别的分支` });
+      snap({ line: 8, ncls: { [id]: 'vis' }, ret: fr.ans, msg: `dfs(${v}) 返回 ${fr.ans}（自己 ${c} + 左边 ${l} + 右边 ${r}）` });
+      gone[id] = 'vis';
+      frames.pop();
+      return fr.ans;
+    };
+    const ans = dfs(t.root, 0, '根');
+    snap({ line: 8, kind: 'ok', msg: `✓ 最外层 dfs(根) 返回 ${ans}：一共 ${ans} 条路径` });
+    return s;
+  }
+
+  function render(st) {
+    TR.draw($('tr'), st.g);
+    $('pathbar').innerHTML = '<span class="lbl">当前路径</span><span class="pn"><small>s=0</small>根上面</span>'
+      + st.path.map((x, j) => `<span class="ar">→</span><span class="pn ${st.hitFrom && st.hitFrom.some(h => j >= h) ? 'hit' : ''}"><small>s=${x.s}</small>${x.v}</span>`).join('');
+    $('frames').innerHTML = st.frames.map((f, k) => `<div class="fr ${k === st.frames.length - 1 ? 'top' : ''}"><span>dfs(${f.v})${f.sum !== undefined ? ` sum=${f.sum}` : ''}</span>`
+      + `<span class="r">${f.ans == null ? '' : 'ans = <b>' + f.ans + '</b>'}</span></div>`).join('') || '<div class="fr">（空）</div>';
+    const items = st.cnt.map(([k, c]) => `<span class="${k === st.look ? 'look' : k === st.add ? 'add' : ''}">${k} → ${c}</span>`);
+    if (st.look !== undefined && !st.cnt.some(([k]) => k === st.look)) items.push(`<span class="miss">没有 ${st.look}</span>`);
+    if (st.sub !== undefined) items.push(`<span class="sub">${st.sub} 减 1</span>`);
+    $('cnt').innerHTML = items.join('');
+    $('eq').innerHTML = st.info || '';
+  }
+
+  const fill = ([a, g]) => { $('tIn').value = treeStr(a); $('gIn').value = g; };
+  const parse = () => {
+    const a = parseTree('tIn'), g = Number($('gIn').value);
+    return a && Number.isInteger(g) && Math.abs(g) <= 9999 ? [a, g] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+  // 解释卡片里的小例子：一条路径 10 → 5 → 3，target = 8
+  (() => {
+    const vals = [10, 5, 3], pre = [10, 15, 18];
+    $('whyDemo').innerHTML = '<span class="pn"><small>s=0</small>根上面</span><span class="ar">→</span>'
+      + vals.map((v, i) => `<span class="pn ${i >= 1 ? 'in' : ''}"><small>s=${pre[i]}</small>${v}</span>`).join('<span class="ar">→</span>')
+      + '<span class="eqn">走到 3 时 s = 18，要找 18 − 8 = <b>10</b>：节点 10 的前缀和就是 10，所以 <b>5 → 3</b> 的和是 18 − 10 = <b>8</b></span>';
+  })();
+
+})();
+</script>
+</body>
+</html>
