@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20. 有效的括号</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  /* 竖着的栈：最下面是栈底，最上面是栈顶 */
+  .stkwrap { display: flex; gap: 72px; align-items: flex-end; flex-wrap: wrap; margin-top: 18px; }
+  .stkcol .sl { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .vs { display: flex; flex-direction: column-reverse; gap: 6px; min-height: 64px; min-width: 120px; padding: 8px;
+        background: var(--inset); border: 2.5px solid #c9ced8; border-top: none; border-radius: 0 0 14px 14px; }
+  .vs .it { position: relative; padding: 7px 14px; border-radius: 10px; background: var(--card); text-align: center;
+            font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; transition: all .25s; }
+  .vs .it small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+  .vs .it.new { border-color: var(--blue); animation: pop .35s cubic-bezier(.2,.8,.2,1); }
+  .vs .it.hot { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .vs .it.ok { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .vs .it.ph { background: none; border: 2px dashed #d0d4dc; color: var(--muted); font-weight: 400; }
+  .vs .it.gone { opacity: .55; border: 2px dashed #dc2626; color: #dc2626; text-decoration: line-through; }
+  .vs .it.gone small { color: #dc2626; }
+  .vs .it.top::after { content: '← 栈顶'; position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+                       font: 600 13px -apple-system, "PingFang SC", sans-serif; color: var(--muted); white-space: nowrap; }
+  .vs .empty { color: var(--muted); font-size: 16px; text-align: center; padding: 10px 6px; }
+
+  /* 堆：数组下标 i 的孩子是 2i+1、2i+2 */
+  .heaps { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px; }
+  .heapcol { flex: 1; min-width: 260px; }
+  .heapcol .sl { font-size: 14px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .heapcol .sl b { color: var(--text); }
+  svg.hp { display: block; overflow: visible; }
+  svg.hp text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.hp line { stroke: #c4c9d3; stroke-width: 2.5; }
+  svg.hp circle { fill: var(--inset); stroke: #d0d4dc; stroke-width: 2; }
+  svg.hp .v { font-size: 16px; font-weight: 700; fill: var(--text); }
+  svg.hp .lab { font-size: 12px; font-weight: 700; fill: #9333ea; }
+  svg.hp .ix { font-size: 11px; fill: var(--muted); }
+  svg.hp .top circle { stroke: var(--blue); stroke-width: 3; fill: var(--blue-soft); }
+  svg.hp .top .v { fill: var(--blue); }
+  svg.hp .new circle { stroke: var(--blue); stroke-width: 3; }
+  svg.hp .hot circle { stroke: var(--amber); stroke-width: 3; fill: var(--amber-soft); }
+  svg.hp .hot .v { fill: var(--amber); }
+  svg.hp .ok circle { stroke: var(--green); stroke-width: 3; fill: var(--green-soft); }
+  svg.hp .ok .v { fill: var(--green); }
+  .hp-empty { color: var(--muted); font-size: 16px; padding: 18px 4px; }
+  .gonechip { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 8px; border: 2px dashed #dc2626; color: #dc2626;
+              text-decoration: line-through; font: 700 15px "JetBrains Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>20. 有效的括号</h1>
+    <span class="pill easy">简单</span>
+    <span class="pill cat">栈</span>
+    <a href="https://leetcode.cn/problems/valid-parentheses/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">遇到左括号就<b>压栈</b>；遇到右括号，必须和<b>栈顶</b>（最近一个还没配上的左括号）是一对，是就弹出。最后栈要是<b>空</b>的。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="sIn">s</label><input id="sIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">s（暗的是还没读到的；配上的一对括号都变绿）</div>
+        <div class="array ptrs" id="array"></div>
+      </div>
+      <div class="stkwrap"><div class="stkcol"><div class="sl">栈 st：还没配上的左括号</div><div class="vs mono" id="stk"></div></div></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">每个字符</span><span class="op">→</span><span class="term">最多进栈 <b>1</b> 次、出栈 <b>1</b> 次</span></div>
+        <p class="why">右括号只能和<b>最近一个</b>还没配上的左括号配对，「最近的」就是<b>后进先出</b>，所以用栈。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">{</span><span class="c b">[</span><span class="c g">(</span><span class="c g">)</span><span class="c ">]</span><span class="c ">}</span></div><span class="cap">读到 ) 时，栈顶是 (，配上</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">最坏全是左括号，都在栈里</span></div>
+        <p class="why">可以先判断<b>长度是奇数</b>就直接返回 false，省一点时间。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">易错</span><span class="val">三种不合法</span></div>
+      <div>
+        <p class="why">① 右括号来时栈是空的（例如 <b>"]"</b>）；② 栈顶不是对应的左括号（例如 <b>"([)]"</b>）；③ 读完了栈里还有剩（例如 <b>"(()"</b>）。三种都要判断，漏掉最后一种最常见。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">bool</span> isValid(<span class=\"t\">string</span> s) {",
+      "    <span class=\"t\">unordered_map</span>&lt;<span class=\"t\">char</span>, <span class=\"t\">char</span>&gt; pairs = {",
+      "        {')', '('}, {']', '['}, {'}', '{'}};",
+      "    stack&lt;<span class=\"t\">char</span>&gt; st;  <span class=\"c\">// 还没配上的左括号</span>",
+      "    <span class=\"k\">for</span> (<span class=\"t\">char</span> c : s) {",
+      "        <span class=\"k\">if</span> (pairs.count(c)) {  <span class=\"c\">// 右括号</span>",
+      "            <span class=\"k\">if</span> (st.empty() || st.top() != pairs[c])",
+      "                <span class=\"k\">return</span> false;",
+      "            st.pop();  <span class=\"c\">// 配上了</span>",
+      "        } <span class=\"k\">else</span> {",
+      "            st.push(c);  <span class=\"c\">// 左括号先存起来</span>",
+      "        }",
+      "    }",
+      "    <span class=\"k\">return</span> st.empty();",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> isValid(<span class=\"t\">self</span>, s):",
+      "    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}",
+      "    st = []  <span class=\"c\"># 还没配上的左括号</span>",
+      "    <span class=\"k\">for</span> c <span class=\"k\">in</span> s:",
+      "        <span class=\"k\">if</span> c <span class=\"k\">in</span> pairs:  <span class=\"c\"># 右括号</span>",
+      "            <span class=\"k\">if</span> <span class=\"k\">not</span> st <span class=\"k\">or</span> st[-1] != pairs[c]:",
+      "                <span class=\"k\">return</span> False",
+      "            st.pop()  <span class=\"c\"># 配上了</span>",
+      "        <span class=\"k\">else</span>:",
+      "            st.append(c)  <span class=\"c\"># 左括号先存起来</span>",
+      "    <span class=\"k\">return</span> <span class=\"k\">not</span> st"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 10, 10];
+
+  const P = (c, t) => `<span class="v ${c}">${t}</span>`;
+  // items：从栈底到栈顶 [{v, sub, cls}]；gone：刚弹出的那个，画在栈顶上面并划掉
+  function drawStack(el, items, gone) {
+    const n = items.length;
+    const one = (x, cls) => `<div class="it ${cls}">${x.sub != null ? `<small>${x.sub}</small>` : ''}${x.v}</div>`;
+    let h = items.map((x, i) => one(x, `${x.cls || ''} ${i === n - 1 && !x.ph ? 'top' : ''}`)).join('');
+    if (gone) h += one(gone, 'gone');
+    $(el).innerHTML = h || '<div class="empty">空</div>';
+  }
+  // 按数组画成完全二叉树：items [{v, lab, cls}]
+  function drawHeap(el, items, w = 360) {
+    const N = items.length;
+    if (!N) { $(el).innerHTML = '<div class="hp-empty">空</div>'; return; }
+    const depth = Math.floor(Math.log2(N)) + 1, R = 20, GY = 60, W = Math.max(w, 2 ** (depth - 1) * 48);
+    const xy = i => { const d = Math.floor(Math.log2(i + 1)), k = i + 1 - 2 ** d; return [(k + .5) / 2 ** d * W, 26 + d * GY]; };
+    let s = '';
+    for (let i = 1; i < N; i++) { const [x1, y1] = xy((i - 1) >> 1), [x2, y2] = xy(i); s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }
+    items.forEach((x, i) => {
+      const [cx, cy] = xy(i);
+      s += `<g class="${x.cls || ''}"><circle cx="${cx}" cy="${cy}" r="${R}"/><text class="v" x="${cx}" y="${cy}">${x.v}</text>`
+        + (x.lab != null ? `<text class="lab" x="${cx}" y="${cy + R + 11}">${x.lab}</text>` : '') + '</g>';
+    });
+    $(el).innerHTML = `<svg class="hp" viewBox="0 0 ${W} ${26 + (depth - 1) * GY + R + 22}" style="width:100%;max-width:${W}px" role="img" aria-label="堆的树形结构">${s}</svg>`;
+  }
+  // 二叉堆：less(a, b) 为真表示 a 应该在 b 上面
+  class Heap {
+    constructor(less) { this.a = []; this.less = less; }
+    get size() { return this.a.length; }
+    top() { return this.a[0]; }
+    push(x) {
+      const a = this.a; a.push(x);
+      for (let i = a.length - 1; i > 0;) {
+        const p = (i - 1) >> 1;
+        if (!this.less(a[i], a[p])) break;
+        [a[i], a[p]] = [a[p], a[i]]; i = p;
+      }
+    }
+    pop() {
+      const a = this.a, top = a[0], last = a.pop();
+      if (a.length) {
+        a[0] = last;
+        for (let i = 0; ;) {
+          let c = 2 * i + 1;
+          if (c >= a.length) break;
+          if (c + 1 < a.length && this.less(a[c + 1], a[c])) c++;
+          if (!this.less(a[c], a[i])) break;
+          [a[i], a[c]] = [a[c], a[i]]; i = c;
+        }
+      }
+      return top;
+    }
+  }
+  const parseNums = (id, lo = 1, hi = 10, lim = 99) => {
+    const s = $(id).value.replace(/[\[\]]/g, '').trim();
+    if (!s) return lo === 0 ? [] : null;
+    const v = s.split(/[,，\s]+/).filter(Boolean).map(Number);
+    return v.length >= lo && v.length <= hi && v.every(x => Number.isInteger(x) && Math.abs(x) <= lim) ? v : null;
+  };
+
+  const EXAMPLES = ['{[()]}', '()[]{}', '([)]', '(()'];
+  const PAIR = { ')': '(', ']': '[', '}': '{' };
+
+  function build(str) {
+    const s = [], st = [], mark = {};
+    const snap = o => s.push({ str, st: st.map(x => ({ ...x })), mark: { ...mark }, ...o });
+    snap({ i: -1, line: 3, msg: '从左往右读，栈里放还没配上的左括号' });
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i], top = st[st.length - 1];
+      if (PAIR[c]) {
+        if (!top || top.c !== PAIR[c]) {
+          mark[i] = 'hot';
+          if (top) mark[top.i] = 'hot';
+          snap({ i, line: 7, kind: 'miss', topCls: 'hot',
+            msg: top ? `✓ ${c} 要和 ${PAIR[c]} 配对，但栈顶是 ${top.c}：顺序交错了，不合法` : `✓ 读到 ${c}，但栈是空的，前面没有左括号可以配：不合法` });
+          return s;
+        }
+        snap({ i, line: 6, topCls: 'ok', msg: `读到 ${c}：栈顶正好是 ${top.c}，是一对` });
+        st.pop();
+        mark[i] = mark[top.i] = 'ok';
+        snap({ i, line: 8, kind: 'ok', gone: { v: top.c, sub: '下标 ' + top.i }, msg: `弹出 ${top.c}，这一对配好了` });
+      } else {
+        st.push({ c, i });
+        snap({ i, line: 10, topCls: 'new', msg: `读到左括号 ${c}，压栈，等后面的右括号来配` });
+      }
+    }
+    st.forEach(x => mark[x.i] = 'hot');
+    const ok = !st.length;
+    snap({ i: -1, line: 13, kind: ok ? 'ok' : 'miss', mark: { ...mark },
+      msg: ok ? '✓ 读完了，栈也空了：合法' : `✓ 读完了，栈里还剩 ${st.map(x => x.c).join(' ')} 没配上：不合法` });
+    return s;
+  }
+
+  function render(st) {
+    $('array').innerHTML = [...st.str].map((ch, k) => {
+      let c = st.mark[k] || (st.i >= 0 && k > st.i ? 'past' : '');
+      if (k === st.i && !st.mark[k]) c = 'cur';
+      return `<div class="cell ${c}"><div class="tags">${k === st.i ? '<span class="tb">i</span>' : ''}</div><div class="box sm mono">${ch}</div><div class="idx mono">${k}</div></div>`;
+    }).join('');
+    const n = st.st.length;
+    drawStack('stk', st.st.map((x, k) => ({ v: x.c, sub: '下标 ' + x.i, cls: k === n - 1 ? st.topCls || '' : '' })), st.gone);
+  }
+
+  const fill = v => { $('sIn').value = v; };
+  const parse = () => { const v = $('sIn').value.trim(); return /^[()\[\]{}]{1,14}$/.test(v) ? v : null; };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>

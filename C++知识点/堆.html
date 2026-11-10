@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C++ 堆 · 动画演示</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  main { max-width: 1480px; }
+  .algos { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 16px; padding: 5px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); width: fit-content; }
+  .algos button { font: inherit; font-size: 18px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .algos button:hover { color: var(--text); }
+  .algos button.on { background: var(--blue); color: #fff; }
+  .algos button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .toolbar .row { display: flex; gap: 10px; width: 100%; align-items: center; flex-wrap: wrap; }
+  .card.info { margin-top: 24px; }
+  .card.info h2 { margin: 0 0 6px; font-size: 24px; }
+  .card.info .sub { color: var(--muted); font-size: 17px; margin: 0 0 18px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 18px; }
+  .tbl th { text-align: left; color: var(--muted); font-size: 15px; font-weight: 600; padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tbl td.mono { font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
+  .tbl .good { color: var(--green); } .tbl .bad { color: var(--amber); }
+  .tbl code, .grid2 code, .pits code { font: 600 .92em "JetBrains Mono", Menlo, monospace; background: var(--inset); padding: 1px 6px; border-radius: 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .blk { background: var(--inset); border-radius: 14px; padding: 18px 20px; }
+  .blk h3 { margin: 0 0 10px; font-size: 19px; }
+  .blk p { margin: 8px 0 0; font-size: 17px; line-height: 1.7; }
+  .blk pre { margin: 0; padding: 0; background: none; color: var(--text); box-shadow: none; border-radius: 0; font: 16px/1.65 "JetBrains Mono", "SF Mono", Menlo, monospace; white-space: pre; overflow-x: auto; }
+  .blk pre .c { color: var(--muted); }
+  .pits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1100px) { .pits { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pits .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 18px; }
+  .pits .p b { display: block; font-size: 18px; color: var(--amber); margin-bottom: 8px; }
+  .pits .p span { font-size: 16px; line-height: 1.65; }
+
+  .tree { position: relative; margin: 26px auto 0; }
+  .tree svg { position: absolute; inset: 0; overflow: visible; }
+  .tree line { stroke: #c4c9d3; stroke-width: 2.5; transition: stroke .2s; }
+  .tree line.on { stroke: var(--amber); stroke-width: 4; }
+  .tree .bg { position: absolute; border-radius: 50%; background: var(--blue-soft); transition: all .3s; }
+  .nd { position: absolute; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; display: grid; place-items: center;
+        background: var(--card); border: 2.5px solid #c9ced8; font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace;
+        transition: left .5s cubic-bezier(.3,.7,.2,1), top .5s cubic-bezier(.3,.7,.2,1), background .2s, border-color .2s, opacity .3s; }
+  .nd .ix { position: absolute; right: -16px; top: -12px; font: 12px "JetBrains Mono", Menlo, monospace; color: var(--muted); }
+  .nd .tg { position: absolute; top: -30px; font: 700 13px "JetBrains Mono", Menlo, monospace; padding: 1px 7px; border-radius: 6px; color: #fff; background: var(--blue); white-space: nowrap; }
+  .nd.cur { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); border-width: 3.5px; }
+  .nd.cmp { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); border-width: 3.5px; }
+  .nd.cmp .tg { background: var(--amber); }
+  .nd.ok { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .nd.top { border-color: var(--green); }
+  .nd.out { opacity: 0; }
+  .arr { position: relative; height: 84px; margin: 34px auto 0; }
+  .arr .lbl { position: absolute; left: 0; top: -26px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .cl { position: absolute; top: 0; width: 52px; height: 52px; border-radius: 11px; display: grid; place-items: center; background: var(--inset);
+        font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; transition: left .5s cubic-bezier(.3,.7,.2,1), opacity .3s; }
+  .cl.cur { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); }
+  .cl.cmp { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .cl.ok { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .cl.out { opacity: 0; }
+  .cl.wait { opacity: .35; }
+  .slot { position: absolute; top: 58px; width: 52px; text-align: center; font: 14px "JetBrains Mono", Menlo, monospace; color: var(--muted); }
+  .bot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: 18px; }
+  .bot .lbl { color: var(--muted); font-size: 15px; font-weight: 600; }
+  .bot .ch { min-width: 40px; text-align: center; padding: 5px 10px; border-radius: 10px; background: var(--green-soft); color: var(--green); font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .bot .ch.new { box-shadow: inset 0 0 0 2.5px var(--green); }
+  .bot .ch.in { background: var(--inset); color: var(--muted); }
+  .counters { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; font-size: 18px; }
+  .counters span { padding: 6px 14px; border-radius: 12px; background: var(--inset); font-weight: 600; }
+  .counters b { font-family: "JetBrains Mono", Menlo, monospace; color: var(--blue); }
+  .rel { font-size: 17px; margin-top: 12px; min-height: 30px; color: var(--muted); }
+  .rel b { font-family: "JetBrains Mono", Menlo, monospace; color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>堆 · 动画演示</h1>
+    <span class="pill cat">C++ 知识点</span>
+  </header>
+  <div class="algos" id="algos" role="tablist" aria-label="演示内容"></div>
+  <p class="idea" id="idea"></p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="row"><div class="seg" id="seg" role="tablist" aria-label="示例数据"></div></div>
+      <form class="field" id="field">
+        <label for="nIn">nums</label><input id="nIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+    <div class="stage">
+      <div class="bot mono" id="queue"></div>
+      <div class="tree" id="tree"></div>
+      <div class="arr" id="arr"></div>
+      <div class="rel" id="rel"></div>
+      <div class="bot mono" id="outs"></div>
+      <div class="counters" id="counters"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--muted)">慢
+      <input type="range" id="speed" min="150" max="1400" step="50" value="800" style="flex:1;direction:rtl" aria-label="播放速度"> 快</label>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card info">
+    <h2>数组怎么看成一棵树</h2>
+    <p class="sub">堆是一棵<b>完全二叉树</b>：一层一层从左往右排满。所以不需要指针，直接按下标存在数组里</p>
+    <div class="grid2">
+      <div class="blk"><h3>下标关系（从 0 开始）</h3><pre>父亲     (i - 1) / 2
+左孩子   2 * i + 1
+右孩子   2 * i + 2
+叶子     i &gt;= n / 2</pre><p>n 个结点的树只有 <b>⌊log₂n⌋ + 1</b> 层，所以上浮、下沉最多走 log n 步。</p></div>
+      <div class="blk"><h3>堆只保证一件事</h3><p><b>小顶堆</b>：父亲 ≤ 孩子，堆顶是最小值。<b>大顶堆</b>：父亲 ≥ 孩子，堆顶是最大值。</p><p>兄弟之间、不同子树之间<b>没有顺序</b>：数组里第二个数不一定是第二小，想要第二小只能先把堆顶 pop 掉。</p></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>各操作的代价</h2>
+    <p class="sub">为什么建堆是 O(n)：一半的结点是叶子不用动，四分之一只沉 1 层，八分之一沉 2 层……加起来 n/4·1 + n/8·2 + n/16·3 + … < n</p>
+    <table class="tbl"><thead><tr><th>操作</th><th>怎么做</th><th>时间</th></tr></thead><tbody><tr><td><b>看堆顶 <code>top()</code></b></td><td>就是 a[0]</td><td class="mono good">O(1)</td></tr><tr><td><b>放进去 <code>push(x)</code></b></td><td>放到最后，上浮</td><td class="mono good">O(log n)</td></tr><tr><td><b>取堆顶 <code>pop()</code></b></td><td>最后一个补到堆顶，下沉</td><td class="mono good">O(log n)</td></tr><tr><td><b>建堆 <code>priority_queue pq(a.begin(), a.end())</code></b></td><td>从 n/2 − 1 往前逐个下沉</td><td class="mono good">O(n)</td></tr><tr><td><b>一个个 push 建堆</b></td><td>n 次上浮</td><td class="mono bad">O(n log n)</td></tr><tr><td><b>查找 / 删除任意元素</b></td><td>堆不支持，要遍历</td><td class="mono bad">O(n)</td></tr></tbody></table>
+  </section>
+  <section class="card info">
+    <h2>在 C++ 里用：priority_queue</h2>
+    <p class="sub">默认是<b>大顶堆</b>；比较器的意思是「返回 true 的那个排在<b>下面</b>」，所以 greater 反而是小顶堆</p>
+    <div class="grid2">
+      <div class="blk"><h3>三种常见写法</h3><pre><span class="c">// 大顶堆</span>
+priority_queue&lt;int&gt; big;
+<span class="c">// 小顶堆</span>
+priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt; small;
+<span class="c">// pair：先比 first 再比 second</span>
+using P = pair&lt;int, int&gt;;
+priority_queue&lt;P, vector&lt;P&gt;, greater&lt;P&gt;&gt; pq;</pre></div>
+      <div class="blk"><h3>自定义比较</h3><pre>auto cmp = [](ListNode* a, ListNode* b) {
+    return a-&gt;val &gt; b-&gt;val;   <span class="c">// a 大就排下面：小顶堆</span>
+};
+priority_queue&lt;ListNode*, vector&lt;ListNode*&gt;,
+               decltype(cmp)&gt; pq(cmp);</pre></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>常见套路</h2>
+    <div class="grid2">
+      <div class="blk"><h3>Top-K：第 k 大 / 前 k 个</h3><p>开一个<b>小顶堆</b>只留 k 个，超过就 pop 掉堆顶。堆顶是「进前 k 的门槛」，最后堆顶就是第 k 大。时间 <b>O(n log k)</b>，比整体排序省。</p></div>
+      <div class="blk"><h3>两个堆：动态中位数</h3><p><b>大顶堆</b>放较小的一半，<b>小顶堆</b>放较大的一半，两边个数差不超过 1。中位数只看两个堆顶。</p></div>
+      <div class="blk"><h3>多路归并：合并 K 个有序序列</h3><p>堆里放每一路<b>当前最前面</b>的那个，每次 pop 最小的，再把它那一路的下一个放进来。堆里始终只有 K 个，总共 <b>O(N log K)</b>。</p></div>
+      <div class="blk"><h3>堆排序</h3><p>建堆 O(n)，再 n 次把堆顶换到最后、下沉。原地、最坏 O(n log n)，但不稳定。</p></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>易错点</h2>
+    <div class="pits"><div class="p"><b>greater 是小顶堆</b><span>比较器回答「a 是不是应该排在 b <b>下面</b>」。<code>less</code>（默认）让大的在上，<code>greater</code> 让小的在上。</span></div><div class="p"><b>空堆不能 top / pop</b><span><code>pq.top()</code>、<code>pq.pop()</code> 前先判 <code>!pq.empty()</code>，否则是未定义行为，不会报错。</span></div><div class="p"><b>不能遍历、不能改</b><span>priority_queue 没有迭代器，也不能改里面的值。要删任意元素用 <code>set</code>，或者做「懒删除」：先记下来，等它到堆顶时再扔。</span></div><div class="p"><b>lambda 要传两次</b><span>模板参数写 <code>decltype(cmp)</code>，构造时还要把 <code>cmp</code> 传进去；C++20 之前漏掉构造参数会编译失败。</span></div></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const PLAY = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M7 4.5v15l13-7.5z\"/></svg>", PAUSE = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><rect x=\"6\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/><rect x=\"14\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/></svg>";
+  const MODES = {"push": {"name": "放进去 push：上浮", "idea": "<b>小顶堆</b>：每个结点都 ≤ 它的孩子，所以堆顶最小。新数先放到数组<b>最后</b>，只要比父亲小就和父亲<b>交换</b>，一路往上浮。", "examples": [["乱序", [5, 3, 8, 1, 9, 2]], ["从小到大", [1, 2, 3, 4, 5, 6]], ["从大到小", [6, 5, 4, 3, 2, 1]]], "code": ["<span class=\"t\">void</span> push(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; a, <span class=\"t\">int</span> x) {", "    a.push_back(x);  <span class=\"c\">// 先放到最后</span>", "    <span class=\"t\">int</span> i = a.size() - 1;", "    <span class=\"k\">while</span> (i &gt; 0) {", "        <span class=\"t\">int</span> p = (i - 1) / 2;  <span class=\"c\">// 父亲</span>", "        <span class=\"k\">if</span> (a[p] &lt;= a[i]) <span class=\"k\">break</span>;  <span class=\"c\">// 父亲不比它大，停</span>", "        <span class=\"t\">swap</span>(a[p], a[i]);", "        i = p;  <span class=\"c\">// 上浮一层</span>", "    }", "}"]}, "pop": {"name": "取堆顶 pop：下沉", "idea": "堆顶就是最小值，直接拿走。空出来的堆顶用数组<b>最后一个</b>补上，再和<b>较小的孩子</b>比，比孩子大就交换，一路往下沉。一直 pop，取出来的就是<b>从小到大</b>。", "examples": [["普通", [1, 3, 2, 7, 4, 5, 6]], ["有重复", [2, 2, 5, 3, 2, 8]], ["只有 3 个", [4, 9, 6]]], "code": ["<span class=\"t\">int</span> pop(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; a) {", "    <span class=\"t\">int</span> top = a[0];", "    a[0] = a.back();  <span class=\"c\">// 最后一个补到堆顶</span>", "    a.pop_back();", "    siftDown(a, 0);", "    <span class=\"k\">return</span> top;", "}", "<span class=\"t\">void</span> siftDown(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; a, <span class=\"t\">int</span> i) {", "    <span class=\"t\">int</span> n = a.size();", "    <span class=\"k\">while</span> (2 * i + 1 &lt; n) {", "        <span class=\"t\">int</span> c = 2 * i + 1;  <span class=\"c\">// 左孩子</span>", "        <span class=\"k\">if</span> (c + 1 &lt; n &amp;&amp; a[c + 1] &lt; a[c]) ++c;  <span class=\"c\">// 挑小的孩子</span>", "        <span class=\"k\">if</span> (a[i] &lt;= a[c]) <span class=\"k\">break</span>;  <span class=\"c\">// 不比孩子大，停</span>", "        <span class=\"t\">swap</span>(a[i], a[c]);", "        i = c;  <span class=\"c\">// 下沉一层</span>", "    }", "}"]}, "build": {"name": "建堆 heapify：O(n)", "idea": "把一个乱序数组原地变成堆：叶子本身就是堆，所以从<b>最后一个有孩子的结点</b>开始<b>往前</b>，每个结点都下沉一次。蓝色底的是正在整理的那棵子树。", "examples": [["乱序", [9, 4, 7, 1, 8, 2, 6, 3]], ["从大到小", [8, 7, 6, 5, 4, 3, 2, 1]], ["已经是堆", [1, 2, 3, 4, 5, 6, 7]]], "code": ["<span class=\"t\">void</span> buildHeap(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; a) {", "    <span class=\"c\">// 从最后一个有孩子的结点开始，往前逐个下沉</span>", "    <span class=\"t\">int</span> n = a.size();", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = n / 2 - 1; i &gt;= 0; --i)", "        siftDown(a, i);", "}", "<span class=\"t\">void</span> siftDown(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; a, <span class=\"t\">int</span> i) {", "    <span class=\"t\">int</span> n = a.size();", "    <span class=\"k\">while</span> (2 * i + 1 &lt; n) {", "        <span class=\"t\">int</span> c = 2 * i + 1;  <span class=\"c\">// 左孩子</span>", "        <span class=\"k\">if</span> (c + 1 &lt; n &amp;&amp; a[c + 1] &lt; a[c]) ++c;  <span class=\"c\">// 挑小的孩子</span>", "        <span class=\"k\">if</span> (a[i] &lt;= a[c]) <span class=\"k\">break</span>;  <span class=\"c\">// 不比孩子大，停</span>", "        <span class=\"t\">swap</span>(a[i], a[c]);", "        i = c;  <span class=\"c\">// 下沉一层</span>", "    }", "}"]}};
+  const ORDER = Object.keys(MODES);
+
+  let vals = [];
+  // a：位置 -> 结点编号。结点按编号画，交换时能看到两个结点互换位置
+  function rec(v) {
+    vals = v.slice();
+    const R = { a: [], steps: [], cmp: 0, swp: 0, outs: [], queue: [] };
+    R.v = p => vals[R.a[p]];
+    R.swap = (i, j) => { [R.a[i], R.a[j]] = [R.a[j], R.a[i]]; R.swp++; };
+    R.snap = o => R.steps.push({ a: R.a.slice(), cmp: R.cmp, swp: R.swp, outs: R.outs.slice(), queue: R.queue.slice(), ...o });
+    return R;
+  }
+  const par = i => (i - 1) >> 1;
+  const sub = i => { const s = []; const go = j => { if (j < S.n) { s.push(j); go(2 * j + 1); go(2 * j + 2); } }; go(i); return s; };
+  let S = { n: 0 };
+
+  // 下沉：push 页不用；pop 和 build 共用。base 是 siftDown 第一行在代码里的行号
+  function siftDown(R, i, base, extra = {}) {
+    const n = R.a.length;
+    while (2 * i + 1 < n) {
+      let c = 2 * i + 1;
+      const two = c + 1 < n;
+      if (two) { R.cmp++; if (R.v(c + 1) < R.v(c)) c++; }
+      R.snap({ ...extra, line: base + 4, cls: { [i]: 'cur', [2 * i + 1]: 'cmp', ...(two ? { [2 * i + 2]: 'cmp' } : {}) }, tags: { [i]: 'i', [c]: 'c' },
+        rel: `i = ${i}，孩子是 2i+1 = <b>${2 * i + 1}</b>${two ? `、2i+2 = <b>${2 * i + 2}</b>` : '（没有右孩子）'}`,
+        msg: two ? `两个孩子 ${R.v(2 * i + 1)}、${R.v(2 * i + 2)} 里挑小的 ${R.v(c)}` : `只有左孩子 ${R.v(c)}` });
+      R.cmp++;
+      if (R.v(i) <= R.v(c)) {
+        R.snap({ ...extra, line: base + 5, cls: { [i]: 'ok', [c]: 'cmp' }, edge: [i, c], msg: `${R.v(i)} ≤ ${R.v(c)}：不比孩子大，沉好了` });
+        return;
+      }
+      R.snap({ ...extra, line: base + 5, cls: { [i]: 'cur', [c]: 'cmp' }, edge: [i, c], tags: { [i]: 'i', [c]: 'c' }, msg: `${R.v(i)} > ${R.v(c)}：比小的那个孩子大，交换` });
+      R.swap(i, c);
+      R.snap({ ...extra, line: base + 6, cls: { [c]: 'cur', [i]: 'cmp' }, edge: [i, c], tags: { [c]: 'i' }, msg: `${R.v(c)} 下沉到下标 ${c}` });
+      i = c;
+    }
+    R.snap({ ...extra, line: base + 2, cls: { [i]: 'ok' }, rel: `i = ${i}：2i+1 = ${2 * i + 1} ≥ n = ${n}，没有孩子了`, msg: `${R.v(i)} 沉到了叶子，停` });
+  }
+
+  function build(mode, v) {
+    const R = rec(v);
+    if (mode === 'push') {
+      R.queue = v.map((_, id) => id);
+      R.snap({ line: 0, msg: '从空堆开始，把这些数一个一个放进去' });
+      v.forEach((x, id) => {
+        R.queue.shift();
+        R.a.push(id);
+        let i = R.a.length - 1;
+        R.snap({ line: 1, cls: { [i]: 'cur' }, tags: { [i]: 'i' }, msg: `${x} 先放到数组最后（下标 ${i}），也就是树的最后一个位置` });
+        while (i > 0) {
+          const p = par(i);
+          R.cmp++;
+          R.snap({ line: 4, cls: { [i]: 'cur', [p]: 'cmp' }, edge: [p, i], tags: { [i]: 'i', [p]: 'p' },
+            rel: `i = ${i}，父亲 p = (i − 1) / 2 = <b>${p}</b>`, msg: `和父亲 ${R.v(p)} 比一比` });
+          if (R.v(p) <= R.v(i)) {
+            R.snap({ line: 5, cls: { [i]: 'ok', [p]: 'cmp' }, edge: [p, i], msg: `父亲 ${R.v(p)} ≤ ${x}：位置对了，停` });
+            break;
+          }
+          R.snap({ line: 5, cls: { [i]: 'cur', [p]: 'cmp' }, edge: [p, i], tags: { [i]: 'i', [p]: 'p' }, msg: `父亲 ${R.v(p)} > ${x}：父亲应该更小，交换` });
+          R.swap(p, i);
+          R.snap({ line: 6, cls: { [p]: 'cur', [i]: 'cmp' }, edge: [p, i], tags: { [p]: 'i' }, msg: `${x} 上浮到下标 ${p}` });
+          i = p;
+        }
+        if (i === 0) R.snap({ line: 3, cls: { 0: 'ok' }, msg: `${x} 浮到了堆顶：它是目前最小的` });
+      });
+      R.snap({ line: 9, kind: 'ok', final: true, msg: `✓ 放完了，堆顶 ${R.v(0)} 最小。交换了 ${R.swp} 次` });
+      return R.steps;
+    }
+    // pop 和 build 都从一个数组开始
+    R.a = v.map((_, id) => id);
+    if (mode === 'pop') {
+      // 先把输入整理成堆（不演示）
+      const by = (i, n) => { while (2 * i + 1 < n) { let c = 2 * i + 1; if (c + 1 < n && R.v(c + 1) < R.v(c)) c++; if (R.v(i) <= R.v(c)) break; [R.a[i], R.a[c]] = [R.a[c], R.a[i]]; i = c; } };
+      for (let i = (R.a.length >> 1) - 1; i >= 0; i--) by(i, R.a.length);
+      R.snap({ line: 0, cls: { 0: 'ok' }, msg: `这是一个小顶堆，堆顶 ${R.v(0)} 最小。一直 pop 到空` });
+      while (R.a.length) {
+        const top = R.v(0), topId = R.a[0];
+        R.snap({ line: 1, cls: { 0: 'ok' }, tags: { 0: 'top' }, msg: `取走堆顶 ${top}` });
+        R.outs.push(topId);
+        const last = R.a.length - 1;
+        if (last === 0) {
+          R.a.pop();
+          R.snap({ line: 3, newOut: true, msg: '堆里只剩它一个，拿走就空了' });
+          break;
+        }
+        R.snap({ line: 2, gone: topId, newOut: true, cls: { [last]: 'cur' }, tags: { [last]: '最后一个' }, msg: `堆顶空了：用最后一个 ${R.v(last)} 补上去` });
+        R.a[0] = R.a[last]; R.a.pop(); R.swp++;
+        R.snap({ line: 4, cls: { 0: 'cur' }, tags: { 0: 'i' }, msg: `${R.v(0)} 到了堆顶，但它可能比孩子大，要往下沉` });
+        siftDown(R, 0, 7);
+      }
+      R.snap({ line: 5, kind: 'ok', final: true, msg: `✓ 取出来的顺序：${R.outs.map(id => vals[id]).join(' ')}，正好从小到大（这就是堆排序的思路）` });
+      return R.steps;
+    }
+    const n = R.a.length;
+    R.snap({ line: 0, msg: `乱序数组。下标 ≥ ${n >> 1} 的都是叶子（没有孩子），本身就是堆，不用管` });
+    for (let i = (n >> 1) - 1; i >= 0; i--) {
+      S = { n };
+      R.snap({ line: 4, sub: sub(i), cls: { [i]: 'cur' }, tags: { [i]: 'i' }, msg: `i = ${i}：它下面的两棵子树已经是堆了，让 ${R.v(i)} 下沉，这棵子树就也成了堆` });
+      siftDown(R, i, 6, { sub: sub(i) });
+    }
+    R.snap({ line: 5, kind: 'ok', final: true, msg: `✓ 建好了，堆顶 ${R.v(0)} 最小。交换 ${R.swp} 次（一个个 push 进去最坏要 n log n 次）` });
+    return R.steps;
+  }
+
+  const N0 = () => vals.length;
+  function geo() {
+    const n = N0(), depth = Math.max(1, Math.floor(Math.log2(n)) + 1), W = Math.max(560, 2 ** (depth - 1) * 66), GY = 84;
+    return { W, H: 30 + (depth - 1) * GY + 40, xy: i => { const d = Math.floor(Math.log2(i + 1)), k = i + 1 - 2 ** d; return [(k + .5) / 2 ** d * W, 30 + d * GY]; } };
+  }
+
+  function render(st) {
+    const { W, H, xy } = geo(), n = st.a.length, cls = st.cls || {}, tags = st.tags || {};
+    const tree = $('tree');
+    tree.style.width = W + 'px'; tree.style.height = H + 'px';
+    if (tree.dataset.k !== vals.join()) {
+      tree.innerHTML = '<div class="bgs"></div><svg></svg>' + vals.map((v, id) => `<div class="nd out" data-id="${id}"><span class="tg"></span>${v}<span class="ix"></span></div>`).join('');
+      tree.dataset.k = vals.join();
+      $('arr').innerHTML = '<span class="lbl">底层就是一个数组</span>' + vals.map((v, id) => `<div class="cl out" data-id="${id}">${v}</div>`).join('') + vals.map((_, p) => `<span class="slot" style="left:${p * 60}px">${p}</span>`).join('');
+    }
+    $('arr').style.width = vals.length * 60 + 'px';
+    let s = '';
+    for (let i = 1; i < n; i++) {
+      const p = par(i), [x1, y1] = xy(p), [x2, y2] = xy(i);
+      const on = st.edge && st.edge[0] === p && st.edge[1] === i;
+      s += `<line class="${on ? 'on' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    }
+    tree.querySelector('svg').innerHTML = s;
+    tree.querySelector('svg').setAttribute('viewBox', `0 0 ${W} ${H}`);
+    tree.querySelector('.bgs').innerHTML = (st.sub || []).map(p => { const [x, y] = xy(p); return `<div class="bg" style="left:${x - 33}px;top:${y - 33}px;width:66px;height:66px"></div>`; }).join('');
+    const pos = {};
+    st.a.forEach((id, p) => pos[id] = p);
+    tree.querySelectorAll('.nd').forEach(el => {
+      const id = +el.dataset.id, p = pos[id];
+      if (p === undefined) { el.className = 'nd out'; return; }
+      const [x, y] = xy(p);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      el.className = 'nd ' + (cls[p] || (st.final && p === 0 ? 'top' : ''));
+      el.querySelector('.ix').textContent = p;
+      const tg = el.querySelector('.tg'); tg.textContent = tags[p] || ''; tg.style.display = tags[p] ? '' : 'none';
+    });
+    $('arr').querySelectorAll('.cl').forEach(el => {
+      const id = +el.dataset.id, p = pos[id];
+      if (p === undefined) { el.className = 'cl out'; return; }
+      el.style.left = p * 60 + 'px';
+      el.className = 'cl ' + (cls[p] || '');
+    });
+    $('rel').innerHTML = st.rel || '父亲 <b>(i − 1) / 2</b>　左孩子 <b>2i + 1</b>　右孩子 <b>2i + 2</b>';
+    $('queue').innerHTML = mode === 'push' ? '<span class="lbl">还没放进去的</span>' + (st.queue.map(id => `<span class="ch in">${vals[id]}</span>`).join('') || '<span class="lbl">（没有了）</span>') : '';
+    $('outs').innerHTML = mode === 'pop' ? '<span class="lbl">取出来的</span>' + (st.outs.map((id, k) => `<span class="ch ${st.newOut && k === st.outs.length - 1 ? 'new' : ''}">${vals[id]}</span>`).join('') || '<span class="lbl">（还没有）</span>') : '';
+    $('counters').innerHTML = `<span>比较 <b>${st.cmp}</b> 次</span><span>交换 / 移动 <b>${st.swp}</b> 次</span><span>n = <b>${vals.length}</b></span>`;
+  }
+
+  function fill(m, v) { $('nIn').value = v.join(', '); }
+  function parse(m) {
+    const v = $('nIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+    return v.length >= 1 && v.length <= 15 && v.every(x => Number.isInteger(x) && x >= 0 && x <= 99) ? v : null;
+  }
+  function showFields() {}
+
+
+  let mode = ORDER[0], steps = [], cur = 0, timer = null, input = null;
+  const speed = () => +$('speed').value;
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const m = MODES[mode], ln = m.map ? m.map[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${cur / Math.max(1, steps.length - 1) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function stop() { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; }
+  function play() {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, speed());
+  }
+  function load() {
+    stop();
+    steps = build(mode, input); cur = 0;
+    fill(mode, input);
+    $('field').classList.remove('bad');
+    $('idea').innerHTML = MODES[mode].idea;
+    $('code').innerHTML = MODES[mode].code.map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.algos button').forEach(b => b.classList.toggle('on', b.dataset.k === mode));
+    showFields(mode);
+    draw();
+  }
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  function loadExamples() {
+    seg.innerHTML = '';
+    MODES[mode].examples.forEach(([name, v], k) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = name;
+      b.onclick = () => { setOn(k); input = structuredClone(v); load(); };
+      seg.appendChild(b);
+    });
+    setOn(0); input = structuredClone(MODES[mode].examples[0][1]);
+  }
+  ORDER.forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.k = k; b.textContent = MODES[k].name;
+    b.onclick = () => { mode = k; loadExamples(); load(); };
+    $('algos').appendChild(b);
+  });
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = parse(mode);
+    $('field').classList.toggle('bad', !v);
+    if (!v) return;
+    setOn(-1); input = v; load();
+  });
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  $('speed').oninput = () => { if (timer) { stop(); play(); } };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+  loadExamples(); load();
+
+})();
+</script>
+</body>
+</html>
