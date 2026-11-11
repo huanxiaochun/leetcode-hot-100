@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Python 回溯</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --line: #e5e5ea;
+    --ink: #1d1d1f; --sub: #515154; --mute: #86868b;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2;
+    --code-bg: #1e1e2e; --code-text: #cdd6f4;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #e6e8ec; }
+  body { overflow: hidden; }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 每页画布固定 1920×1080，按窗口等比缩放；只显示当前页 */
+  .slide {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    margin: -540px 0 0 -960px; transform-origin: center;
+    background: var(--bg); padding: 76px 110px 56px;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s;
+  }
+  .slide:not(.cover):not(.pick) { display: flex; flex-direction: column; }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+
+  /* 页头 */
+  .eyebrow { font-size: 22px; letter-spacing: 4px; color: var(--blue); font-weight: 600; }
+  .head { margin-top: 14px; display: flex; align-items: center; gap: 28px; }
+  .head h1 { line-height: 1.1; }
+  h1 { font-size: 64px; font-weight: 700; letter-spacing: -1px; }
+  h1.mono { letter-spacing: 0; }
+  .head .what { font-size: 32px; line-height: 1.3; color: var(--sub); }
+  .cx { padding: 6px 18px; line-height: 1.3; border-radius: 12px; font-size: 28px; font-weight: 700; }
+  .cx.fast { background: var(--green-soft); color: var(--green); }
+  .cx.slow { background: var(--blue-soft); color: var(--blue); }
+  .head .inc {
+    margin-left: auto; padding: 10px 22px; border-radius: 999px;
+    background: var(--card); box-shadow: var(--shadow); font-size: 24px; color: var(--sub);
+  }
+
+  /* 代码卡片 */
+  .codes { flex: 1; min-height: 0; margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  pre.cpp {
+    background: var(--code-bg); color: var(--code-text); border-radius: 22px; padding: 30px 40px;
+    font: 22px/1.55 "JetBrains Mono", "SF Mono", Menlo, monospace; height: 100%; overflow: hidden;
+  }
+  pre.cpp.short { height: auto; }
+  .cpp .sec { color: #89b4fa; font-weight: 700; }
+  .cpp .k { color: #cba6f7; } .cpp .t { color: #f9e2af; } .cpp .s { color: #a6e3a1; }
+  .cpp .n { color: #fab387; } .cpp .c { color: #7f849c; } .cpp .f { color: #89dceb; }
+
+  /* 底部要点 */
+  .facts { margin-top: 48px; }
+  .facts h3 { font-size: 22px; letter-spacing: 3px; color: var(--amber); margin-bottom: 14px; }
+  .pits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .p { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 18px 26px; border-left: 6px solid var(--amber); }
+  .p b { display: block; font-size: 24px; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .p span { display: block; margin-top: 4px; font-size: 20px; line-height: 1.45; color: var(--sub); }
+  .p span code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--green); font-weight: 600; }
+
+  /* 封面 */
+  .cover h1 { font-size: 80px; margin-top: 18px; }
+  .cover .lead { margin-top: 18px; font-size: 30px; color: var(--sub); }
+  .cover .grid { margin-top: 64px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .cover .card {
+    background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 34px;
+    height: 400px; display: flex; flex-direction: column;
+  }
+  .cover .no { font-size: 20px; color: var(--mute); }
+  .cover .name { margin-top: 10px; font-size: 34px; font-weight: 700; }
+  .cover .desc { margin-top: 14px; font-size: 26px; line-height: 1.5; color: var(--sub); }
+  .cover .tags { margin-top: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+  .tag { padding: 6px 14px; border-radius: 10px; font-size: 20px; font-weight: 600; }
+  .tag.fast { background: var(--green-soft); color: var(--green); }
+  .tag.slow { background: var(--blue-soft); color: var(--blue); }
+  .tag.lc { background: var(--bg); color: var(--sub); }
+  .cover .hint { position: absolute; left: 110px; bottom: 64px; font-size: 22px; color: var(--mute); }
+
+  /* 怎么选 */
+  .pick .cols { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .panel { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 40px; height: 780px; }
+  .panel h2 { font-size: 30px; margin-bottom: 24px; }
+  .row { display: flex; align-items: center; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: none; }
+  .row .need { flex: 1; font-size: 27px; }
+  .row .use { font-size: 25px; font-weight: 700; color: var(--blue); background: var(--blue-soft); padding: 6px 16px; border-radius: 12px; white-space: nowrap; }
+  .pit { padding: 20px 0; border-top: 1px solid var(--line); }
+  .pit:first-of-type { border-top: none; }
+  .pit .bad { font-size: 26px; font-weight: 700; color: var(--red); }
+  .pit .fix { margin-top: 6px; font-size: 24px; color: var(--sub); }
+  .pit code, .row code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; }
+  .pit .fix code { color: var(--green); font-weight: 600; }
+
+  /* 翻页控件：鼠标移到底部才出现 */
+  .nav {
+    position: fixed; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 8px;
+    font: 14px "SF Mono", Menlo, monospace; color: #515154; opacity: 0; transition: opacity .2s;
+  }
+  body:hover .nav, .nav:focus-within { opacity: 1; }
+  .nav button {
+    width: 36px; height: 36px; border: 1px solid #d2d2d7; border-radius: 8px;
+    background: rgba(255,255,255,.9); color: #1d1d1f; font-size: 16px; cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .nav button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  /* 打印 / 导出 PDF：每页一张 1920×1080 */
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print {
+    html, body { height: auto; overflow: visible; background: none; }
+    .slide { position: relative; left: 0; top: 0; margin: 0; transform: none !important;
+             opacity: 1; visibility: visible; page-break-after: always; break-after: page; }
+    .nav { display: none; }
+  }
+  .pit.ok .bad { color: var(--blue); }
+  .head .what, .head .cx, .head .inc { white-space: nowrap; }
+  .cover .note { margin-top: 40px; font-size: 26px; color: var(--sub); }
+  .cover .note b { color: var(--blue); }
+
+  /* 图解页 */
+  .figs { flex: 1; min-height: 0; margin-top: 36px; display: grid; gap: 28px; }
+  .fig { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 28px 34px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .fig h3 { font-size: 28px; }
+  .fig h3 small { font-size: 22px; color: var(--mute); font-weight: 600; margin-left: 12px; }
+  .fig .body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin: 14px 0; }
+  .fig .body svg { max-width: 100%; max-height: 100%; }
+  .fig .cap { font-size: 23px; line-height: 1.55; color: var(--sub); }
+  .fig .cap b { color: var(--ink); }
+  .fig .cap .r { color: var(--red); font-weight: 700; } .fig .cap .g { color: var(--green); font-weight: 700; }
+  .fig .cap .bl { color: var(--blue); font-weight: 700; } .fig .cap .a { color: var(--amber); font-weight: 700; }
+  .fig code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: .92em; background: var(--bg); padding: 1px 8px; border-radius: 6px; }
+  svg.fg text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .steps5 { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 22px; }
+  .steps5 th { font-size: 22px; color: var(--blue); text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--line); }
+  .steps5 th:first-child { color: var(--mute); }
+  .steps5 td { padding: 14px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.45; color: var(--sub); }
+  .steps5 td:first-child { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .steps5 code { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--ink); font-weight: 600; font-size: .95em; }
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide cover" aria-label="第 1 页">
+  <p class="eyebrow">Python 回溯</p>
+  <h1>回溯 = 在「决策树」上做 DFS</h1>
+  <p class="lead">每一层做一个选择，走到底就收集答案，再<b>撤销</b>这个选择回到上一层，试下一个。所有回溯题都是同一个模板，区别只在三件事：path 是什么、每层能选什么、什么时候收集</p>
+  <div class="grid">
+    <div class="card">
+      <p class="no mono">02</p>
+      <p class="name mono">模板</p>
+      <p class="desc">做选择 → 递归 → 撤销<br>先回答三个问题</p>
+      <div class="tags"><span class="tag lc mono">path</span><span class="tag lc mono">dfs</span><span class="tag lc mono">pop()</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">03</p>
+      <p class="name mono">排列</p>
+      <p class="desc">顺序不同算不同<br>用 used 记谁用过</p>
+      <div class="tags"><span class="tag lc mono">used[i]</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">04</p>
+      <p class="name mono">组合 / 子集</p>
+      <p class="desc">顺序无关<br>用 start 只往后选</p>
+      <div class="tags"><span class="tag lc mono">start</span><span class="tag lc mono">i + 1</span></div>
+    </div>
+    <div class="card">
+      <p class="no mono">05</p>
+      <p class="name mono">切割 / 网格</p>
+      <p class="desc">切割线当 start<br>网格原地标记再恢复</p>
+      <div class="tags"><span class="tag lc mono">s[i:j]</span><span class="tag lc mono">"#"</span></div>
+    </div>
+  </div>
+  <p class="note">撤销要和做选择<b>完全对称</b>：append 了就 pop，标记了就恢复。漏掉一个，后面的分支就会看到脏数据</p>
+  <p class="hint">← → 翻页 · F 全屏</p>
+</section>
+
+<!-- 2. 回溯模板 -->
+<section class="slide" aria-label="第 2 页">
+  <p class="eyebrow">Python 回溯 · 02</p>
+  <div class="head"><h1 class="mono">回溯模板</h1><span class="what">一棵决策树：根是「什么都没选」，每条边是一次选择</span><span class="cx mid mono">指数级</span></div>
+  <div class="codes">
+<script type="text/x-py">
+res, path = [], []             # path：根到当前节点的选择
+
+def dfs(状态):
+    if 结束条件:
+        res.append(path[:])    # 一定要拷贝
+        return
+    for 选择 in 这一层能选的:
+        if 不合法:
+            continue           # 剪枝
+        path.append(选择)      # 做选择
+        dfs(下一层状态)
+        path.pop()             # 撤销选择
+
+dfs(初始状态)
+return res
+</script>
+<script type="text/x-py">
+## 为什么要撤销：path 所有分支共用
+# [1] 选 2 -> [1,2]，回来 pop -> [1]
+# [1] 选 3 -> [1,3]，兄弟分支才干净
+
+## 为什么要 path[:]
+res.append(path)       # 存的是同一个 list
+# 回溯结束时 path 是空的，res 里全是 []
+
+## 改外层的数字要 nonlocal
+cnt = 0
+def dfs(i):
+    nonlocal cnt       # list 不用，int 要
+    cnt += 1
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>res.append(path)</b><span>存进去的是同一个对象，最后全变成 []；要 <code>path[:]</code></span></div>
+      <div class="p"><b>忘了 path.pop()</b><span>兄弟分支会带着上一个分支的选择，结果越来越长</span></div>
+      <div class="p"><b>结束后没有 return</b><span>叶子还会继续往下 for，可能越界或多收集</span></div>
+      <div class="p"><b>递归太深</b><span>Python 默认 1000 层；回溯深度一般就是 n，通常够用</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 排列：used 数组 -->
+<section class="slide" aria-label="第 3 页">
+  <p class="eyebrow">Python 回溯 · 03</p>
+  <div class="head"><h1 class="mono">排列：used 数组</h1><span class="what">每个位置可以放任何没用过的数，顺序不同算不同的答案</span><span class="cx mid mono">O(n·n!)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 全排列
+used = [False] * n
+def dfs():
+    if len(path) == n:          # 放满了
+        res.append(path[:])
+        return
+    for i in range(n):          # 每层都从 0 开始
+        if used[i]:
+            continue            # 用过的跳过
+        used[i] = True
+        path.append(a[i])
+        dfs()
+        path.pop()
+        used[i] = False         # 两个都要恢复
+</script>
+<script type="text/x-py">
+## 有重复数字：先排序，同一层不选相同的数
+a.sort()
+for i in range(n):
+    if used[i]:
+        continue
+    # 前一个相同的数这一层已经试过了
+    if i > 0 and a[i] == a[i - 1] \
+            and not used[i - 1]:
+        continue
+    ...
+
+## 叶子数 n!：n = 10 就有 360 万
+
+## 只要结果：itertools.permutations(a)
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>排列也用 start</b><span>start 只往后选，[2,1] 这种顺序永远选不到</span></div>
+      <div class="p"><b>used 只设不恢复</b><span>回到上一层后这个数一直显示用过，后面的分支全被跳过</span></div>
+      <div class="p"><b>用 a[i] in path 判断</b><span>每次 O(n)，而且有重复数字时直接错；用 <code>used</code></span></div>
+      <div class="p"><b>去重前没排序</b><span>相同的数不相邻，a[i] == a[i-1] 判断不出来</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. 组合与子集：start 下标 -->
+<section class="slide" aria-label="第 4 页">
+  <p class="eyebrow">Python 回溯 · 04</p>
+  <div class="head"><h1 class="mono">组合与子集：start 下标</h1><span class="what">顺序无关：[1,2] 和 [2,1] 是同一个，所以只往后选</span><span class="cx mid mono">O(n·2ⁿ)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 子集：每个节点都是一个答案
+def dfs(start):
+    res.append(path[:])         # 进来就收集
+    for i in range(start, n):
+        path.append(a[i])
+        dfs(i + 1)              # 下一层从 i+1 开始
+        path.pop()
+
+## 组合：选够 k 个才收集，其余一样
+if len(path) == k:
+    res.append(path[:])
+    return
+</script>
+<script type="text/x-py">
+## 能重复选同一个数：下一层传 i
+def dfs(start, remain):
+    if remain == 0:
+        res.append(path[:])
+        return
+    for i in range(start, n):
+        if a[i] > remain:
+            break               # 排过序，剪枝
+        path.append(a[i])
+        dfs(i, remain - a[i])   # 还能再选 a[i]
+        path.pop()
+
+## 另一种视角：每个数「选 / 不选」
+dfs(i + 1)                      # 不选 a[i]
+path.append(a[i]); dfs(i + 1); path.pop()   # 选
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>dfs(start + 1)</b><span>应该是 <code>dfs(i + 1)</code>：下一层从「刚选的这个」后面开始</span></div>
+      <div class="p"><b>子集只在叶子收集</b><span>会漏掉中间节点，子集是<code>每个节点</code>都算</span></div>
+      <div class="p"><b>break 前没排序</b><span>后面可能还有小的数，break 会漏答案；没排序只能 continue</span></div>
+      <div class="p"><b>可重复选传 i+1</b><span>每个数最多只能用一次了；能重复选要传 <code>i</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 切割：start 就是切割线 -->
+<section class="slide" aria-label="第 5 页">
+  <p class="eyebrow">Python 回溯 · 05</p>
+  <div class="head"><h1 class="mono">切割：start 就是切割线</h1><span class="what">把字符串切成几段：每一层决定「这一段切到哪」</span><span class="cx mid mono">O(n·2ⁿ)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 分割成若干段，每段都要满足条件
+def dfs(start):
+    if start == n:              # 切到末尾：一种方案
+        res.append(path[:])
+        return
+    for end in range(start, n):
+        if not ok(start, end):
+            continue            # 这一段不合法
+        path.append(s[start:end + 1])
+        dfs(end + 1)            # 下一段从 end+1 开始
+        path.pop()
+</script>
+<script type="text/x-py">
+## 判断一段合不合法很慢？先预处理
+# 例如回文：p[i][j] 表示 s[i..j] 是回文
+p = [[False] * n for _ in range(n)]
+for i in range(n - 1, -1, -1):
+    for j in range(i, n):
+        p[i][j] = s[i] == s[j] and \
+            (j - i < 2 or p[i + 1][j - 1])
+# 回溯里 ok(start, end) 就是 O(1)
+
+## 生成类：按位置一个个填
+# 例如括号：( 没用完就能放
+#          ) 比 ( 少才能放
+def dfs(open_, close): ...
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>s[start:end]</b><span>切片不含右端；要包含 end 写 <code>s[start:end + 1]</code></span></div>
+      <div class="p"><b>每次都现算回文</b><span>同一段会被判断很多次；先用 dp 预处理成 <code>O(1)</code></span></div>
+      <div class="p"><b>结束条件写 start == n - 1</b><span>最后一段还没切出来；要等 <code>start == n</code></span></div>
+      <div class="p"><b>[[False] * n] * n</b><span>n 行是同一个 list，改一行全变；用<code>列表推导</code></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. 网格与棋盘 -->
+<section class="slide" aria-label="第 6 页">
+  <p class="eyebrow">Python 回溯 · 06</p>
+  <div class="head"><h1 class="mono">网格与棋盘</h1><span class="what">在格子上走：标记「正在用」，回来时恢复</span><span class="cx mid mono">O(m·n·3ᴸ)</span></div>
+  <div class="codes">
+<script type="text/x-py">
+## 网格里找一条路径（例如单词搜索）
+DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))
+def dfs(r, c, k):
+    if k == len(w):
+        return True             # 全部匹配
+    if not (0 <= r < m and 0 <= c < n):
+        return False            # 出界
+    if g[r][c] != w[k]:
+        return False
+    ch, g[r][c] = g[r][c], "#"  # 标记：这条路用过了
+    found = any(dfs(r + dr, c + dc, k + 1)  # 找到就停
+                for dr, dc in DIRS)
+    g[r][c] = ch                # 恢复
+    return found
+</script>
+<script type="text/x-py">
+## 棋盘放子（例如 N 皇后）：一行放一个
+col, d1, d2 = set(), set(), set()
+def dfs(r):
+    if r == n:
+        res.append(["".join(row) for row in board])
+        return
+    for c in range(n):
+        # 主对角线 r-c 相同，副对角线 r+c 相同
+        if c in col or r - c in d1 or r + c in d2:
+            continue
+        col.add(c); d1.add(r - c); d2.add(r + c)
+        board[r][c] = "Q"
+        dfs(r + 1)
+        board[r][c] = "."
+        col.remove(c); d1.remove(r - c); d2.remove(r + c)
+</script>
+  </div>
+  <div class="facts">
+    <h3>易错点</h3>
+    <div class="pits">
+      <div class="p"><b>标记后不恢复</b><span>和「岛屿」那种只要访问一次的 DFS 不同，回溯里别的路径还要再走这一格</span></div>
+      <div class="p"><b>先访问再判断越界</b><span>负下标在 Python 里不报错，会悄悄访问到最后一行；<code>先判断范围</code></span></div>
+      <div class="p"><b>字符串当棋盘直接改</b><span>str 不能改；用 list 的 list，收集时再 <code>"".join</code></span></div>
+      <div class="p"><b>找到后不提前返回</b><span>只要判断「有没有」时，用 <code>or</code> 短路，找到一条就停</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. 图解：一次完整的回溯 -->
+<section class="slide" aria-label="第 7 页">
+  <p class="eyebrow">Python 回溯 · 07</p>
+  <div class="head"><h1>图解：一次完整的回溯</h1><span class="what">全排列 [1, 2, 3]：每个结点是当前的 path，每条边是一次选择</span></div>
+  <div class="figs" style="grid-template-columns:1fr">
+    <div class="fig"><h3>决策树<small><span style="display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-2px;margin-right:6px;background:#e8efff;border:2.5px solid #2f6bff"></span>当前路径　<span style="display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-2px;margin-right:6px;background:#dcfce7;border:2.5px solid #16a34a"></span>到底了，收集　<span style="display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-2px;margin-right:6px;background:#fef3c7;border:2.5px solid #d97706"></span>撤销后试的下一个分支</small></h3><div class="body"><svg class="fg" viewBox="0 0 1040 496" width="1040" height="496"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="220.0" y1="312" x2="220" y2="386" stroke="#2f6bff" stroke-width="4" stroke-dasharray=""/><rect x="193.0" y="335.0" width="54" height="28" rx="7" fill="#fff"/><text x="220.0" y="349.0" font-size="18" fill="#2f6bff" font-weight="700">选 3</text><line x1="370.0" y1="312" x2="370" y2="386" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="343.0" y="335.0" width="54" height="28" rx="7" fill="#fff"/><text x="370.0" y="349.0" font-size="18" fill="#86868b" font-weight="700">选 2</text><line x1="295.0" y1="194" x2="220.0" y2="268" stroke="#2f6bff" stroke-width="4" stroke-dasharray=""/><rect x="230.5" y="217.0" width="54" height="28" rx="7" fill="#fff"/><text x="257.5" y="231.0" font-size="18" fill="#2f6bff" font-weight="700">选 2</text><line x1="295.0" y1="194" x2="370.0" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="305.5" y="217.0" width="54" height="28" rx="7" fill="#fff"/><text x="332.5" y="231.0" font-size="18" fill="#86868b" font-weight="700">选 3</text><line x1="520.0" y1="312" x2="520" y2="386" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="507.0" y="335.0" width="26" height="28" rx="7" fill="#fff"/><text x="520.0" y="349.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="670.0" y1="312" x2="670" y2="386" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="657.0" y="335.0" width="26" height="28" rx="7" fill="#fff"/><text x="670.0" y="349.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="595.0" y1="194" x2="520.0" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="544.5" y="217.0" width="26" height="28" rx="7" fill="#fff"/><text x="557.5" y="231.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="595.0" y1="194" x2="670.0" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="619.5" y="217.0" width="26" height="28" rx="7" fill="#fff"/><text x="632.5" y="231.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="820.0" y1="312" x2="820" y2="386" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="807.0" y="335.0" width="26" height="28" rx="7" fill="#fff"/><text x="820.0" y="349.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="970.0" y1="312" x2="970" y2="386" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="957.0" y="335.0" width="26" height="28" rx="7" fill="#fff"/><text x="970.0" y="349.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="895.0" y1="194" x2="820.0" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="844.5" y="217.0" width="26" height="28" rx="7" fill="#fff"/><text x="857.5" y="231.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="895.0" y1="194" x2="970.0" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="919.5" y="217.0" width="26" height="28" rx="7" fill="#fff"/><text x="932.5" y="231.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="595.0" y1="76" x2="295.0" y2="150" stroke="#2f6bff" stroke-width="4" stroke-dasharray=""/><rect x="418.0" y="99.0" width="54" height="28" rx="7" fill="#fff"/><text x="445.0" y="113.0" font-size="18" fill="#2f6bff" font-weight="700">选 1</text><line x1="595.0" y1="76" x2="595.0" y2="150" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="568.0" y="99.0" width="54" height="28" rx="7" fill="#fff"/><text x="595.0" y="113.0" font-size="18" fill="#86868b" font-weight="700">选 2</text><line x1="595.0" y1="76" x2="895.0" y2="150" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="718.0" y="99.0" width="54" height="28" rx="7" fill="#fff"/><text x="745.0" y="113.0" font-size="18" fill="#86868b" font-weight="700">选 3</text><path d="M186 390 Q136.0 347.0 182.0 304" fill="none" stroke="#d97706" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ara)"/><text x="128.0" y="347.0" font-size="18" fill="#d97706" font-weight="700" style="text-anchor:end">撤销 3</text><path d="M186.0 272 Q140.0 229.0 257.0 186" fill="none" stroke="#d97706" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#ara)"/><text x="132.0" y="229.0" font-size="18" fill="#d97706" font-weight="700" style="text-anchor:end">撤销 2</text><rect x="159.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="220" y="408" font-size="22" font-weight="700" fill="#16a34a">[1,2,3]</text><text x="220" y="448" font-size="17" fill="#16a34a" font-weight="700">✓ 收集</text><rect x="172.9" y="268" width="94.2" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="220.0" y="290" font-size="22" font-weight="700" fill="#2f6bff">[1,2]</text><rect x="309.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="370" y="408" font-size="22" font-weight="700" fill="#16a34a">[1,3,2]</text><text x="370" y="448" font-size="17" fill="#16a34a" font-weight="700">✓ 收集</text><rect x="322.9" y="268" width="94.2" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="370.0" y="290" font-size="22" font-weight="700" fill="#d97706">[1,3]</text><rect x="261.54" y="150" width="66.92" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="295.0" y="172" font-size="22" font-weight="700" fill="#2f6bff">[1]</text><rect x="459.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="520" y="408" font-size="22" font-weight="700" fill="#16a34a">[2,1,3]</text><text x="520" y="448" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="472.9" y="268" width="94.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="520.0" y="290" font-size="22" font-weight="700" fill="#1d1d1f">[2,1]</text><rect x="609.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="670" y="408" font-size="22" font-weight="700" fill="#16a34a">[2,3,1]</text><text x="670" y="448" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="622.9" y="268" width="94.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="670.0" y="290" font-size="22" font-weight="700" fill="#1d1d1f">[2,3]</text><rect x="561.54" y="150" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="595.0" y="172" font-size="22" font-weight="700" fill="#1d1d1f">[2]</text><rect x="759.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="820" y="408" font-size="22" font-weight="700" fill="#16a34a">[3,1,2]</text><text x="820" y="448" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="772.9" y="268" width="94.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="820.0" y="290" font-size="22" font-weight="700" fill="#1d1d1f">[3,1]</text><rect x="909.26" y="386" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="970" y="408" font-size="22" font-weight="700" fill="#16a34a">[3,2,1]</text><text x="970" y="448" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="922.9" y="268" width="94.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="970.0" y="290" font-size="22" font-weight="700" fill="#1d1d1f">[3,2]</text><rect x="861.54" y="150" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="895.0" y="172" font-size="22" font-weight="700" fill="#1d1d1f">[3]</text><rect x="561.54" y="32" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="595.0" y="54" font-size="22" font-weight="700" fill="#1d1d1f">[ ]</text></svg></div><p class="cap"><span class="bl">[ ] → [1] → [1,2] → [1,2,3]</span> 到底，<span class="g">收集</span>；回来时 <span class="a">pop() 撤销 3、撤销 2</span>，path 变回 [1]，才能去试 <span class="a">[1,3]</span>。每个结点都是「做选择 → 递归 → 撤销」这三步</p></div>
+  </div>
+  <div class="facts">
+    <h3>记住</h3>
+    <div class="pits">
+      <div class="p"><b>path 只有一份</b><span>所有分支共用同一个 path，所以回来时<code>必须撤销</code></span></div>
+      <div class="p"><b>撤销的顺序</b><span>后选的先撤销，和栈一样：path 就是<code>从根到当前结点</code>的路</span></div>
+      <div class="p"><b>收集时要拷贝</b><span>收集的是那一刻的 path，之后它还会变</span></div>
+      <div class="p"><b>复杂度</b><span>≈ 结点数 × 每个结点的工作；排列叶子有 <code>n!</code> 个</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 图解：三种树 -->
+<section class="slide" aria-label="第 8 页">
+  <p class="eyebrow">Python 回溯 · 08</p>
+  <div class="head"><h1>图解：三种树</h1><span class="what">同样是 [1, 2, 3]，区别只在「每层能选什么」和「什么时候收集」</span></div>
+  <div class="figs" style="grid-template-columns:1fr 1fr 1.25fr">
+    <div class="fig"><h3>子集<small>下一层从 i + 1 开始</small></h3><div class="body"><svg class="fg" viewBox="0 0 494 454" width="494" height="454"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="70.0" y1="284" x2="70" y2="344" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="57.0" y="300.0" width="26" height="28" rx="7" fill="#fff"/><text x="70.0" y="314.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="129.0" y1="180" x2="70.0" y2="240" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="86.5" y="196.0" width="26" height="28" rx="7" fill="#fff"/><text x="99.5" y="210.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="129.0" y1="180" x2="188" y2="240" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="145.5" y="196.0" width="26" height="28" rx="7" fill="#fff"/><text x="158.5" y="210.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="306.0" y1="180" x2="306" y2="240" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="293.0" y="196.0" width="26" height="28" rx="7" fill="#fff"/><text x="306.0" y="210.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="276.5" y1="76" x2="129.0" y2="136" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="189.75" y="92.0" width="26" height="28" rx="7" fill="#fff"/><text x="202.75" y="106.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="276.5" y1="76" x2="306.0" y2="136" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="278.25" y="92.0" width="26" height="28" rx="7" fill="#fff"/><text x="291.25" y="106.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="276.5" y1="76" x2="424" y2="136" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="337.25" y="92.0" width="26" height="28" rx="7" fill="#fff"/><text x="350.25" y="106.0" font-size="18" fill="#86868b" font-weight="700">3</text><rect x="9.259999999999998" y="344" width="121.48" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="70" y="366" font-size="22" font-weight="700" fill="#16a34a">[1,2,3]</text><text x="70" y="406" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="22.9" y="240" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="70.0" y="262" font-size="22" font-weight="700" fill="#16a34a">[1,2]</text><text x="125.1" y="262" font-size="19" fill="#16a34a" font-weight="700" style="text-anchor:start">✓</text><rect x="140.9" y="240" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="188" y="262" font-size="22" font-weight="700" fill="#16a34a">[1,3]</text><text x="188" y="302" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="95.53999999999999" y="136" width="66.92" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="129.0" y="158" font-size="22" font-weight="700" fill="#16a34a">[1]</text><text x="170.46" y="158" font-size="19" fill="#16a34a" font-weight="700" style="text-anchor:start">✓</text><rect x="258.9" y="240" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="306" y="262" font-size="22" font-weight="700" fill="#16a34a">[2,3]</text><text x="306" y="302" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="272.54" y="136" width="66.92" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="306.0" y="158" font-size="22" font-weight="700" fill="#16a34a">[2]</text><text x="347.46" y="158" font-size="19" fill="#16a34a" font-weight="700" style="text-anchor:start">✓</text><rect x="390.54" y="136" width="66.92" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="424" y="158" font-size="22" font-weight="700" fill="#16a34a">[3]</text><text x="424" y="198" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="243.04" y="32" width="66.92" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="276.5" y="54" font-size="22" font-weight="700" fill="#16a34a">[ ]</text><text x="317.96" y="54" font-size="19" fill="#16a34a" font-weight="700" style="text-anchor:start">✓</text></svg></div><p class="cap">只往后选，所以不会出现 [2,1]。<span class="g">每个结点</span>都是一个子集：进来就收集</p></div>
+    <div class="fig"><h3>组合（选 2 个）<small>只收集第 2 层</small></h3><div class="body"><svg class="fg" viewBox="0 0 464 362" width="464" height="362"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="124.0" y1="186" x2="70" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="84.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="97.0" y="219.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="124.0" y1="186" x2="178" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="138.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="151.0" y="219.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="286.0" y1="186" x2="286" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="273.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="286.0" y="219.0" font-size="18" fill="#86868b" font-weight="700">3</text><line x1="259.0" y1="76" x2="124.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="178.5" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="191.5" y="109.0" font-size="18" fill="#86868b" font-weight="700">1</text><line x1="259.0" y1="76" x2="286.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="259.5" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="272.5" y="109.0" font-size="18" fill="#86868b" font-weight="700">2</text><line x1="259.0" y1="76" x2="394" y2="142" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="313.5" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="326.5" y="109.0" font-size="18" fill="#dc2626" font-weight="700">3</text><rect x="22.9" y="252" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="70" y="274" font-size="22" font-weight="700" fill="#16a34a">[1,2]</text><text x="70" y="314" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="130.9" y="252" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="178" y="274" font-size="22" font-weight="700" fill="#16a34a">[1,3]</text><text x="178" y="314" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="90.53999999999999" y="142" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="124.0" y="164" font-size="22" font-weight="700" fill="#1d1d1f">[1]</text><rect x="238.9" y="252" width="94.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="286" y="274" font-size="22" font-weight="700" fill="#16a34a">[2,3]</text><text x="286" y="314" font-size="17" fill="#16a34a" font-weight="700">✓</text><rect x="252.54" y="142" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="286.0" y="164" font-size="22" font-weight="700" fill="#1d1d1f">[2]</text><rect x="360.54" y="142" width="66.92" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="394" y="164" font-size="22" font-weight="700" fill="#dc2626">[3]</text><text x="394" y="204" font-size="17" fill="#dc2626" font-weight="700">不够了</text><rect x="225.54" y="32" width="66.92" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="259.0" y="54" font-size="22" font-weight="700" fill="#1d1d1f">[ ]</text></svg></div><p class="cap">和子集是同一棵树，只在 path 长度到 k 时收集。<span class="r">[3]</span> 后面没有数了，凑不够 2 个</p></div>
+    <div class="fig"><h3>排列（选 2 个）<small>每层从 0 开始</small></h3><div class="body"><svg class="fg" viewBox="0 0 764 362" width="764" height="362"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="174.0" y1="186" x2="70" y2="252" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="109.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="122.0" y="219.0" font-size="16" fill="#dc2626" font-weight="700">1</text><line x1="174.0" y1="186" x2="174" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="161.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="174.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">2</text><line x1="174.0" y1="186" x2="278" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="213.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="226.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">3</text><line x1="434.0" y1="186" x2="382" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="395.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="408.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">1</text><line x1="434.0" y1="186" x2="486" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="447.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="460.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">3</text><line x1="642.0" y1="186" x2="590" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="603.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="616.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">1</text><line x1="642.0" y1="186" x2="694" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="655.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="668.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">2</text><line x1="408.0" y1="76" x2="174.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="278.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="291.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">1</text><line x1="408.0" y1="76" x2="434.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="408.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="421.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">2</text><line x1="408.0" y1="76" x2="642.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="512.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="525.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">3</text><rect x="42.0" y="252" width="56" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="70" y="274" font-size="20" font-weight="700" fill="#dc2626">1</text><text x="70" y="314" font-size="15" fill="#dc2626" font-weight="700">用过</text><rect x="130.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="174" y="274" font-size="20" font-weight="700" fill="#16a34a">[1,2]</text><text x="174" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="234.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="278" y="274" font-size="20" font-weight="700" fill="#16a34a">[1,3]</text><text x="278" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="142.4" y="142" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="174.0" y="164" font-size="20" font-weight="700" fill="#1d1d1f">[1]</text><rect x="338.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="382" y="274" font-size="20" font-weight="700" fill="#16a34a">[2,1]</text><text x="382" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="442.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="486" y="274" font-size="20" font-weight="700" fill="#16a34a">[2,3]</text><text x="486" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="402.4" y="142" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="434.0" y="164" font-size="20" font-weight="700" fill="#1d1d1f">[2]</text><rect x="546.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="590" y="274" font-size="20" font-weight="700" fill="#16a34a">[3,1]</text><text x="590" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="650.0" y="252" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="694" y="274" font-size="20" font-weight="700" fill="#16a34a">[3,2]</text><text x="694" y="314" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="610.4" y="142" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="642.0" y="164" font-size="20" font-weight="700" fill="#1d1d1f">[3]</text><rect x="376.4" y="32" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="408.0" y="54" font-size="20" font-weight="700" fill="#1d1d1f">[ ]</text></svg></div><p class="cap">顺序不同算不同，所以每层都要看所有数；<span class="r">用过的</span>靠 used 跳过</p></div>
+  </div>
+  <div class="facts">
+    <h3>记住</h3>
+    <div class="pits">
+      <div class="p"><b>顺序无关</b><span>组合、子集用 <code>start</code>，下一层从 i + 1 开始</span></div>
+      <div class="p"><b>顺序有关</b><span>排列用 <code>used</code>，每层从 0 开始</span></div>
+      <div class="p"><b>能重复选</b><span>下一层传 <code>i</code> 而不是 i + 1</span></div>
+      <div class="p"><b>收集时机</b><span>子集：每个结点；组合 / 排列：长度够了才收</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. 图解：剪枝和切割 -->
+<section class="slide" aria-label="第 9 页">
+  <p class="eyebrow">Python 回溯 · 09</p>
+  <div class="head"><h1>图解：剪枝和切割</h1><span class="what">剪枝越早越好：在「做选择之前」就判断，整棵子树都不用走</span></div>
+  <div class="figs" style="grid-template-columns:1fr 1fr">
+    <div class="fig"><h3>组合总和：排序后 break<small>候选 [2, 3, 5]，凑 5，同一个数能重复用</small></h3><div class="body"><svg class="fg" viewBox="0 0 588 472" width="588" height="472"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="70.0" y1="296" x2="70" y2="362" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="57.0" y="315.0" width="26" height="28" rx="7" fill="#fff"/><text x="70.0" y="329.0" font-size="16" fill="#dc2626" font-weight="700">2</text><line x1="182.0" y1="186" x2="70.0" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="113.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="126.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">2</text><line x1="182.0" y1="186" x2="182" y2="252" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="169.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="182.0" y="219.0" font-size="16" fill="#86868b" font-weight="700">3</text><line x1="182.0" y1="186" x2="294" y2="252" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="225.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="238.0" y="219.0" font-size="16" fill="#dc2626" font-weight="700">5</text><line x1="406.0" y1="186" x2="406" y2="252" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="393.0" y="205.0" width="26" height="28" rx="7" fill="#fff"/><text x="406.0" y="219.0" font-size="16" fill="#dc2626" font-weight="700">3</text><line x1="350.0" y1="76" x2="182.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="253.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="266.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">2</text><line x1="350.0" y1="76" x2="406.0" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="365.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="378.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">3</text><line x1="350.0" y1="76" x2="518" y2="142" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="421.0" y="95.0" width="26" height="28" rx="7" fill="#fff"/><text x="434.0" y="109.0" font-size="16" fill="#86868b" font-weight="700">5</text><rect x="26.0" y="362" width="88.0" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="70" y="384" font-size="20" font-weight="700" fill="#dc2626">2 > 1</text><text x="70" y="424" font-size="15" fill="#dc2626" font-weight="700">break</text><rect x="38.4" y="252" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="70.0" y="274" font-size="20" font-weight="700" fill="#1d1d1f">剩 1</text><rect x="150.4" y="252" width="63.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="182" y="274" font-size="20" font-weight="700" fill="#16a34a">剩 0</text><text x="182" y="314" font-size="15" fill="#16a34a" font-weight="700">✓ [2,3]</text><rect x="250.0" y="252" width="88.0" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="294" y="274" font-size="20" font-weight="700" fill="#dc2626">5 > 3</text><text x="294" y="314" font-size="15" fill="#dc2626" font-weight="700">break</text><rect x="150.4" y="142" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="182.0" y="164" font-size="20" font-weight="700" fill="#1d1d1f">剩 3</text><rect x="362.0" y="252" width="88.0" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="406" y="274" font-size="20" font-weight="700" fill="#dc2626">3 > 2</text><text x="406" y="314" font-size="15" fill="#dc2626" font-weight="700">break</text><rect x="374.4" y="142" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="406.0" y="164" font-size="20" font-weight="700" fill="#1d1d1f">剩 2</text><rect x="486.4" y="142" width="63.2" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="518" y="164" font-size="20" font-weight="700" fill="#16a34a">剩 0</text><text x="518" y="204" font-size="15" fill="#16a34a" font-weight="700">✓ [5]</text><rect x="318.4" y="32" width="63.2" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="350.0" y="54" font-size="20" font-weight="700" fill="#1d1d1f">剩 5</text></svg></div><p class="cap">排过序，第一个就<span class="r">超过剩余</span>了，后面的只会更大，直接 <b>break</b>。「剩 3」下面还能再选 2：能重复选，下一层传的是 <b>i</b></p></div>
+    <div class="fig"><h3>分割回文串：start 是切割线<small>"aab" 切成几段，每段都是回文</small></h3><div class="body"><svg class="fg" viewBox="0 0 494 378" width="494" height="378"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="129.0" y1="194" x2="70" y2="268" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="72.5" y="217.0" width="54" height="28" rx="7" fill="#fff"/><text x="99.5" y="231.0" font-size="16" fill="#86868b" font-weight="700">"a"</text><line x1="129.0" y1="194" x2="188" y2="268" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="124.5" y="217.0" width="68" height="28" rx="7" fill="#fff"/><text x="158.5" y="231.0" font-size="16" fill="#dc2626" font-weight="700">"ab"</text><line x1="276.5" y1="76" x2="129.0" y2="150" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="175.75" y="99.0" width="54" height="28" rx="7" fill="#fff"/><text x="202.75" y="113.0" font-size="16" fill="#86868b" font-weight="700">"a"</text><line x1="276.5" y1="76" x2="306" y2="150" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="257.25" y="99.0" width="68" height="28" rx="7" fill="#fff"/><text x="291.25" y="113.0" font-size="16" fill="#86868b" font-weight="700">"aa"</text><line x1="276.5" y1="76" x2="424" y2="150" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><rect x="309.25" y="99.0" width="82" height="28" rx="7" fill="#fff"/><text x="350.25" y="113.0" font-size="16" fill="#dc2626" font-weight="700">"aab"</text><rect x="26.0" y="268" width="88.0" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="70" y="290" font-size="20" font-weight="700" fill="#16a34a">a|a|b</text><text x="70" y="330" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="150.2" y="268" width="75.6" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="188" y="290" font-size="20" font-weight="700" fill="#dc2626">"ab"</text><text x="188" y="330" font-size="15" fill="#dc2626" font-weight="700">不是回文</text><rect x="78.8" y="150" width="100.4" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="129.0" y="172" font-size="20" font-weight="700" fill="#1d1d1f">a | ab</text><rect x="255.8" y="150" width="100.4" height="44" rx="11" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="306" y="172" font-size="20" font-weight="700" fill="#16a34a">aa | b</text><text x="306" y="212" font-size="15" fill="#16a34a" font-weight="700">✓</text><rect x="380.0" y="150" width="88.0" height="44" rx="11" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="424" y="172" font-size="20" font-weight="700" fill="#dc2626">"aab"</text><text x="424" y="212" font-size="15" fill="#dc2626" font-weight="700">不是回文</text><rect x="232.5" y="32" width="88.0" height="44" rx="11" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="276.5" y="54" font-size="20" font-weight="700" fill="#1d1d1f">"aab"</text></svg></div><p class="cap">每一层决定「这一段切到哪」。<span class="r">不是回文</span>的那一刀直接跳过；切到末尾就是一种方案：<span class="g">a|a|b</span>、<span class="g">aa|b</span></p></div>
+  </div>
+  <div class="facts">
+    <h3>记住</h3>
+    <div class="pits">
+      <div class="p"><b>break 的前提</b><span>数组<code>排过序</code>；没排序只能 continue</span></div>
+      <div class="p"><b>剪枝放哪里</b><span>for 循环里、递归之前；不要等到叶子再判断</span></div>
+      <div class="p"><b>切割 = 组合</b><span>选「切在哪」就是在下标里选，用 <code>start</code></span></div>
+      <div class="p"><b>判断很慢就预处理</b><span>回文这种判断先用 DP 打表，回溯里查表 O(1)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. 怎么选 -->
+<section class="slide pick" aria-label="第 10 页">
+  <p class="eyebrow">Python 回溯 · 10</p>
+  <div class="head"><h1>怎么认出回溯 & 怎么写</h1></div>
+  <div class="cols">
+    <div class="panel">
+      <h2>我想……</h2>
+      <div class="row"><span class="need">列出所有排列</span><span class="use mono">used 数组，每层从 0</span></div>
+      <div class="row"><span class="need">列出所有组合 / 子集</span><span class="use mono">start，下一层 i + 1</span></div>
+      <div class="row"><span class="need">同一个数能选多次</span><span class="use mono">下一层传 i</span></div>
+      <div class="row"><span class="need">有重复数字但答案不能重复</span><span class="use mono">排序 + 同层跳过相同</span></div>
+      <div class="row"><span class="need">把字符串切成几段</span><span class="use mono">start 当切割线</span></div>
+      <div class="row"><span class="need">格子上找路径</span><span class="use mono">原地标记，回来恢复</span></div>
+      <div class="row"><span class="need">只问方案数 / 最优值</span><span class="use mono">先想想能不能 DP</span></div>
+    </div>
+    <div class="panel">
+      <h2>剪枝：越早剪越好</h2>
+      <div class="pit">
+        <p class="bad">走到叶子才判断合不合法</p>
+        <p class="fix">在 for 里「做选择之前」就判断，不合法直接 continue</p>
+      </div>
+      <div class="pit">
+        <p class="bad">排序后还用 continue</p>
+        <p class="fix">和超过上限了，后面只会更大：直接 break</p>
+      </div>
+      <div class="pit">
+        <p class="bad">结果要的只是「有没有」</p>
+        <p class="fix">找到一个就一路 return True，不用走完整棵树</p>
+      </div>
+      <div class="pit ok">
+        <p class="bad">数据范围 n ≤ 20 左右</p>
+        <p class="fix">基本就是在提示你：指数级的回溯能过</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="翻页">
+  <button id="prev" aria-label="上一页">‹</button>
+  <span id="count"></span>
+  <button id="next" aria-label="下一页">›</button>
+  <button id="fs" aria-label="全屏">⛶</button>
+</nav>
+
+<script>
+  // Python 代码块：从 <script type="text/x-py"> 读原文，简单高亮后换成 <pre>
+  const KW = new Set('from import def return for in if elif else while not and or is None True False lambda del continue break'.split(' '));
+  const BI = new Set('dict set list tuple int str len enumerate zip sorted range hash frozenset print defaultdict Counter max min sum append pop nonlocal'.split(' '));
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hl = (line) => {
+    if (/^## /.test(line)) return `<span class="sec"># ${esc(line.slice(3))}</span>`;
+    return line.replace(/(#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(\b\d+\b)|([A-Za-z_]\w*)(?=\()|([A-Za-z_]\w*)|([^\w"'#]+)/g,
+      (m, c, s, n, fn, id, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (s) return `<span class="s">${esc(s)}</span>`;
+        if (n) return `<span class="n">${n}</span>`;
+        const w = fn || id;
+        if (w) return KW.has(w) ? `<span class="k">${w}</span>` : BI.has(w) ? `<span class="t">${w}</span>` : fn ? `<span class="f">${w}</span>` : w;
+        return esc(other);
+      });
+  };
+  document.querySelectorAll('script[type="text/x-py"]').forEach((el) => {
+    const pre = document.createElement('pre');
+    pre.className = 'cpp';
+    pre.innerHTML = el.textContent.replace(/^\n|\n\s*$/g, '').split('\n').map(hl).join('\n');
+    el.replaceWith(pre);
+  });
+
+  // 翻页
+  const slides = [...document.querySelectorAll('.slide')];
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  const count = document.getElementById('count');
+  let cur = 0;
+
+  const fit = () => {
+    const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+    slides.forEach((el) => (el.style.transform = `scale(${s})`));
+  };
+  // 当前页记在 hash 里，刷新不回到第一页
+  const go = (i) => {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((el, k) => el.classList.toggle('active', k === cur));
+    prev.disabled = cur === 0; next.disabled = cur === slides.length - 1;
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    history.replaceState(null, '', `#${cur + 1}`);
+  };
+
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') toggleFs();
+  });
+  const toggleFs = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  prev.onclick = () => go(cur - 1);
+  next.onclick = () => go(cur + 1);
+  document.getElementById('fs').onclick = toggleFs;
+
+  addEventListener('resize', fit);
+  fit();
+  go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>322. 零钱兑换</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .rl { font-size: 15px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .rl b { color: var(--text); }
+  .rl .k { display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 700; }
+  .rl .k.c { background: var(--blue-soft); color: var(--blue); }
+  .rl .k.d { background: var(--amber-soft); color: var(--amber); }
+  .rl .k.g { background: var(--green-soft); color: var(--green); }
+
+  /* dp 表：一排格子，下面是下标；弧线箭头从依赖的格子指向当前格 */
+  .dpw { position: relative; }
+  .dpw svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  .dpw svg path { fill: none; stroke: var(--amber); stroke-width: 2.5; }
+  .dpw svg marker path { stroke: none !important; }
+  .dpw svg path.alt { stroke: #c4c9d3; stroke-dasharray: 5 5; }
+  .dpw svg path.g { stroke: var(--green); }
+  .dpw svg path.pr { stroke: var(--green); stroke-width: 2; }
+  .dpw svg text { font: 700 13px "JetBrains Mono", Menlo, monospace; fill: var(--amber); text-anchor: middle; }
+  .dpw svg text.alt { fill: var(--muted); }
+  .dpw svg text.g { fill: var(--green); }
+  .dpl { display: flex; }
+  .dc { flex: none; text-align: center; }
+  .dc .b { border-radius: 10px; display: grid; place-items: center; background: var(--inset); border: 2.5px solid transparent;
+           font-weight: 700; font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; transition: all .3s cubic-bezier(.2,.8,.2,1); }
+  .dc .ix { font: 13px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-top: 4px; white-space: nowrap; }
+  .dc.todo .b { color: #c4c9d3; font-weight: 400; }
+  .dc.cur .b { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-4px); }
+  .dc.cur .ix { color: var(--blue); font-weight: 700; }
+  .dc.dep .b { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .dc.dep .ix { color: var(--amber); font-weight: 700; }
+  .dc.alt .b { border-color: #c4c9d3; border-style: dashed; }
+  .dc.ok .b { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .dc.no .b { color: #c4c9d3; }
+  .dc.t .b { background: var(--green-soft); color: var(--green); }
+  .dc.f .b { color: #c4c9d3; }
+  .dc.fade { opacity: .35; }
+  .dc.new .b { animation: pop .35s cubic-bezier(.2,.8,.2,1); }
+  .dc.sen .b { background: none; border: 2px dashed #d0d4dc; color: var(--muted); }
+
+  /* 代入数字的转移式 */
+  .fm { background: var(--inset); border-radius: 14px; padding: 14px 18px; min-height: 64px; }
+  .fm .ln { font: 600 19px/1.7 "JetBrains Mono", "SF Mono", Menlo, monospace; white-space: nowrap; overflow-x: auto; }
+  .fm .ln.sm { font-size: 17px; }
+  .fm .why { font-size: 17px; line-height: 1.6; color: var(--muted); margin-top: 4px; }
+  .fm .why b { color: var(--text); }
+  .fm .c { color: var(--blue); } .fm .d { color: var(--amber); } .fm .g { color: var(--green); } .fm .m { color: var(--muted); }
+  .fm .p { color: #9333ea; }
+  .fm .hd { display: inline-block; font: 700 13px -apple-system, "PingFang SC", sans-serif; color: var(--muted); padding: 1px 8px;
+            border-radius: 6px; background: var(--card); margin-right: 10px; vertical-align: 2px; }
+
+  .ways { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 34px; }
+  .ways .w { padding: 3px 10px; border-radius: 8px; font: 700 15px "JetBrains Mono", Menlo, monospace; background: var(--inset); }
+  .ways .w.d { background: var(--amber-soft); color: var(--amber); }
+  .ways .w.c { background: var(--blue-soft); color: var(--blue); }
+  .ways .w.g { background: var(--green-soft); color: var(--green); }
+  .ways .lb { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .ways .more { color: var(--muted); font-size: 15px; }
+  .pills { display: flex; gap: 10px; flex-wrap: wrap; font-size: 18px; }
+  .pills span { padding: 4px 12px; border-radius: 10px; background: var(--inset); font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
+  .pills span b { color: var(--blue); }
+
+  .opts { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .opts .o { min-width: 46px; height: 46px; padding: 0 8px; border-radius: 50%; display: grid; place-items: center; background: #fdf6e3;
+             border: 2.5px solid #e9d8a6; font: 700 17px "JetBrains Mono", "SF Mono", Menlo, monospace; color: #8a6d1c; transition: all .25s; }
+  .opts .o.sq { border-radius: 10px; background: var(--inset); border-color: #d0d4dc; color: var(--text); }
+  .opts .o.on { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); transform: translateY(-4px); }
+  .opts .o.best { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-4px); }
+  .opts .o.off { opacity: .3; }
+  .opts .lb { font-size: 15px; color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .tries { display: flex; flex-direction: column; gap: 4px; font: 600 17px "JetBrains Mono", Menlo, monospace; }
+  .tries .t { padding: 4px 12px; border-radius: 8px; background: var(--inset); width: fit-content; }
+  .tries .t.on { background: var(--amber-soft); color: var(--amber); }
+  .tries .t.best { background: var(--green-soft); color: var(--green); }
+  .tries .t.skip { color: #b0b4bd; }
+
+  .gd { margin-top: 24px; }
+  .gd h2 { margin: 0 0 6px; font-size: 26px; }
+  .gd .sub { color: var(--muted); font-size: 18px; margin: 0 0 20px; }
+  .gd .sub b { color: var(--text); }
+  /* 解题五步 */
+  .five { display: flex; flex-direction: column; }
+  .five .st { display: grid; grid-template-columns: 200px minmax(0, 1fr) 420px; gap: 28px; align-items: center; padding: 20px 0; }
+  .five .st.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  .five .st + .st { border-top: 1px solid var(--line); }
+  @media (max-width: 1100px) { .five .st, .five .st.nofig { grid-template-columns: 1fr; gap: 12px; } }
+  .five .hd { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; }
+  .five .hd i { font-style: normal; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                background: var(--blue); color: #fff; font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .five .bd { font-size: 20px; line-height: 1.7; }
+  .five .bd b { color: var(--blue); }
+  .five .bd .eq { display: inline-block; margin: 2px 0 6px; padding: 8px 16px; border-radius: 12px; background: var(--inset);
+                  font: 700 20px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); white-space: nowrap; }
+  .five .bd .note { display: block; font-size: 17px; color: var(--muted); }
+  .five .fg { display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--bg); }
+  .five .fg .cap { font-size: 15px; color: var(--muted); text-align: center; }
+  svg.mini { display: block; overflow: visible; }
+  svg.mini rect { rx: 10; fill: var(--card); stroke: #d0d4dc; stroke-width: 2; }
+  svg.mini .c rect { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 2.5; }
+  svg.mini .d rect { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini .g rect { fill: var(--green-soft); stroke: var(--green); stroke-width: 2.5; }
+  svg.mini .p rect { fill: #f3e8ff; stroke: #9333ea; stroke-width: 2.5; }
+  svg.mini .r rect { fill: #fee2e2; stroke: #dc2626; stroke-width: 2.5; }
+  svg.mini .m rect { fill: none; stroke: none; }
+  svg.mini text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; fill: var(--text); }
+  svg.mini .c text { fill: var(--blue); } svg.mini .d text { fill: var(--amber); } svg.mini .g text { fill: var(--green); }
+  svg.mini .p text { fill: #9333ea; } svg.mini .r text { fill: #dc2626; } svg.mini .m text { fill: var(--muted); }
+  svg.mini text.ix { font-size: 12px; font-weight: 400; fill: var(--muted); }
+  svg.mini path.a { fill: none; stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini path.a.r { stroke: #dc2626; }
+  svg.mini path.a.g { stroke: var(--green); }
+  svg.mini text.al { font: 700 13px -apple-system, "PingFang SC", sans-serif; fill: var(--amber); }
+  svg.mini text.al.r { fill: #dc2626; } svg.mini text.al.g { fill: var(--green); }
+  /* 递归树 */
+  .tree2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  @media (max-width: 1100px) { .tree2 { grid-template-columns: 1fr; } }
+  .tree2 .tv { overflow-x: auto; padding: 8px 0; }
+  svg.rt { display: block; overflow: visible; margin: 0 auto; }
+  svg.rt line { stroke: #c4c9d3; stroke-width: 2; }
+  svg.rt rect { rx: 10; stroke-width: 2.5; }
+  svg.rt text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .tree2 .tx { font-size: 20px; line-height: 1.75; }
+  .tree2 .tx b { color: var(--blue); }
+  .tree2 .cnt { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .tree2 .cnt span { padding: 4px 12px; border-radius: 9px; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .tree2 .memo { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tree2 .memo span { padding: 4px 10px; border-radius: 8px; background: var(--green-soft); color: var(--green); font: 700 15px "JetBrains Mono", Menlo, monospace; }
+  /* 归纳 */
+  .sum .model { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 14px; background: var(--blue-soft);
+                font-size: 21px; font-weight: 700; color: var(--blue); margin-bottom: 18px; }
+  .sum .model i { font-style: normal; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .sum .rel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .sum .rel .r { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 12px 18px; border-radius: 14px; background: var(--inset); }
+  .sum .rel .r .nm { font-size: 19px; font-weight: 700; }
+  .sum .rel .r .nm span { font: 600 15px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-right: 6px; }
+  .sum .rel .r .df { font-size: 18px; line-height: 1.65; }
+  .sum .rel .r .df b { color: var(--blue); }
+  .sum .pit { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .sum .pit .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 20px; }
+  .sum .pit .p b { display: block; font-size: 19px; color: var(--amber); margin-bottom: 8px; }
+  .sum .pit .p span { font-size: 17px; line-height: 1.7; }
+  .sum .pit .p code { font: 600 .95em "JetBrains Mono", Menlo, monospace; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>322. 零钱兑换</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">动态规划</span>
+    <a href="https://leetcode.cn/problems/coin-change/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">状态：<b>dp[i] = 凑出金额 i 最少要几枚硬币</b>。枚举最后一枚硬币 c，前面要先凑出 i − c：<b>dp[i] = min(dp[i − c] + 1)</b>，都凑不出就是 ∞。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="cIn">coins</label><input id="cIn" autocomplete="off" style="flex:1">
+        <span class="sep"></span>
+        <label for="aIn">amount</label><input id="aIn" autocomplete="off" style="width:80px">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div class="opts mono" id="opts"></div>
+      <div>
+        <div class="rl">dp 表：dp[i] = 凑出 i 最少几枚　<span class="k c">蓝</span> 正在算　<span class="k d">橙</span> 来源　虚线：其他候选　∞：凑不出</div>
+        <div id="dp"></div>
+      </div>
+      <div class="tries" id="tries"></div>
+      <div id="fm"></div>
+      <div class="ways" id="plan"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+
+  <section class="card gd">
+    <h2>解题五步</h2>
+    <p class="sub">所有动态规划题都按这五步想：先把「状态」说清楚，剩下几步就顺了</p>
+    <div class="five"><div class="st nofig"><div class="hd"><i>1</i>状态定义</div><div class="bd"><b>dp[i]</b> = 凑出金额 i，最少要几枚硬币</div></div><div class="st"><div class="hd"><i>2</i>转移方程</div><div class="bd"><span class="eq">dp[i] = min(dp[i − c] + 1)，c ≤ i</span><span class="note">枚举<b>最后一枚</b>硬币 c：前面要先凑出 i − c，再加这 1 枚</span></div><div class="fg"><svg class="mini" viewBox="-4 0 308 106" width="308" height="106" role="img" aria-label="依赖关系示意"><defs><marker id="mkd" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d97706"/></marker><marker id="mkr" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mkg" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker></defs><path class="a " d="M 26.0 54 Q 147.0 -30 268.0 54" marker-end="url(#mkd)"/><text class="al " x="147.0" y="4">+5</text><path class="a " d="M 150.0 54 Q 215.0 -30 280.0 54" marker-end="url(#mkd)"/><text class="al " x="215.0" y="4">+2</text><path class="a " d="M 212.0 54 Q 240.0 -30 268.0 54" marker-end="url(#mkd)"/><text class="al " x="240.0" y="4">+1</text><g class="d"><rect x="0" y="56" width="52" height="44"/><text x="26.0" y="78.0">i−5</text></g><g class="m"><rect x="62" y="56" width="52" height="44"/><text x="88.0" y="78.0">…</text></g><g class="d"><rect x="124" y="56" width="52" height="44"/><text x="150.0" y="78.0">i−2</text></g><g class="d"><rect x="186" y="56" width="52" height="44"/><text x="212.0" y="78.0">i−1</text></g><g class="c"><rect x="248" y="56" width="52" height="44"/><text x="274.0" y="78.0">i</text></g></svg><span class="cap">coins = [1, 2, 5]</span></div></div><div class="st nofig"><div class="hd"><i>3</i>初始化</div><div class="bd">dp[0] = 0，其余设为 amount + 1（当作 ∞）<span class="note">最多用 amount 枚 1 元，所以 amount + 1 一定比真实答案大。用 INT_MAX 的话 dp[i − c] + 1 会溢出</span></div></div><div class="st nofig"><div class="hd"><i>4</i>遍历顺序</div><div class="bd">金额 i <b>从小到大</b>，硬币顺序无所谓<span class="note">每种硬币能用无限次：dp[i − c] 里已经用过 c 也没关系</span></div></div><div class="st nofig"><div class="hd"><i>5</i>答案</div><div class="bd">dp[amount] &gt; amount 说明凑不出，返回 −1；否则返回 <b>dp[amount]</b></div></div></div>
+  </section>
+  <section class="card gd">
+    <h2>为什么不能直接暴力递归</h2>
+    <p class="sub">把递推式直接写成递归：同一个子问题会被算很多遍。<b>同色的格子就是重复算的</b></p>
+    <div class="tree2"><div class="tv"><svg class="rt" viewBox="0 0 444 198" width="444" height="198" role="img" aria-label="暴力递归树"><line x1="111.0" y1="87.0" x2="37.0" y2="153.0"/><line x1="111.0" y1="87.0" x2="111.0" y2="153.0"/><line x1="111.0" y1="87.0" x2="185.0" y2="153.0"/><line x1="296.0" y1="87.0" x2="259.0" y2="153.0"/><line x1="296.0" y1="87.0" x2="333.0" y2="153.0"/><line x1="407.0" y1="87.0" x2="407.0" y2="153.0"/><line x1="259.0" y1="21.0" x2="111.0" y2="87.0"/><line x1="259.0" y1="21.0" x2="296.0" y2="87.0"/><line x1="259.0" y1="21.0" x2="407.0" y2="87.0"/><rect x="227.0" y="4.0" width="64" height="34" fill="#fff" stroke="#d0d4dc"/><text x="259.0" y="21.0" fill="#1d1d1f">f(6)</text><rect x="79.0" y="70.0" width="64" height="34" fill="#fff" stroke="#d0d4dc"/><text x="111.0" y="87.0" fill="#1d1d1f">f(5)</text><rect x="5.0" y="136.0" width="64" height="34" fill="#fef3c7" stroke="#d97706"/><text x="37.0" y="153.0" fill="#b45309">f(4)</text><rect x="79.0" y="136.0" width="64" height="34" fill="#e8efff" stroke="#2f6bff"/><text x="111.0" y="153.0" fill="#2f6bff">f(3)</text><rect x="153.0" y="136.0" width="64" height="34" fill="#fee2e2" stroke="#dc2626"/><text x="185.0" y="153.0" fill="#dc2626">f(0)</text><rect x="264.0" y="70.0" width="64" height="34" fill="#fef3c7" stroke="#d97706"/><text x="296.0" y="87.0" fill="#b45309">f(4)</text><rect x="227.0" y="136.0" width="64" height="34" fill="#e8efff" stroke="#2f6bff"/><text x="259.0" y="153.0" fill="#2f6bff">f(3)</text><rect x="301.0" y="136.0" width="64" height="34" fill="#fff" stroke="#d0d4dc"/><text x="333.0" y="153.0" fill="#1d1d1f">f(2)</text><rect x="375.0" y="70.0" width="64" height="34" fill="#fff" stroke="#d0d4dc"/><text x="407.0" y="87.0" fill="#1d1d1f">f(1)</text><rect x="375.0" y="136.0" width="64" height="34" fill="#fee2e2" stroke="#dc2626"/><text x="407.0" y="153.0" fill="#dc2626">f(0)</text></svg></div><div class="tx">coins = [1, 2, 5]，凑 6：最后一枚试 1、2、5，变成 f(5)、f(4)、f(1)；f(5) 又会去问 f(4)、f(3)……<b>「凑出 4 最少几枚」被问了好几次</b>。<div class="cnt"><span style="background:#fef3c7;color:#b45309">f(4) 算了 2 次</span><span style="background:#e8efff;color:#2f6bff">f(3) 算了 2 次</span><span style="background:#fee2e2;color:#dc2626">f(0) 算了 2 次</span></div>这棵树有 <b>10</b> 个结点，但不同的子问题只有 <b>7</b> 个。动态规划把每个子问题的答案记下来，每个只算一次：<div class="memo"><span>f(0)</span><span>f(1)</span><span>f(2)</span><span>f(3)</span><span>f(4)</span><span>f(5)</span><span>f(6)</span></div></div></div>
+  </section>
+  <section class="card gd sum">
+    <h2>归纳 · 同类题 · 易错点</h2>
+    <div class="model">完全背包<i>求最少个数，每种硬币能用无限次</i></div>
+    <div class="rel"><div class="r"><div class="nm"><span>279</span>完全平方数</div><div class="df"><b>一模一样</b>，硬币换成平方数，而且一定凑得出（有 1）</div></div><div class="r"><div class="nm"><span>416</span>分割等和子集</div><div class="df">也是背包，但每个数<b>只能用一次</b>（0/1 背包）：内层要<b>倒着</b>遍历，和这里正好相反</div></div><div class="r"><div class="nm"><span>70</span>爬楼梯</div><div class="df">爬楼梯其实是 coins = [1, 2]、求「方案数」的版本：min 换成了加法</div></div></div>
+    <div class="pit"><div class="p"><b>为什么用 amount + 1</b><span>它是「凑不出」的标记，比任何真实答案都大，取 min 时会被替换掉；最后还大于 amount 就说明凑不出</span></div><div class="p"><b>不能先拿大面值</b><span>coins = [1, 3, 4] 凑 6：贪心 4 + 1 + 1 要 3 枚，最优 3 + 3 只要 2 枚</span></div></div>
+  </section>  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(amount × k)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>amount</b> 个金额</span><span class="op">×</span><span class="term">每个试 <b>k</b> 种硬币</span></div>
+        <p class="why">每种硬币能用<b>无限次</b>，所以从小金额往大推：dp[i − c] 里可能已经用过 c 了，没关系，这正是「完全背包」。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c g">dp[10]+1 = 3</span><span class="c ">dp[9]+1 = 4</span><span class="c g">dp[6]+1 = 3</span></div><span class="cap">dp[11]：最后一枚是 1、2、5，取最少 3</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(amount)</span></div>
+      <div>
+        <div class="eq"><span class="term">dp 数组 <b>amount + 1</b> 格</span></div>
+        <p class="why">「凑不出」用 amount + 1 表示：最多也就用 amount 枚 1 元，所以这个值一定比真实答案大；用 INT_MAX 的话 +1 会溢出。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">贪心不对</span></div>
+      <div>
+        <p class="why">先拿最大面值：coins = [1, 3, 4] 凑 6，贪心 4 + 1 + 1 要 3 枚，最优 3 + 3 只要 2 枚。暴力搜索每一步选哪枚是指数级，而且「凑出 x 最少几枚」会在不同分支里<b>被反复问到</b>，dp 只算一次。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">int</span> coinChange(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; coins, <span class=\"t\">int</span> amount) {",
+      "    <span class=\"c\">// amount + 1 枚不可能用到，当作「凑不出」</span>",
+      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; dp(amount + 1, amount + 1);",
+      "    dp[0] = 0;",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 1; i &lt;= amount; ++i)",
+      "        <span class=\"k\">for</span> (<span class=\"t\">int</span> c : coins)  <span class=\"c\">// 最后一枚用 c</span>",
+      "            <span class=\"k\">if</span> (c &lt;= i) dp[i] = <span class=\"t\">min</span>(dp[i], dp[i - c] + 1);",
+      "    <span class=\"k\">return</span> dp[amount] &gt; amount ? -1 : dp[amount];",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> coinChange(<span class=\"t\">self</span>, coins, amount):",
+      "    <span class=\"c\"># amount + 1 枚不可能用到，当作「凑不出」</span>",
+      "    dp = [0] + [amount + 1] * amount",
+      "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(1, amount + 1):",
+      "        <span class=\"k\">for</span> c <span class=\"k\">in</span> coins:  <span class=\"c\"># 最后一枚用 c</span>",
+      "            <span class=\"k\">if</span> c &lt;= i:",
+      "                dp[i] = <span class=\"t\">min</span>(dp[i], dp[i - c] + 1)",
+      "    <span class=\"k\">return</span> -1 <span class=\"k\">if</span> dp[amount] &gt; amount <span class=\"k\">else</span> dp[amount]"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 2, 3, 4, 6, 7, 7];
+
+  const K = (c, t) => `<span class="${c}">${t}</span>`;
+  const fm = (lines, why) => `<div class="fm">${lines.map(l => `<div class="ln${l.sm ? ' sm' : ''}">${l.t ?? l}</div>`).join('')}${why ? `<div class="why">${why}</div>` : ''}</div>`;
+  const HD = t => `<span class="hd">${t}</span>`;
+  // 画一排 dp 格子。cells：[{v, cls, ix}]；o.arcs：[[from, to, 标签, 'alt' | 'g']] 画在格子上方
+  function drawRow(el, cs, o = {}) {
+    const n = cs.length, G = o.G ?? 6;
+    const W = o.W || Math.max(30, Math.min(52, Math.floor(((o.avail || 650) - (n - 1) * G) / Math.max(1, n))));
+    const arcs = o.arcs || [], H = arcs.length || o.reserve ? (o.arcH || 66) : 0;
+    const cx = i => i * (W + G) + W / 2;
+    let svg = '';
+    // 指向同一格的几条弧，终点在格子上方错开，标签放在各自弧的最高点
+    const into = {};
+    arcs.forEach(([a, b]) => (into[b] = into[b] || []).push(a));
+    arcs.forEach(([a, b, lab, cls], k) => {
+      const x1 = cx(a), x2 = cx(b), dx = Math.abs(x2 - x1), h = Math.min(H - 22, 12 + dx * .3);
+      const grp = into[b].slice().sort((p, q) => p - q), m = grp.length, j = grp.indexOf(a);
+      const y = H - 2, ex = x2 + (m > 1 ? (j - (m - 1) / 2) * Math.min(14, W / m) : (x1 < x2 ? -4 : 4)), mid = (x1 + ex) / 2;
+      svg += `<path class="${cls || ''}" d="M ${x1} ${y} Q ${mid} ${y - h * 2} ${ex} ${y}"${cls === 'pr' ? '' : ` marker-end="url(#ah${cls || ''})"`}/>`;
+      if (lab) svg += `<text class="${cls || ''}" x="${mid}" y="${y - h - 6}">${lab}</text>`;
+    });
+    const mk = (id, col) => `<marker id="ah${id}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${col}" stroke="none"/></marker>`;
+    const fs = o.fs || (W >= 46 ? 19 : W >= 38 ? 16 : 14);
+    $(el).innerHTML = `<div class="dpw" style="padding-top:${H}px;width:${n * (W + G) - G}px">`
+      + (H ? `<svg width="${n * (W + G)}" height="${H}"><defs>${mk('', '#d97706')}${mk('alt', '#c4c9d3')}${mk('g', '#16a34a')}</defs>${svg}</svg>` : '')
+      + `<div class="dpl" style="gap:${G}px">${cs.map(c => `<div class="dc ${c.cls || ''}" style="width:${W}px"><div class="b" style="height:${o.Hc || W}px;font-size:${c.fs || fs}px">${c.v}</div>${c.ix != null ? `<div class="ix">${c.ix}</div>` : ''}</div>`).join('')}</div></div>`;
+    return { W, G, cx };
+  }
+  const parseNums = (id, lo = 1, hi = 10, lim = 99) => {
+    const s = $(id).value.replace(/[\[\]]/g, '').trim();
+    if (!s) return lo === 0 ? [] : null;
+    const v = s.split(/[,，\s]+/).filter(Boolean).map(Number);
+    return v.length >= lo && v.length <= hi && v.every(x => Number.isInteger(x) && Math.abs(x) <= lim) ? v : null;
+  };
+
+  // 一维凑数 dp 的通用步骤：opts 是可选的「最后一块」，INF 表示凑不出
+  function knap(T, opts, s, snap, L, name) {
+    const dp = Array(T + 1).fill(null), INF = T + 1, how = [[]];
+    const show = v => v >= INF ? '∞' : v;
+    dp[0] = 0;
+    snap({ dp: dp.slice(), cur: 0, line: L.init, f: [`${HD('起点')}dp[0] = ${K('c', 0)}`, { t: `其余先设成 ${K('m', '∞')}（${INF}，不可能用到这么多${name}）`, sm: true }],
+      why: `凑出 0 不需要任何${name}。这是唯一不用算的格子，其他格子都从它一步步推出来`, msg: `dp[0] = 0：凑出 0 要 0 个${name}` });
+    for (let i = 1; i <= T; i++) {
+      let best = INF, bc = null;
+      const tries = [];
+      dp[i] = INF;
+      for (const c of opts) {
+        if (c > i) { tries.push({ c, skip: true }); continue; }
+        const v = dp[i - c] + 1;
+        tries.push({ c, from: i - c, v });
+        if (v < best) { best = v; bc = c; }
+      }
+      dp[i] = best;
+      const valid = tries.filter(t => !t.skip);
+      how[i] = bc != null && best < INF ? [...how[i - bc], bc] : null;
+      const detail = i <= 8 || T <= 14;          // 前几格逐个选项展开讲；后面的合成一步
+      if (detail) valid.forEach((t, k) => {
+        const part = valid.slice(0, k + 1), cb = part.reduce((m, x) => (x.v < m.v ? x : m), part[0]);
+        snap({ dp: dp.slice(0, i).concat([null], dp.slice(i + 1)), cur: i, line: L.loop, tries: tries.filter(x => x.skip || valid.indexOf(x) <= k), on: t.c, arcs: [[t.from, i, '+' + t.c, '']], opts,
+          f: [`最后一块选 ${K('p', t.c)}：dp[${i}] ← ${K('d', `dp[${i} − ${t.c}]`)} + 1 = ${K('d', show(dp[t.from]))} + 1 = ${show(t.v)}`],
+          why: `如果最后用的是 ${t.c}，前面要先凑出 ${i} − ${t.c} = ${t.from}，最少要 ${show(dp[t.from])} 个（已经算好了），再加上这 1 个。目前最好：${show(cb.v)}`,
+          msg: `dp[${i}]：最后一块用 ${t.c}，从 dp[${t.from}] 来，${show(t.v)} 个` });
+      });
+      snap({ dp: dp.slice(), cur: i, line: L.loop, tries, best: bc, opts, arcs: valid.map(t => [t.from, i, '+' + t.c, t.c === bc ? '' : 'alt']),
+        f: [`dp[${i}] = min(${valid.map(t => `${K('d', `dp[${t.from}]`)}+1`).join(', ') || '∅'})`,
+            { t: `　　 = min(${valid.map(t => show(t.v)).join(', ') || '∅'}) = ${K('c', show(best))}`, sm: valid.length > 4 }],
+        why: best >= INF ? `每种选法前面那一段都凑不出来，所以 ${i} 也凑不出` : `最后一块试遍所有可能，取最少的：用 ${bc}，方案 ${how[i].join(' + ')}`,
+        msg: best >= INF ? `dp[${i}] = ∞：凑不出 ${i}` : `dp[${i}] = ${best}：${how[i].join(' + ')} = ${i}` });
+    }
+    return { dp, how, INF, show };
+  }
+
+  const EXAMPLES = [[[1, 2, 5], 11], [[2], 3], [[2, 5], 13], [[3, 4], 6]];
+  const LAB = c => c;
+  const OPTS = st => st.allOpts;
+
+  function build([coins, amount]) {
+    const s = [], snap = o => s.push({ allOpts: coins, ...o });
+    const { dp, how, INF } = knap(amount, coins, s, snap, { init: 3, loop: 6 }, '枚硬币');
+    s.forEach(x => { if (x.on) x.line = 5; });
+    const ok = dp[amount] < INF;
+    snap({ dp, cur: amount, line: 7, done: ok, kind: ok ? 'ok' : 'miss', best: ok ? how[amount].at(-1) : null,
+      plan: ok ? `<span class="lb">方案：</span>${how[amount].map(c => `<span class="w g">${c}</span>`).join('<span class="more">+</span>')}` : '',
+      f: [ok ? `return dp[${amount}] = ${K('g', dp[amount])}` : `dp[${amount}] = ∞ > ${amount}，return ${K('d', -1)}`],
+      why: ok ? `${amount} = ${how[amount].join(' + ')}。贪心先拿最大面值不一定对，比如 coins = [1, 3, 4] 凑 6：贪心 4+1+1 是 3 枚，最优 3+3 是 2 枚` : '最后一格还是初始的「很大」值，说明没有任何组合能凑出来',
+      msg: ok ? `✓ 最少 ${dp[amount]} 枚硬币` : '✓ 凑不出来，返回 -1' });
+    return s;
+  }
+
+  function render(st) {
+    const T = st.dp.length - 1, show = v => v == null ? '?' : v > T ? '∞' : v;
+    const deps = new Set((st.arcs || []).filter(a => a[3] !== 'alt').map(a => a[0]));
+    const alts = new Set((st.arcs || []).filter(a => a[3] === 'alt').map(a => a[0]));
+    drawRow('dp', st.dp.map((v, k) => ({ v: show(v), ix: k, cls: k === st.cur ? (st.done ? 'ok' : 'cur') : deps.has(k) ? 'dep' : alts.has(k) ? 'alt' : v == null ? 'todo' : v > T ? 'no' : '' })),
+      { arcs: st.arcs, reserve: true, avail: 660 });
+    $('opts').innerHTML = '<span class="lb">可选的「最后一块」</span>' + OPTS(st).map(c => {
+      const t = (st.tries || []).find(x => x.c === c);
+      const cls = st.best === c ? 'best' : st.on === c ? 'on' : t && t.skip ? 'off' : '';
+      return `<span class="o  ${cls}">${LAB(c)}</span>`;
+    }).join('');
+    $('tries').innerHTML = (st.tries || []).map(t => t.skip ? `<span class="t skip">${LAB(t.c)} > ${st.cur}，放不下</span>`
+      : `<span class="t ${st.best === t.c ? 'best' : st.on === t.c ? 'on' : ''}">最后用 ${LAB(t.c)}：dp[${t.from}] + 1 = ${show(t.v)}</span>`).join('');
+    $('fm').innerHTML = fm(st.f, st.why);
+    $('plan').innerHTML = st.plan ? st.plan : '';
+  }
+
+  const fill = ([c, a]) => { $('cIn').value = c.join(', '); $('aIn').value = a; };
+  const parse = () => {
+    const c = parseNums('cIn', 1, 5, 20), a = Number($('aIn').value);
+    return c && c.every(x => x >= 1) && new Set(c).size === c.length && Number.isInteger(a) && a >= 0 && a <= 18 ? [c, a] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>
