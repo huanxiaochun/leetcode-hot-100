@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B003. 圆环回原点</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .dpwrap { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .dpcol { min-width: 0; }
+  .dpcol .sl { font-size: 15px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .dpcol .sl b { color: var(--text); }
+  .dpt { position: relative; }
+  .dpt .hd { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+             font: 700 18px "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); border-radius: 8px; }
+  .dpt .hd small { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .dpt .hd.row { flex-direction: row; gap: 6px; }
+  .dpt .hd.cur { background: var(--blue-soft); color: var(--blue); }
+  .dpt .hd.cur small { color: var(--blue); }
+  .dpt .hd.ok { background: var(--green-soft); color: var(--green); }
+  .dpt .hd.no { background: var(--amber-soft); color: var(--amber); }
+  .dpt .hd.mt { background: var(--green); color: #fff; }
+  .dpt .hd.mt small { color: #fff; }
+  .dpt .hd.dim { color: var(--muted); }
+  .dpt .c { position: absolute; display: grid; place-items: center; border-radius: 9px; background: var(--inset);
+            font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-weight: 700; color: var(--text);
+            border: 2.5px solid transparent; transition: background .2s, border-color .2s; }
+  .dpt .c.done { background: var(--card); border-color: #e1e4ea; }
+  .dpt .c.base { background: #eceef2; color: var(--muted); }
+  .dpt .c.na { background: repeating-linear-gradient(45deg, transparent 0 5px, #e9ebef 5px 7px); }
+  .dpt .c.yes { background: var(--green-soft); color: var(--green); border-color: transparent; }
+  .dpt .c.no { color: #b5b9c2; }
+  .dpt .c.dep { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .dpt .c.dep2 { border-color: var(--amber); border-style: dashed; }
+  .dpt .c.cur { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); border-width: 3.5px; z-index: 1; }
+  .dpt .c.best { box-shadow: 0 0 0 3px var(--green) inset; }
+  .dpt .c.path { background: #c8f0d6; color: #15803d; border-color: transparent; }
+  .dpt .c.mt { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c.ans { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c .ic { position: absolute; font-size: 15px; line-height: 1; }
+  .dpt .c .ic.tl { left: -4px; top: -8px; } .dpt .c .ic.br { right: -5px; bottom: -6px; }
+  .dpt .c s { font-size: .62em; color: var(--muted); margin-right: 2px; font-weight: 600; }
+  .dpt svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 2; }
+  .dpt svg .ar { stroke: var(--amber); stroke-width: 3; fill: none; }
+  .dpt svg .ar.off { stroke-width: 2; stroke-dasharray: 4 4; opacity: .75; }
+  .dpt svg .pth { stroke: var(--green); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
+  .dpt .tg { position: absolute; z-index: 3; transform: translate(-50%, -50%); padding: 0 6px; border-radius: 6px; white-space: nowrap;
+             font: 700 12px/18px -apple-system, "PingFang SC", sans-serif; background: var(--amber); color: #fff; }
+  .dpt .tg.off { background: #fff; color: var(--amber); box-shadow: inset 0 0 0 1.5px var(--amber); }
+  .dpt .tg.blue { background: var(--blue); }
+
+  /* 一条字符串：i..j 区间、两头、中间 */
+  .strip { display: flex; gap: 6px; padding-top: 26px; flex-wrap: wrap; }
+  .strip .ch { position: relative; width: 46px; text-align: center; }
+  .strip .ch b { display: grid; place-items: center; height: 46px; border-radius: 10px; background: var(--inset);
+                 font: 700 21px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; }
+  .strip .ch small { display: block; font: 12px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-top: 3px; }
+  .strip .ch i { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font: 700 13px "JetBrains Mono", Menlo, monospace;
+                 font-style: normal; padding: 0 7px; border-radius: 6px; color: #fff; background: var(--blue); white-space: nowrap; }
+  .strip .ch.in b { background: var(--blue-soft); }
+  .strip .ch.end b { border-color: var(--blue); color: var(--blue); }
+  .strip .ch.endno b { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .strip .ch.mid b { box-shadow: inset 0 -4px 0 var(--amber); }
+  .strip .ch.best b { background: var(--green-soft); color: var(--green); }
+  .strip .ch.bestu b { box-shadow: inset 0 -4px 0 var(--green); }
+
+  .eqrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-height: 44px; font-size: 19px; }
+  .eqrow .v { padding: 3px 12px; border-radius: 10px; font-weight: 700; background: var(--inset); }
+  .eqrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .eqrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .eqrow .v.g { background: var(--green-soft); color: var(--green); }
+  .eqrow .v.m { color: var(--muted); }
+  .eqrow small { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 5px; vertical-align: -2px; }
+  .chipline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 40px; font-size: 17px; }
+  .chipline .w { padding: 5px 12px; border-radius: 10px; background: var(--inset); font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .chipline .w.g { background: var(--green-soft); color: var(--green); }
+  .chipline .op { font-size: 14px; font-weight: 700; color: var(--amber); }
+  .chipline .lbl { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+  .dpt .c.nw { background: var(--blue-soft); color: var(--blue); border-color: transparent; }
+  .dpt .c.old { color: #b5b9c2; }
+
+  .ringbox { background: var(--inset); border-radius: 16px; padding: 10px; }
+  .ringbox svg { display: block; }
+  .ringbox svg text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .ringbox .trk { fill: none; stroke: #d5d9e0; stroke-width: 3; }
+  .ringbox .pt circle { fill: #fff; stroke: #c9ced8; stroke-width: 2.5; transition: fill .25s, stroke .25s; }
+  .ringbox .pt .v { font-size: 18px; font-weight: 700; fill: var(--text); }
+  .ringbox .pt .ix { font-size: 13px; font-weight: 600; fill: #9aa1ad; }
+  .ringbox .pt.zero .v { fill: #b5b9c2; }
+  .ringbox .pt.home circle { stroke: var(--green); stroke-width: 3.5; }
+  .ringbox .pt.home .ix { fill: var(--green); font-weight: 700; }
+  .ringbox .pt.dep circle { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 3.5; }
+  .ringbox .pt.dep .v { fill: var(--amber); }
+  .ringbox .pt.cur circle { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 3.5; }
+  .ringbox .pt.cur .v { fill: var(--blue); }
+  .ringbox .ar { stroke: var(--amber); stroke-width: 3; fill: none; }
+  .ringbox .mid { font: 600 14px -apple-system, "PingFang SC", sans-serif; fill: var(--muted); }
+  .ringbox .mid.big { font: 700 20px "JetBrains Mono", Menlo, monospace; fill: var(--blue); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>B003. 圆环回原点</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">字节高频</span>
+    <a href="https://leetcode.cn/problems/climbing-stairs/" target="_blank" rel="noopener">相关：70. 爬楼梯 ↗</a>
+  </header>
+  <p class="idea">题目（非力扣原题）：圆环上有 10 个点，编号 0 ~ 9。从 0 出发，每步走到相邻的点（顺时针或逆时针），走 n 步回到 0 有多少种走法？（0 ≤ n ≤ 60）例：n = 2 → 2（0→1→0、0→9→0）。<br>做法：和爬楼梯一个套路。<b>dp[i][j] = 走 i 步到达点 j 的走法数</b>。第 i 步到 j，上一步一定在 j 的左邻或右邻：<b>dp[i][j] = dp[i−1][(j−1+len) % len] + dp[i−1][(j+1) % len]</b>，取模处理首尾相接。起点 dp[0][0] = 1，答案 dp[n][0]。每步只看上一步，滚动成两行。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="nIn">n</label><input id="nIn" autocomplete="off" style="width:70px">
+        <span class="sep"></span>
+        <label for="lIn">环长 len</label><input id="lIn" autocomplete="off" style="width:70px">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div class="dpwrap">
+        <div class="dpcol"><div class="sl">圆环：点上的数 = 上一步结束时停在这里的走法数</div><div class="ringbox" id="ring"></div></div>
+        <div class="dpcol"><div class="sl">dp 表：第 i 行 = 走 i 步后停在各点的走法数（代码里只留两行）</div><div class="dpt" id="tbl"></div></div>
+      </div>
+      <div class="eqrow mono" id="eq"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n·len)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>n</b> 步</span><span class="op">×</span><span class="term">每步算 <b>len</b> 个点</span></div>
+        <p class="why">每个点只从左右两个邻居转移过来，一次加法。和爬楼梯一样：「最后一步从哪来」决定转移，这里来源是环上的两个邻居。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c ">1</span><span class="c ">0</span><span class="c ">0</span></div><div class="cells"><span class="c ">0</span><span class="c ">1</span><span class="c ">1</span></div><div class="cells"><span class="c g">2</span><span class="c ">1</span><span class="c ">1</span></div><span class="cap">环长 3：0、1、2 步后各点的走法数</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(len)</span></div>
+      <div>
+        <div class="eq"><span class="term">两行 <b>dp</b>、<b>nxt</b></span></div>
+        <p class="why">第 i 步只依赖第 i − 1 步，所以只留两行，算完 swap。不能原地改一行：算 nxt[j] 时 dp[j − 1] 已经被改成新值了。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">易错</span><span class="val">负数取模</span></div>
+      <div>
+        <p class="why">j = 0 时 j − 1 = −1。C++ 的 % 对负数结果也是负的：(−1) % 10 = −1，直接当下标会越界。要写成 <b>(j − 1 + len) % len</b>。Python 的 % 结果总是非负，(−1) % 10 = 9，不用加。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "long long backToOrigin(<span class=\"t\">int</span> n, <span class=\"t\">int</span> len = 10) {",
+      "    <span class=\"t\">vector</span>&lt;long long&gt; dp(len, 0);",
+      "    dp[0] = 1;  <span class=\"c\">// 0 步：站在 0</span>",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> step = 1; step &lt;= n; ++step) {",
+      "        <span class=\"t\">vector</span>&lt;long long&gt; nxt(len, 0);",
+      "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = 0; j &lt; len; ++j)  <span class=\"c\">// 左右邻居走来</span>",
+      "            nxt[j] = dp[(j - 1 + len) % len]",
+      "                   + dp[(j + 1) % len];",
+      "        dp.<span class=\"t\">swap</span>(nxt);",
+      "    }",
+      "    <span class=\"k\">return</span> dp[0];",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> backToOrigin(<span class=\"t\">self</span>, n, length=10):",
+      "    dp = [0] * length",
+      "    dp[0] = 1  <span class=\"c\"># 0 步：站在 0</span>",
+      "    <span class=\"k\">for</span> _ <span class=\"k\">in</span> <span class=\"t\">range</span>(n):",
+      "        dp = [dp[(j - 1) % length]  <span class=\"c\"># 左右邻居走来</span>",
+      "              + dp[(j + 1) % length]",
+      "              <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(length)]",
+      "    <span class=\"k\">return</span> dp[0]"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 3, 4, 6, 4, 5, 4, 3, 7, 7];
+
+  const E = (c, t) => `<span class="v ${c}">${t}</span>`;
+  // o: { rows:[{t,s}], cols:[{t,s}], vals:二维, cls:{'i,j':类}, cur:[i,j], deps:[{i,j,lab,on,pos}], path:[[i,j]],
+  //      rowHl:{i:类}, colHl:{j:类}, icons:{'i,j':[字符, 'tl'|'br']}, fmt(v,i,j), maxW, hw, noColHead, noRowHead }
+  function drawTable(id, o) {
+    const el = $(id), R = o.vals.length, C = o.vals[0].length;
+    const HW = o.noRowHead ? 0 : (o.hw || 44), HH = o.noColHead ? 0 : 46;
+    const avail = (o.avail || (el.parentElement.clientWidth || 600)) - HW - 4;
+    const W = Math.max(34, Math.min(o.maxW || 56, Math.floor(avail / C)));
+    const fs = Math.round(W * .37);
+    const X = j => HW + j * W + W / 2, Y = i => HH + i * W + W / 2;
+    let h = '';
+    if (!o.noColHead) o.cols.forEach((c, j) => {
+      h += `<div class="hd ${(o.colHl || {})[j] || ''}" style="left:${HW + j * W + 2}px;top:0;width:${W - 4}px;height:${HH - 4}px">`
+        + `${c.s != null ? `<small>${c.s}</small>` : ''}<span>${c.t}</span></div>`;
+    });
+    if (!o.noRowHead) o.rows.forEach((r, i) => {
+      h += `<div class="hd row ${(o.rowHl || {})[i] || ''}" style="left:0;top:${HH + i * W + 2}px;width:${HW - 4}px;height:${W - 4}px">`
+        + `<span>${r.t}</span>${r.s != null ? `<small>${r.s}</small>` : ''}</div>`;
+    });
+    const cur = o.cur ? o.cur.join() : '';
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const k = i + ',' + j, v = o.vals[i][j];
+      let c = (o.cls || {})[k] || '';
+      if (k === cur) c += ' cur';
+      const ic = (o.icons || {})[k];
+      const txt = v == null ? '' : o.fmt ? o.fmt(v, i, j) : v;
+      h += `<div class="c ${c}" style="left:${HW + j * W + 2}px;top:${HH + i * W + 2}px;width:${W - 4}px;height:${W - 4}px;font-size:${fs}px">`
+        + `${txt}${ic ? `<span class="ic ${ic[1]}">${ic[0]}</span>` : ''}</div>`;
+    }
+    let s = '', tags = '';
+    if (o.cur) (o.deps || []).forEach(d => {
+      const x1 = X(d.j), y1 = Y(d.i), x2 = X(o.cur[1]), y2 = Y(o.cur[0]);
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const a = W * .2, b = W * .3;
+      s += `<line class="ar ${d.on === false ? 'off' : ''}" x1="${x1 + ux * a}" y1="${y1 + uy * a}" x2="${x2 - ux * b}" y2="${y2 - uy * b}" marker-end="url(#ah-${id})"/>`;
+      if (d.lab) {
+        const p = d.pos || 'top';
+        const tx = p === 'left' ? HW + d.j * W + 2 : X(d.j), ty = p === 'bottom' ? HH + (d.i + 1) * W - 2 : p === 'left' ? Y(d.i) : HH + d.i * W + 2;
+        tags += `<span class="tg ${d.on === false ? 'off' : ''}" style="left:${tx}px;top:${ty}px">${d.lab}</span>`;
+      }
+    });
+    (o.tags || []).forEach(t => { tags += `<span class="tg ${t.cls || ''}" style="left:${X(t.j)}px;top:${HH + t.i * W + 2}px">${t.t}</span>`; });
+    const Wt = HW + C * W, Ht = HH + R * W;
+    el.style.width = Wt + 'px'; el.style.height = Ht + 'px';
+    el.innerHTML = h + `<svg width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" aria-hidden="true"><defs><marker id="ah-${id}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker></defs>${s}</svg>` + tags;
+  }
+  // 一条字符串：o.cls {k:类}，o.tags {k:'i'}
+  function drawStrip(id, str, o = {}) {
+    $(id).innerHTML = [...str].map((ch, k) => `<div class="ch ${(o.cls || {})[k] || ''}">${(o.tags || {})[k] ? `<i>${o.tags[k]}</i>` : ''}<b>${ch}</b><small>${k}</small></div>`).join('');
+  }
+  const grid2 = (R, C, v = null) => Array.from({ length: R }, () => Array(C).fill(v));
+  const clone2 = a => a.map(r => r.slice());
+
+  const idx = (n, o = 0) => Array.from({ length: n }, (_, k) => ({ t: k + o }));
+
+  const EXAMPLES = [[2, 10], [4, 10], [3, 3], [6, 6]];
+
+  function build([n, len]) {
+    const T = grid2(n + 1, len), s = [];
+    let dp = Array(len).fill(0); dp[0] = 1; T[0] = dp.slice();
+    const snap = o => s.push({ n, len, T: clone2(T), ring: dp.slice(), ...o });
+    snap({ line: 2, step: 0, msg: `第 0 步：站在点 0，dp[0] = 1，其他点都是 0 种`, eq: `dp[0][0] = ${E('b', 1)}` });
+    for (let step = 1; step <= n; step++) {
+      const nxt = Array(len).fill(0);
+      for (let j = 0; j < len; j++) {
+        const L = (j - 1 + len) % len, R = (j + 1) % len;
+        nxt[j] = dp[L] + dp[R]; T[step][j] = nxt[j];
+        const wrap = j === 0 ? `。j − 1 = −1 是负数，先加 len：(0 − 1 + ${len}) % ${len} = ${L}` : j === len - 1 ? `。右邻 (${j} + 1) % ${len} = 0，绕回起点` : '';
+        snap({ line: 6, step, j, L, R, cur: [step, j],
+          msg: `第 ${step} 步到点 ${j}：上一步要么在左邻 ${L}（${dp[L]} 种），要么在右邻 ${R}（${dp[R]} 种），合计 ${nxt[j]} 种${wrap}`,
+          eq: `dp[${step}][${j}] = ${E('a', `dp[${step - 1}][${L}] ` + dp[L])} + ${E('a', `dp[${step - 1}][${R}] ` + dp[R])} = ${E('b', nxt[j])}` });
+      }
+      dp = nxt;
+      snap({ line: 8, step, rowDone: step, msg: `第 ${step} 步算完，nxt 换成 dp。下一步只用到这一行，更早的行可以丢掉`,
+        eq: `dp = [${dp.map(v => E(v ? 'b' : 'm', v)).join(', ')}]` });
+    }
+    snap({ line: 10, step: n, done: true, kind: 'ok', msg: `✓ 走 ${n} 步回到 0 一共 ${dp[0]} 种走法`, eq: `return dp[${n}][0] = ${E('g', dp[0])}` });
+    return s;
+  }
+
+  function ring(st) {
+    const N = st.len, S = 300, cx = S / 2, cy = S / 2, Rr = 112, r = 22;
+    const P = j => { const a = -Math.PI / 2 + 2 * Math.PI * j / N; return [cx + Rr * Math.cos(a), cy + Rr * Math.sin(a), a]; };
+    let h = `<defs><marker id="rah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker></defs>`;
+    h += `<circle class="trk" cx="${cx}" cy="${cy}" r="${Rr}"/>`;
+    if (st.j != null && !st.rowDone && !st.done) [st.L, st.R].forEach(f => {
+      const [x1, y1] = P(f), [x2, y2] = P(st.j), dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      h += `<line class="ar" x1="${x1 + ux * (r + 2)}" y1="${y1 + uy * (r + 2)}" x2="${x2 - ux * (r + 6)}" y2="${y2 - uy * (r + 6)}" marker-end="url(#rah)"/>`;
+    });
+    for (let j = 0; j < N; j++) {
+      const [x, y, a] = P(j), v = st.ring[j];
+      let c = v ? '' : 'zero';
+      if (j === 0) c += ' home';
+      if (!st.rowDone && !st.done && (j === st.L || j === st.R)) c += ' dep';
+      if (!st.rowDone && !st.done && j === st.j) c += ' cur';
+      h += `<g class="pt ${c}"><circle cx="${x}" cy="${y}" r="${r}"/><text class="v" x="${x}" y="${y + 1}">${v}</text>`
+        + `<text class="ix" x="${cx + (Rr + 38) * Math.cos(a)}" y="${cy + (Rr + 38) * Math.sin(a)}">${j === 0 ? '点 0' : j}</text></g>`;
+    }
+    const lbl = st.step === 0 || st.rowDone || st.done ? `${st.step} 步后` : `${st.step - 1} 步后`;
+    h += `<text class="mid" x="${cx}" y="${cy - 14}">${lbl}</text><text class="mid big" x="${cx}" y="${cy + 14}">第 ${st.done ? st.n : st.step} 步</text>`;
+    $('ring').innerHTML = `<svg width="${S + 40}" height="${S + 40}" viewBox="-20 -20 ${S + 40} ${S + 40}" role="img" aria-label="圆环">${h}</svg>`;
+  }
+
+  function render(st) {
+    const { n, len } = st, cls = {}, rowHl = {}, colHl = { 0: 'ok' }, tags = [];
+    for (let i = 0; i <= n; i++) for (let j = 0; j < len; j++) if (st.T[i][j] != null) cls[i + ',' + j] = st.T[i][j] ? 'done' : 'done no';
+    if (st.cur) {
+      cls[(st.step - 1) + ',' + st.L] = cls[(st.step - 1) + ',' + st.R] = 'dep';
+      tags.push({ i: st.step - 1, j: st.L, t: '左邻' }, { i: st.step - 1, j: st.R, t: '右邻' });
+      rowHl[st.step] = 'cur';
+    }
+    if (st.done) cls[n + ',0'] = 'ans';
+    const rows = Array.from({ length: n + 1 }, (_, i) => ({ t: i, s: '步' }));
+    drawTable('tbl', { rows, cols: idx(len), vals: st.T, cls, rowHl, colHl, cur: st.cur, tags, maxW: 46, hw: 56, avail: 470 });
+    ring(st);
+    $('eq').innerHTML = st.eq || '';
+  }
+
+  const fill = ([n, len]) => { $('nIn').value = n; $('lIn').value = len; };
+  const parse = () => {
+    const n = Number($('nIn').value), len = Number($('lIn').value);
+    return Number.isInteger(n) && n >= 0 && n <= 10 && Number.isInteger(len) && len >= 3 && len <= 10 ? [n, len] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>

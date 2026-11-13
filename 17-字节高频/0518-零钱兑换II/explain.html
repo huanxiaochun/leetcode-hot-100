@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>518. 零钱兑换 II</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .dpwrap { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .dpcol { min-width: 0; }
+  .dpcol .sl { font-size: 15px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .dpcol .sl b { color: var(--text); }
+  .dpt { position: relative; }
+  .dpt .hd { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+             font: 700 18px "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); border-radius: 8px; }
+  .dpt .hd small { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .dpt .hd.row { flex-direction: row; gap: 6px; }
+  .dpt .hd.cur { background: var(--blue-soft); color: var(--blue); }
+  .dpt .hd.cur small { color: var(--blue); }
+  .dpt .hd.ok { background: var(--green-soft); color: var(--green); }
+  .dpt .hd.no { background: var(--amber-soft); color: var(--amber); }
+  .dpt .hd.mt { background: var(--green); color: #fff; }
+  .dpt .hd.mt small { color: #fff; }
+  .dpt .hd.dim { color: var(--muted); }
+  .dpt .c { position: absolute; display: grid; place-items: center; border-radius: 9px; background: var(--inset);
+            font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-weight: 700; color: var(--text);
+            border: 2.5px solid transparent; transition: background .2s, border-color .2s; }
+  .dpt .c.done { background: var(--card); border-color: #e1e4ea; }
+  .dpt .c.base { background: #eceef2; color: var(--muted); }
+  .dpt .c.na { background: repeating-linear-gradient(45deg, transparent 0 5px, #e9ebef 5px 7px); }
+  .dpt .c.yes { background: var(--green-soft); color: var(--green); border-color: transparent; }
+  .dpt .c.no { color: #b5b9c2; }
+  .dpt .c.dep { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .dpt .c.dep2 { border-color: var(--amber); border-style: dashed; }
+  .dpt .c.cur { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); border-width: 3.5px; z-index: 1; }
+  .dpt .c.best { box-shadow: 0 0 0 3px var(--green) inset; }
+  .dpt .c.path { background: #c8f0d6; color: #15803d; border-color: transparent; }
+  .dpt .c.mt { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c.ans { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c .ic { position: absolute; font-size: 15px; line-height: 1; }
+  .dpt .c .ic.tl { left: -4px; top: -8px; } .dpt .c .ic.br { right: -5px; bottom: -6px; }
+  .dpt .c s { font-size: .62em; color: var(--muted); margin-right: 2px; font-weight: 600; }
+  .dpt svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 2; }
+  .dpt svg .ar { stroke: var(--amber); stroke-width: 3; fill: none; }
+  .dpt svg .ar.off { stroke-width: 2; stroke-dasharray: 4 4; opacity: .75; }
+  .dpt svg .pth { stroke: var(--green); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
+  .dpt .tg { position: absolute; z-index: 3; transform: translate(-50%, -50%); padding: 0 6px; border-radius: 6px; white-space: nowrap;
+             font: 700 12px/18px -apple-system, "PingFang SC", sans-serif; background: var(--amber); color: #fff; }
+  .dpt .tg.off { background: #fff; color: var(--amber); box-shadow: inset 0 0 0 1.5px var(--amber); }
+  .dpt .tg.blue { background: var(--blue); }
+
+  /* 一条字符串：i..j 区间、两头、中间 */
+  .strip { display: flex; gap: 6px; padding-top: 26px; flex-wrap: wrap; }
+  .strip .ch { position: relative; width: 46px; text-align: center; }
+  .strip .ch b { display: grid; place-items: center; height: 46px; border-radius: 10px; background: var(--inset);
+                 font: 700 21px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; }
+  .strip .ch small { display: block; font: 12px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-top: 3px; }
+  .strip .ch i { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font: 700 13px "JetBrains Mono", Menlo, monospace;
+                 font-style: normal; padding: 0 7px; border-radius: 6px; color: #fff; background: var(--blue); white-space: nowrap; }
+  .strip .ch.in b { background: var(--blue-soft); }
+  .strip .ch.end b { border-color: var(--blue); color: var(--blue); }
+  .strip .ch.endno b { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .strip .ch.mid b { box-shadow: inset 0 -4px 0 var(--amber); }
+  .strip .ch.best b { background: var(--green-soft); color: var(--green); }
+  .strip .ch.bestu b { box-shadow: inset 0 -4px 0 var(--green); }
+
+  .eqrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-height: 44px; font-size: 19px; }
+  .eqrow .v { padding: 3px 12px; border-radius: 10px; font-weight: 700; background: var(--inset); }
+  .eqrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .eqrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .eqrow .v.g { background: var(--green-soft); color: var(--green); }
+  .eqrow .v.m { color: var(--muted); }
+  .eqrow small { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 5px; vertical-align: -2px; }
+  .chipline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 40px; font-size: 17px; }
+  .chipline .w { padding: 5px 12px; border-radius: 10px; background: var(--inset); font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .chipline .w.g { background: var(--green-soft); color: var(--green); }
+  .chipline .op { font-size: 14px; font-weight: 700; color: var(--amber); }
+  .chipline .lbl { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+  .dpt .c.nw { background: var(--blue-soft); color: var(--blue); border-color: transparent; }
+  .dpt .c.old { color: #b5b9c2; }
+
+  .ways2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 36px; font-size: 15px; }
+  .ways2 .w { padding: 3px 10px; border-radius: 8px; font: 700 16px "JetBrains Mono", Menlo, monospace; background: var(--green-soft); color: var(--green); }
+  .ways2 .lb { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>518. 零钱兑换 II</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">字节高频</span>
+    <a href="https://leetcode.cn/problems/coin-change-ii/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">完全背包求方案数：<b>dp[j] = 凑出金额 j 的组合数</b>，dp[0] = 1（什么都不选）。<b>外层枚举硬币</b>，内层金额<b>从小到大</b>：dp[j] += dp[j − coin]。金额从小到大时 dp[j − coin] 里可能已经用过这枚硬币，这正是「每种无限个」。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="aIn">amount</label><input id="aIn" autocomplete="off" style="width:70px">
+        <span class="sep"></span>
+        <label for="cIn">coins</label><input id="cIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div class="dpcol"><div class="sl">每一行 = <b>处理完这枚硬币后</b>的 dp[]（代码里只有一行，一行一行往下覆盖）。灰色：金额比硬币小，用不上，保持不变</div><div class="dpt" id="tbl"></div></div>
+      <div class="eqrow mono" id="eq"></div>
+      <div class="ways2" id="ways"></div>
+      <div class="legend"><span><i style="background:var(--amber-soft)"></i>用到的两格：上 = 不用这枚，左 = 再放一枚</span><span><i style="background:var(--blue-soft)"></i>当前格</span></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(amount·k)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>k</b> 种硬币</span><span class="op">×</span><span class="term">每种扫一遍 <b>amount</b> 个金额</span></div>
+        <p class="why">每格只做一次加法。dp[j − coin] 在 j 左边，从小到大扫时已经算好，而且<b>已经算上了这枚硬币</b>，所以同一种硬币能用任意多枚。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c ">1</span><span class="c ">1</span><span class="c ">2</span><span class="c ">2</span><span class="c ">3</span><span class="c ">3</span><span class="c g">4</span></div><span class="cap">coins = [1, 2] 时的 dp[0..6]：dp[6] = 4，用 0 ~ 3 个 2，其余补 1</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(amount)</span></div>
+      <div>
+        <div class="eq"><span class="term">一行 dp <b>amount + 1</b> 格</span></div>
+        <p class="why">二维写法 dp[i][j] = 前 i 种硬币凑出 j 的组合数，它只用到上一行和这一行左边，所以压成一行。中间值可能超过 int，C++ 用 unsigned long long，题目保证答案在 int 内。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">易错</span><span class="val">循环顺序</span></div>
+      <div>
+        <p class="why"><b>外层硬币、内层金额</b>：硬币按固定顺序加入，1+2 和 2+1 只算一次，是<b>组合</b>（本题）。<b>外层金额、内层硬币</b>：不同顺序算不同方案，是<b>排列</b>（377. 组合总和 IV）。例 1 反过来会得到 9。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">322 题</span></div>
+      <div>
+        <p class="why">322. 零钱兑换求<b>最少枚数</b>：dp[j] = min(dp[j − coin] + 1)，初始化成「很大」。这里求<b>方案数</b>：相加，初始化 dp[0] = 1、其他 0。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">int</span> change(<span class=\"t\">int</span> amount, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; coins) {",
+      "    <span class=\"t\">vector</span>&lt;unsigned long long&gt; dp(amount + 1, 0);",
+      "    dp[0] = 1;  <span class=\"c\">// 什么都不选，也算一种</span>",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> coin : coins)  <span class=\"c\">// 外层硬币 → 组合</span>",
+      "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = coin; j &lt;= amount; ++j)  <span class=\"c\">// 小到大</span>",
+      "            dp[j] += dp[j - coin];",
+      "    <span class=\"k\">return</span> (<span class=\"t\">int</span>)dp[amount];",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> change(<span class=\"t\">self</span>, amount, coins):",
+      "    dp = [0] * (amount + 1)",
+      "    dp[0] = 1  <span class=\"c\"># 什么都不选，也算一种</span>",
+      "    <span class=\"k\">for</span> coin <span class=\"k\">in</span> coins:  <span class=\"c\"># 外层硬币 → 组合</span>",
+      "        <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(coin, amount + 1):  <span class=\"c\"># 小到大</span>",
+      "            dp[j] += dp[j - coin]",
+      "    <span class=\"k\">return</span> dp[amount]"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 3, 4, 5, 6, 6];
+
+  const E = (c, t) => `<span class="v ${c}">${t}</span>`;
+  // o: { rows:[{t,s}], cols:[{t,s}], vals:二维, cls:{'i,j':类}, cur:[i,j], deps:[{i,j,lab,on,pos}], path:[[i,j]],
+  //      rowHl:{i:类}, colHl:{j:类}, icons:{'i,j':[字符, 'tl'|'br']}, fmt(v,i,j), maxW, hw, noColHead, noRowHead }
+  function drawTable(id, o) {
+    const el = $(id), R = o.vals.length, C = o.vals[0].length;
+    const HW = o.noRowHead ? 0 : (o.hw || 44), HH = o.noColHead ? 0 : 46;
+    const avail = (o.avail || (el.parentElement.clientWidth || 600)) - HW - 4;
+    const W = Math.max(34, Math.min(o.maxW || 56, Math.floor(avail / C)));
+    const fs = Math.round(W * .37);
+    const X = j => HW + j * W + W / 2, Y = i => HH + i * W + W / 2;
+    let h = '';
+    if (!o.noColHead) o.cols.forEach((c, j) => {
+      h += `<div class="hd ${(o.colHl || {})[j] || ''}" style="left:${HW + j * W + 2}px;top:0;width:${W - 4}px;height:${HH - 4}px">`
+        + `${c.s != null ? `<small>${c.s}</small>` : ''}<span>${c.t}</span></div>`;
+    });
+    if (!o.noRowHead) o.rows.forEach((r, i) => {
+      h += `<div class="hd row ${(o.rowHl || {})[i] || ''}" style="left:0;top:${HH + i * W + 2}px;width:${HW - 4}px;height:${W - 4}px">`
+        + `<span>${r.t}</span>${r.s != null ? `<small>${r.s}</small>` : ''}</div>`;
+    });
+    const cur = o.cur ? o.cur.join() : '';
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const k = i + ',' + j, v = o.vals[i][j];
+      let c = (o.cls || {})[k] || '';
+      if (k === cur) c += ' cur';
+      const ic = (o.icons || {})[k];
+      const txt = v == null ? '' : o.fmt ? o.fmt(v, i, j) : v;
+      h += `<div class="c ${c}" style="left:${HW + j * W + 2}px;top:${HH + i * W + 2}px;width:${W - 4}px;height:${W - 4}px;font-size:${fs}px">`
+        + `${txt}${ic ? `<span class="ic ${ic[1]}">${ic[0]}</span>` : ''}</div>`;
+    }
+    let s = '', tags = '';
+    if (o.cur) (o.deps || []).forEach(d => {
+      const x1 = X(d.j), y1 = Y(d.i), x2 = X(o.cur[1]), y2 = Y(o.cur[0]);
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const a = W * .2, b = W * .3;
+      s += `<line class="ar ${d.on === false ? 'off' : ''}" x1="${x1 + ux * a}" y1="${y1 + uy * a}" x2="${x2 - ux * b}" y2="${y2 - uy * b}" marker-end="url(#ah-${id})"/>`;
+      if (d.lab) {
+        const p = d.pos || 'top';
+        const tx = p === 'left' ? HW + d.j * W + 2 : X(d.j), ty = p === 'bottom' ? HH + (d.i + 1) * W - 2 : p === 'left' ? Y(d.i) : HH + d.i * W + 2;
+        tags += `<span class="tg ${d.on === false ? 'off' : ''}" style="left:${tx}px;top:${ty}px">${d.lab}</span>`;
+      }
+    });
+    (o.tags || []).forEach(t => { tags += `<span class="tg ${t.cls || ''}" style="left:${X(t.j)}px;top:${HH + t.i * W + 2}px">${t.t}</span>`; });
+    const Wt = HW + C * W, Ht = HH + R * W;
+    el.style.width = Wt + 'px'; el.style.height = Ht + 'px';
+    el.innerHTML = h + `<svg width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" aria-hidden="true"><defs><marker id="ah-${id}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker></defs>${s}</svg>` + tags;
+  }
+  // 一条字符串：o.cls {k:类}，o.tags {k:'i'}
+  function drawStrip(id, str, o = {}) {
+    $(id).innerHTML = [...str].map((ch, k) => `<div class="ch ${(o.cls || {})[k] || ''}">${(o.tags || {})[k] ? `<i>${o.tags[k]}</i>` : ''}<b>${ch}</b><small>${k}</small></div>`).join('');
+  }
+  const grid2 = (R, C, v = null) => Array.from({ length: R }, () => Array(C).fill(v));
+  const clone2 = a => a.map(r => r.slice());
+
+  const idx = (n, o = 0) => Array.from({ length: n }, (_, k) => ({ t: k + o }));
+
+  const EXAMPLES = [[5, [1, 2, 5]], [3, [2]], [4, [1, 2, 3]], [7, [2, 3]]];
+
+  // 列出所有组合（硬币按 coins 的顺序放），最多 8 个
+  function combos(amount, coins) {
+    const out = [], cur = [];
+    const go = (k, rest) => {
+      if (out.length >= 8) return;
+      if (!rest) { out.push(cur.join('+') || '不选'); return; }
+      for (let t = k; t < coins.length; t++) if (coins[t] <= rest) { cur.push(coins[t]); go(t, rest - coins[t]); cur.pop(); }
+    };
+    go(0, amount);
+    return out;
+  }
+
+  function build([amount, coins]) {
+    const R = coins.length + 1, C = amount + 1, T = grid2(R, C), dp = Array(C).fill(0), s = [];
+    dp[0] = 1; T[0] = dp.slice();
+    const snap = o => s.push({ amount, coins, R, C, T: clone2(T), ...o });
+    snap({ line: 2, row: 0, msg: 'dp[0] = 1：凑出 0 元有一种方法，就是什么都不选。还没有硬币可用，其他金额都是 0 种',
+      eq: `dp = [${dp.map(v => E('b', v)).join(', ')}]` });
+    coins.forEach((c, k) => {
+      const r = k + 1;
+      for (let j = 0; j < Math.min(c, C); j++) T[r][j] = dp[j];
+      snap({ line: 3, row: r, msg: `开始用面额 ${c}。金额小于 ${c} 的格子放不下它，组合数不变（灰色）`, eq: `coin = ${E('b', c)}` });
+      for (let j = c; j <= amount; j++) {
+        const up = dp[j], left = dp[j - c];
+        dp[j] += left; T[r][j] = dp[j];
+        snap({ line: 5, row: r, cur: [r, j], deps: [{ i: r - 1, j, lab: '不用 ' + c }, { i: r, j: j - c, lab: '再放 ' + c, pos: 'bottom' }],
+          msg: `dp[${j}]：不用 ${c} 的有 ${up} 种；用 ${c} 的话先凑出 ${j - c}，这一行的 dp[${j - c}] 已经算上了 ${c}，所以 ${c} 可以放很多枚，有 ${left} 种。合计 ${dp[j]}`,
+          eq: `dp[${j}] = ${E('a', '上 ' + up)} + ${E('a', `dp[${j - c}] ` + left)} = ${E('b', dp[j])}` });
+      }
+    });
+    // 循环顺序反过来（外层金额、内层硬币）会数排列，对照一下
+    const P = Array(C).fill(0); P[0] = 1;
+    for (let j = 1; j <= amount; j++) coins.forEach(c => { if (c <= j) P[j] += P[j - c]; });
+    const ws = combos(amount, coins);
+    snap({ line: 6, done: true, kind: 'ok', msg: `✓ 凑出 ${amount} 一共 ${dp[amount]} 种组合` + (P[amount] !== dp[amount] ? `。如果外层金额、内层硬币，会得到 ${P[amount]}：那是把不同顺序当成不同方案的排列数` : ''),
+      eq: `return dp[${amount}] = ${E('g', dp[amount])}`,
+      ways: dp[amount] ? `<span class="lb">组合：</span>${ws.map(w => `<span class="w">${w}</span>`).join('')}${dp[amount] > ws.length ? '<span class="lb">…</span>' : ''}` : '<span class="lb">凑不出来</span>' });
+    return s;
+  }
+
+  function render(st) {
+    const { R, C } = st, cls = {}, rowHl = {};
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      if (st.T[i][j] == null) continue;
+      cls[i + ',' + j] = i && j < st.coins[i - 1] ? 'old' : 'done';
+    }
+    (st.deps || []).forEach(d => cls[d.i + ',' + d.j] = 'dep');
+    if (st.done) cls[(R - 1) + ',' + (C - 1)] = 'ans';
+    if (st.row != null) rowHl[st.row] = 'cur';
+    const rows = [{ t: '无', s: '硬币' }, ...st.coins.map(c => ({ t: '+' + c }))];
+    drawTable('tbl', { rows, cols: idx(C), vals: st.T, cls, rowHl, cur: st.cur, deps: st.deps, maxW: 54, hw: 92, avail: 760 });
+    $('eq').innerHTML = st.eq || '';
+    $('ways').innerHTML = st.ways || '';
+  }
+
+  const fill = ([a, c]) => { $('aIn').value = a; $('cIn').value = c.join(', '); };
+  const parse = () => {
+    const a = Number($('aIn').value), c = $('cIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+    return Number.isInteger(a) && a >= 0 && a <= 12 && c.length >= 1 && c.length <= 4 && c.every(x => Number.isInteger(x) && x >= 1 && x <= 20)
+      && new Set(c).size === c.length ? [a, c] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>

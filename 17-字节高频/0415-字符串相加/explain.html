@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>415. 字符串相加</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .card.sum { margin-top: 24px; padding: 28px 32px; }
+  .card.sum h2 { margin: 0 0 20px; font-size: 24px; }
+  .sumgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  @media (max-width: 1100px) { .sumgrid { grid-template-columns: 1fr; } }
+  .pts { display: flex; flex-direction: column; gap: 16px; }
+  .pt { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 16px; align-items: baseline; }
+  .pt .k { font-size: 16px; font-weight: 700; color: var(--blue); background: var(--blue-soft); border-radius: 9px; padding: 5px 0; text-align: center; }
+  .pt .d { font-size: 19px; line-height: 1.65; }
+  .pt .d b, .ind b { color: var(--blue); }
+  .pt .d code, .ind code, .pit code { font: 600 .9em "JetBrains Mono", Menlo, monospace; background: var(--inset); padding: 1px 6px; border-radius: 6px; }
+  .sfig { background: var(--bg); border-radius: 16px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .sfig .cap { font-size: 16px; color: var(--muted); line-height: 1.6; }
+  .sfig .cap b { color: var(--text); }
+  .sfig svg { display: block; width: 100%; overflow: visible; }
+  .sfig svg text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .sfig svg .zh { font-family: -apple-system, "PingFang SC", sans-serif; }
+  .mg { display: inline-grid; gap: 5px; }
+  .mg span { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center; background: var(--card); position: relative;
+             font: 700 17px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2px solid transparent; }
+  .mg span i { position: absolute; left: -7px; top: -9px; font: 700 12px -apple-system, sans-serif; font-style: normal; background: var(--text); color: #fff; border-radius: 9px; padding: 1px 6px; }
+  .figrow { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; }
+  .lay { display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+  .lay div { display: flex; gap: 6px; align-items: center; }
+  .lay .t { width: 82px; color: var(--muted); font-weight: 600; }
+  .lay .q { padding: 3px 9px; border-radius: 8px; font: 700 15px "JetBrains Mono", Menlo, monospace; }
+  .ind { display: flex; flex-direction: column; gap: 18px; }
+  .ind .kind { display: flex; gap: 14px; align-items: center; font-size: 20px; flex-wrap: wrap; }
+  .ind .kind .tag { font-size: 18px; font-weight: 700; color: #fff; background: var(--blue); padding: 6px 16px; border-radius: 10px; }
+  .ind .link { font-size: 19px; line-height: 1.7; padding-left: 18px; border-left: 4px solid var(--blue-soft); }
+  .pits2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 900px) { .pits2 { grid-template-columns: 1fr; } }
+  .pit { background: var(--amber-soft); border-radius: 14px; padding: 16px 20px; }
+  .pit .pt2 { display: block; font-size: 18px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
+  .pit span b { color: var(--amber); }
+  .pit span { font-size: 17px; line-height: 1.65; }
+
+  .card.stmt { margin-bottom: 24px; padding: 26px 32px; }
+  .card.stmt h2 { margin: 0 0 12px; font-size: 22px; }
+  .card.stmt p { margin: 6px 0; font-size: 19px; line-height: 1.7; }
+  .card.stmt code { font: 600 .9em "JetBrains Mono", Menlo, monospace; background: var(--inset); padding: 1px 6px; border-radius: 6px; }
+  .row-l { display: flex; align-items: flex-end; gap: 14px; }
+  .row-l > .lab { margin-bottom: 18px; width: 64px; flex: none; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .cell.dot .box { width: 22px; background: transparent; color: var(--muted); }
+  .cell.pa .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.pb .box { background: var(--green-soft); color: var(--green); }
+  .cell.pc .box { border-color: var(--amber); color: var(--amber); }
+  .cell .bal { font-size: 15px; margin-top: 6px; color: var(--muted); }
+  .cell .bal.z { color: var(--green); font-weight: 800; }
+  .cut { width: 3px; align-self: stretch; margin: 0 4px; border-radius: 2px; background: var(--green); }
+
+  .add { display: grid; gap: 8px; justify-content: start; align-items: center; }
+  .add .h { font-size: 15px; font-weight: 600; color: var(--muted); padding-right: 6px; }
+  .add .d { width: 46px; height: 52px; border-radius: 12px; display: grid; place-items: center; font: 700 24px "JetBrains Mono", Menlo, monospace; background: var(--inset); border: 2.5px solid transparent; transition: all .3s; }
+  .add .d.e { background: transparent; }
+  .add .d.cy { height: 30px; font-size: 16px; color: var(--amber); background: transparent; }
+  .add .d.col { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+  .add .d.used { opacity: .35; }
+  .add .d.res { background: var(--green-soft); color: var(--green); }
+  .add .d.res.col { border-color: var(--green); }
+  .add .ln { grid-column: 2 / -1; height: 3px; background: var(--text); border-radius: 2px; opacity: .6; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>415. 字符串相加</h1>
+    <span class="pill easy">简单</span>
+    <span class="pill cat">字节高频</span>
+    <a href="https://leetcode.cn/problems/add-strings/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">模拟<b>竖式加法</b>：i、j 从两个串的末位往前走，每位 <b>sum = 位1 + 位2 + carry</b>，写下 sum % 10，进位 sum / 10。走完的串当 0，最后一个进位也在循环里处理，结果<b>倒着写</b>再反转。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="aIn">num1</label><input id="aIn" autocomplete="off" style="flex:1">
+        <span class="sep"></span>
+        <label for="bIn">num2</label><input id="bIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">竖式（蓝框 = 正在算的这一位，上方黄色小字 = 进到这一位的进位）</div>
+        <div class="add" id="add"></div>
+      </div>
+      <div>
+        <div class="pillrow mono" id="eq"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card sum" aria-label="归纳与同类题提醒">
+    <h2>归纳 / 同类题提醒</h2>
+    <div class="ind">
+      <div class="kind"><span class="tag">竖式模拟</span><span>从低位往高位逐位相加，进位带到下一位。</span></div>
+      <div class="link">字节常见变体：<b>36 进制加法</b>（把 10 换成 36，字符和数字互转）、<b>43. 字符串相乘</b>、<b>带小数点的字符串相加</b>（先按小数点对齐、补 0），核心都是这个竖式循环。</div>
+      <div class="pits2"><div class="pit"><span class="pt2">易错：最高位的进位</span><span><code>999 + 1 = 1000</code>：循环条件里少了 <code>|| carry</code>，最后的 1 就丢了，得到 000。</span></div><div class="pit"><span class="pt2">易错：结果是倒着写的</span><span>从低位往高位 push，最后要 <code>reverse</code>；每次往头部插入会变成 O(n²)。</span></div></div>
+    </div>
+  </section>
+  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(max(m, n))</span></div>
+      <div>
+        <div class="eq"><span class="term">每轮处理一位</span><span class="op">×</span><span class="term"><b>max(m, n) + 1</b> 轮</span><span class="op">=</span><span class="term"><b>O(max(m, n))</b></span></div>
+        <p class="why">循环条件 <b>i ≥ 0 || j ≥ 0 || carry</b>：长的串走完、最后的进位也写完才停。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="c b">9</span><span class="c b">9</span><span class="c b">9</span><span class="c ">+</span><span class="c b">1</span><span class="ar">→</span><span class="c g">1</span><span class="c g">0</span><span class="c g">0</span><span class="c g">0</span></div><span class="cap">999 + 1：最后一轮只剩进位，写出最高位的 1</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div>
+        <div class="eq"><span class="term"><b>i</b>、<b>j</b>、<b>carry</b>（不算结果串）</span></div>
+        <p class="why">只用几个变量；结果串是要返回的，不算额外空间。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">string</span> addStrings(<span class=\"t\">string</span> num1, <span class=\"t\">string</span> num2) {",
+      "    <span class=\"t\">int</span> i = num1.size() - 1, j = num2.size() - 1;",
+      "    <span class=\"t\">int</span> carry = 0;  <span class=\"t\">string</span> ans;",
+      "    <span class=\"k\">while</span> (i &gt;= 0 || j &gt;= 0 || carry) {",
+      "        <span class=\"t\">int</span> sum = carry;",
+      "        <span class=\"k\">if</span> (i &gt;= 0) sum += num1[i--] - '0';",
+      "        <span class=\"k\">if</span> (j &gt;= 0) sum += num2[j--] - '0';",
+      "        ans.push_back('0' + sum % 10);  <span class=\"c\">// 这一位</span>",
+      "        carry = sum / 10;               <span class=\"c\">// 进位</span>",
+      "    }",
+      "    reverse(ans.begin(), ans.end());",
+      "    <span class=\"k\">return</span> ans;",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> addStrings(<span class=\"t\">self</span>, num1, num2):",
+      "    i, j = <span class=\"t\">len</span>(num1) - 1, <span class=\"t\">len</span>(num2) - 1",
+      "    carry, ans = 0, []",
+      "    <span class=\"k\">while</span> i &gt;= 0 <span class=\"k\">or</span> j &gt;= 0 <span class=\"k\">or</span> carry:",
+      "        total = carry",
+      "        <span class=\"k\">if</span> i &gt;= 0:",
+      "            total += int(num1[i]); i -= 1",
+      "        <span class=\"k\">if</span> j &gt;= 0:",
+      "            total += int(num2[j]); j -= 1",
+      "        ans.append(str(total % 10))  <span class=\"c\"># 这一位</span>",
+      "        carry = total // 10          <span class=\"c\"># 进位</span>",
+      "    <span class=\"k\">return</span> ''.join(reversed(ans))"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 3, 4, 6, 8, 9, 10, 10, 11, 11, 11];
+
+  const EXAMPLES = [['11', '123'], ['456', '77'], ['999', '1'], ['0', '0']];
+
+  function build([a, b]) {
+    const s = [], W = Math.max(a.length, b.length) + 1, ans = [], cin = {};
+    let i = a.length - 1, j = b.length - 1, carry = 0, col = 0;
+    const snap = (o) => s.push({ a, b, W, ans: ans.slice(), cin: { ...cin }, carry, col: -1, ...o });
+    snap({ line: 2, msg: `i、j 指向两个串的末位，carry = 0` });
+    while (i >= 0 || j >= 0 || carry) {
+      const da = i >= 0 ? +a[i] : null, db = j >= 0 ? +b[j] : null, c0 = carry;
+      let sum = carry;
+      if (i >= 0) sum += +a[i--];
+      if (j >= 0) sum += +b[j--];
+      const note = da === null && db === null ? '两个串都走完了，只剩进位：'
+        : da === null ? 'num1 已走完按 0 算，' : db === null ? 'num2 已走完按 0 算，' : '';
+      snap({ col, sum, line: 6, msg: `第 ${col + 1} 位：${note}${da ?? 0} + ${db ?? 0} + 进位 ${c0} = ${sum}` });
+      ans.push(sum % 10);
+      carry = Math.floor(sum / 10);
+      if (carry) cin[col + 1] = carry;
+      snap({ col, sum, carry, line: 8, msg: `写下 ${sum % 10}，进位 carry = ${carry}` });
+      col++;
+    }
+    const res = ans.slice().reverse().join('');
+    snap({ done: true, line: 11, kind: 'ok', msg: `✓ 倒着写的 "${ans.join('')}" 反转后得到 ${res}` });
+    return s;
+  }
+
+  function render(st) {
+    const W = st.W, cells = [];
+    const at = (str, k) => k < str.length ? str[str.length - 1 - k] : '';
+    const row = (lab, f) => { cells.push(`<span class="h">${lab}</span>`); for (let g = 0; g < W; g++) cells.push(f(W - 1 - g)); };
+    const cls = k => (k === st.col ? ' col' : '') + (st.col >= 0 && k < st.col ? ' used' : '');
+    row('进位', k => `<span class="d cy">${st.cin[k] ? '+' + st.cin[k] : ''}</span>`);
+    row('num1', k => { const v = at(st.a, k); return `<span class="d${v ? cls(k) : ' e'}">${v}</span>`; });
+    row('num2', k => { const v = at(st.b, k); return `<span class="d${v ? cls(k) : ' e'}">${v}</span>`; });
+    cells.push('<span></span><span class="ln"></span>');
+    row('和', k => k < st.ans.length ? `<span class="d res${k === st.col ? ' col' : ''}">${st.ans[k]}</span>` : '<span class="d e"></span>');
+    $('add').style.gridTemplateColumns = `64px repeat(${W}, 46px)`;
+    $('add').innerHTML = cells.join('');
+    $('eq').innerHTML = (st.sum != null ? `sum =<span class="v b">${st.sum}</span>` : '')
+      + ` carry =<span class="v a">${st.carry}</span>`
+      + ` ans（倒着写）=<span class="v">"${st.ans.join('')}"</span>`
+      + (st.done ? `<span class="v g right">${st.ans.slice().reverse().join('')}</span>` : '');
+  }
+
+  const fill = ([a, b]) => { $('aIn').value = a; $('bIn').value = b; };
+  const parse = () => {
+    const a = $('aIn').value.trim(), b = $('bIn').value.trim(), ok = x => /^(0|[1-9]\d{0,10})$/.test(x);
+    return ok(a) && ok(b) ? [a, b] : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>
