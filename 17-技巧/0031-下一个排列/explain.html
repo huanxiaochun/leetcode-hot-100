@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>31. 下一个排列</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .cell.desc .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.piv .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.sw .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); transform: translateY(-6px); }
+  .cell.fix .box { opacity: .45; }
+  .cell.done .box { background: var(--green-soft); color: var(--green); }
+  .phase { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .phase span { padding: 6px 14px; border-radius: 10px; background: var(--inset); color: var(--muted); font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .phase span.on { background: var(--blue); color: #fff; }
+  .phase span.done { background: var(--green-soft); color: var(--green); }
+
+  .gd { margin-top: 24px; }
+  .gd h2 { margin: 0 0 6px; font-size: 26px; }
+  .gd .sub { color: var(--muted); font-size: 18px; margin: 0 0 20px; }
+  .gd .sub b { color: var(--text); }
+  /* 解题五步 */
+  .five { display: flex; flex-direction: column; }
+  .five .st { display: grid; grid-template-columns: 200px minmax(0, 1fr) 420px; gap: 28px; align-items: center; padding: 20px 0; }
+  .five .st.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  .five .st + .st { border-top: 1px solid var(--line); }
+  @media (max-width: 1100px) { .five .st, .five .st.nofig { grid-template-columns: 1fr; gap: 12px; } }
+  .five .hd { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; }
+  .five .hd i { font-style: normal; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                background: var(--blue); color: #fff; font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .five .bd { font-size: 20px; line-height: 1.7; }
+  .five .bd b { color: var(--blue); }
+  .five .bd .eq { display: inline-block; margin: 2px 0 6px; padding: 8px 16px; border-radius: 12px; background: var(--inset);
+                  font: 700 20px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); white-space: nowrap; }
+  .five .bd .note { display: block; font-size: 17px; color: var(--muted); }
+  .five .fg { display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--bg); }
+  .five .fg .cap { font-size: 15px; color: var(--muted); text-align: center; }
+  svg.mini { display: block; overflow: visible; }
+  svg.mini rect { rx: 10; fill: var(--card); stroke: #d0d4dc; stroke-width: 2; }
+  svg.mini .c rect { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 2.5; }
+  svg.mini .d rect { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini .g rect { fill: var(--green-soft); stroke: var(--green); stroke-width: 2.5; }
+  svg.mini .p rect { fill: #f3e8ff; stroke: #9333ea; stroke-width: 2.5; }
+  svg.mini .r rect { fill: #fee2e2; stroke: #dc2626; stroke-width: 2.5; }
+  svg.mini .m rect { fill: none; stroke: none; }
+  svg.mini text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; fill: var(--text); }
+  svg.mini .c text { fill: var(--blue); } svg.mini .d text { fill: var(--amber); } svg.mini .g text { fill: var(--green); }
+  svg.mini .p text { fill: #9333ea; } svg.mini .r text { fill: #dc2626; } svg.mini .m text { fill: var(--muted); }
+  svg.mini text.ix { font-size: 12px; font-weight: 400; fill: var(--muted); }
+  svg.mini path.a { fill: none; stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini path.a.r { stroke: #dc2626; }
+  svg.mini path.a.g { stroke: var(--green); }
+  svg.mini text.al { font: 700 13px -apple-system, "PingFang SC", sans-serif; fill: var(--amber); }
+  svg.mini text.al.r { fill: #dc2626; } svg.mini text.al.g { fill: var(--green); }
+  /* 递归树 */
+  .tree2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  @media (max-width: 1100px) { .tree2 { grid-template-columns: 1fr; } }
+  .tree2 .tv { overflow-x: auto; padding: 8px 0; }
+  svg.rt { display: block; overflow: visible; margin: 0 auto; }
+  svg.rt line { stroke: #c4c9d3; stroke-width: 2; }
+  svg.rt rect { rx: 10; stroke-width: 2.5; }
+  svg.rt text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .tree2 .tx { font-size: 20px; line-height: 1.75; }
+  .tree2 .tx b { color: var(--blue); }
+  .tree2 .cnt { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .tree2 .cnt span { padding: 4px 12px; border-radius: 9px; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .tree2 .memo { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tree2 .memo span { padding: 4px 10px; border-radius: 8px; background: var(--green-soft); color: var(--green); font: 700 15px "JetBrains Mono", Menlo, monospace; }
+  /* 归纳 */
+  .sum .model { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 14px; background: var(--blue-soft);
+                font-size: 21px; font-weight: 700; color: var(--blue); margin-bottom: 18px; }
+  .sum .model i { font-style: normal; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .sum .rel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .sum .rel .r { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 12px 18px; border-radius: 14px; background: var(--inset); }
+  .sum .rel .r .nm { font-size: 19px; font-weight: 700; }
+  .sum .rel .r .nm span { font: 600 15px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-right: 6px; }
+  .sum .rel .r .df { font-size: 18px; line-height: 1.65; }
+  .sum .rel .r .df b { color: var(--blue); }
+  .sum .pit { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .sum .pit .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 20px; }
+  .sum .pit .p b { display: block; font-size: 19px; color: var(--amber); margin-bottom: 8px; }
+  .sum .pit .p span { font-size: 17px; line-height: 1.7; }
+  .sum .pit .p code { font: 600 .95em "JetBrains Mono", Menlo, monospace; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
+
+  .wy2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: center; }
+  @media (max-width: 1100px) { .wy2 { grid-template-columns: 1fr; } }
+  .wy2 .props { display: flex; flex-direction: column; gap: 12px; }
+  .wy2 .pp { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; padding: 14px 18px; border-radius: 14px; background: var(--inset); font-size: 20px; line-height: 1.6; }
+  .wy2 .pp i { font-style: normal; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; margin-top: 2px;
+               background: var(--blue); color: #fff; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .wy2 .pp b { color: var(--blue); }
+  .wy2 .pp code { font: 700 .95em "JetBrains Mono", "SF Mono", Menlo, monospace; background: var(--card); padding: 1px 8px; border-radius: 7px; }
+  .wy2 .fw { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 20px 22px; border-radius: 16px; background: var(--bg); }
+  .wy2 .fw .cap { font-size: 16px; color: var(--muted); text-align: center; line-height: 1.6; }
+  .wy2 .fw .cap b { color: var(--text); }
+  .wr { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .wr .k { min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; display: grid; place-items: center; background: var(--card); border: 2px solid #d0d4dc; color: var(--text); }
+  .wr .k.b { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+  .wr .k.a { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .wr .k.g { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+  .wr .k.r { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+  .wr .k.w { background: #fff; }
+  .wr .k.x { opacity: .4; text-decoration: line-through; }
+  .wr .k.m { color: var(--muted); background: var(--inset); border-style: dashed; }
+  .f75 { display: flex; flex-direction: column; gap: 4px; }
+  .f75 .rw { display: grid; grid-template-columns: 74px repeat(9, 40px); gap: 6px; align-items: center; }
+  .f75 .lb { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); text-align: right; padding-right: 4px; }
+  .f75 .k { height: 40px; border-radius: 10px; display: grid; place-items: center; font: 700 19px "JetBrains Mono", Menlo, monospace; border: 2px solid #d0d4dc; background: #fff; color: var(--text); }
+  .f75 .k.r { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+  .f75 .k.b { background: #dbeafe; border-color: #93c5fd; color: #2563eb; }
+  .f75 .k.u { background: var(--inset); border-style: dashed; color: var(--muted); }
+  .f75 .k.sw { box-shadow: 0 0 0 3px var(--green); }
+  .f75 .sg { height: 30px; border-radius: 8px; display: grid; place-items: center; font: 700 14px "JetBrains Mono", Menlo, monospace; }
+  .f75 .sg.r { background: #fee2e2; color: #dc2626; } .f75 .sg.w { background: #eef0f4; color: #515154; }
+  .f75 .sg.u { border: 2px dashed #c9ced8; color: var(--muted); } .f75 .sg.b { background: #dbeafe; color: #2563eb; }
+  .f75 .gap { height: 8px; }
+  .wr .op { color: var(--muted); font-size: 18px; }
+  .wr .lb { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); min-width: 64px; text-align: right; margin-right: 4px; }
+  .wr .br { color: var(--muted); font-size: 22px; font-weight: 400; }
+  .wdn { color: var(--muted); font-size: 20px; line-height: 1; }
+  svg.rho { display: block; overflow: visible; }
+  svg.rho text { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.rho .lab { font: 700 16px -apple-system, "PingFang SC", sans-serif; }
+  .deriv { display: flex; flex-direction: column; gap: 6px; font: 600 18px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; align-self: stretch; }
+  .deriv div { padding: 4px 12px; border-radius: 9px; background: var(--card); }
+  .deriv div.h { background: var(--green-soft); color: var(--green); }
+  .deriv span { font: 400 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); margin-left: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>31. 下一个排列</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">技巧</span>
+    <a href="https://leetcode.cn/problems/next-permutation/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">想让数变大、又变得尽量少，就改<b>尽量靠右</b>的位置：从右找第一个 nums[i] &lt; nums[i+1]，再在右边找比它大的最小数 nums[j] 交换，最后把 i 右边<b>反转</b>成升序。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="nIn">nums</label><input id="nIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">nums &nbsp;（<span style="color:var(--blue)">蓝色</span>是右边的降序段，<span style="color:var(--amber)">橙色</span>是要交换的位置）</div>
+        <div class="array ptrs" id="array"></div>
+        <div class="phase mono" id="phase"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+
+  <section class="card gd">
+    <h2>为什么这个技巧成立</h2>
+    <p class="sub">「下一个排列」= 比现在大的排列里<b>最小</b>的那个。要变大又要变得最少，就改<b>尽量靠右</b>的位置</p>
+    <div class="wy2"><div class="props"><div class="pp"><i>1</i><div>从右往左看，右边那段是<b>降序</b>的：这几个数已经排成了它们能排出的<b>最大</b>样子，只动它们不可能变大</div></div><div class="pp"><i>2</i><div>所以必须动降序段左边的第一个数 nums[i]（下降点）：把它换成右边<b>比它大的最小数</b>，增加得最少</div></div><div class="pp"><i>3</i><div>换完以后右边仍是降序。把它<b>反转成升序</b>，就是这几个数能排出的最小样子</div></div><div class="pp"><i>4</i><div>整个数组都是降序（已经最大）时没有下降点，i = −1，反转整个数组得到最小排列，正好是「下一个」</div></div></div><div class="fw"><div class="wr"><span class="lb">原排列</span><span class="k ">1</span><span class="k ">5</span><span class="k ">8</span><span class="k a">4</span><span class="k b">7</span><span class="k b">6</span><span class="k b">5</span><span class="k b">3</span><span class="k b">1</span></div><div class="wdn">↓</div><div class="wr"><span class="lb">交换</span><span class="k ">1</span><span class="k ">5</span><span class="k ">8</span><span class="k a">5</span><span class="k b">7</span><span class="k b">6</span><span class="k a">4</span><span class="k b">3</span><span class="k b">1</span></div><div class="wdn">↓</div><div class="wr"><span class="lb">反转后缀</span><span class="k ">1</span><span class="k ">5</span><span class="k ">8</span><span class="k ">5</span><span class="k g">1</span><span class="k g">3</span><span class="k g">4</span><span class="k g">6</span><span class="k g">7</span></div><div class="cap">蓝色后缀 7 6 5 3 1 是降序，只能动 4；换成后缀里比 4 大的最小数 5，再把后缀反转成升序</div></div></div>
+  </section>
+  <section class="card gd sum">
+    <h2>归纳 · 同类题 · 易错点</h2>
+    <div class="model">排列规律<i>从右往左找第一个能变大的位置</i></div>
+    <div class="rel"><div class="r"><div class="nm"><span>46</span>全排列</div><div class="df">回溯一次生成全部 n! 个排列。从最小排列开始反复求「下一个排列」，也能<b>按字典序</b>逐个生成全部排列</div></div><div class="r"><div class="nm"><span>47</span>全排列 II</div><div class="df">有重复数字时回溯要剪枝去重；本题的做法天然支持重复：比较用 ≥ / ≤，相同的数不会被当成下降点</div></div><div class="r"><div class="nm"><span>B001</span>小于 n 的最大数（18-字节高频）</div><div class="df">同一种思路：从右往左找能改的那一位，改完以后后面的位置填上能填的<b>最极端</b>的值</div></div></div>
+    <div class="pit"><div class="p"><b>两处比较都要严格</b><span>找 i 用 <code>nums[i] &lt; nums[i+1]</code>，找 j 用 <code>nums[j] &gt; nums[i]</code>。写成 ≤ 时 [1, 5, 1] 会把两个 1 交换，得到更小的 [1, 1, 5]</span></div><div class="p"><b>后缀是反转，不是排序</b><span>交换以后后缀仍是降序，反转就是升序，O(n)；用 sort 也对，但是 O(n log n)</span></div></div>
+  </section>  <section class="card cx-card">
+    <div class="cx-row time">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">找 i <b>≤ n</b></span><span class="op">+</span><span class="term">找 j <b>≤ n</b></span><span class="op">+</span><span class="term">反转 <b>≤ n/2</b></span></div>
+        <p class="why">三步都是从右往左扫一遍或交换一半，没有嵌套循环。</p>
+      </div>
+      <div class="fig"><div class="cells"><span class="ar">…</span><span class="c ">8</span><span class="c a">4</span><span class="c b">7</span><span class="c b">6</span><span class="c a">5</span><span class="c b">3</span><span class="c b">1</span></div><span class="cap">i 指向 4，j 指向 5，交换它们</span><div class="cells"><span class="ar">…</span><span class="c ">8</span><span class="c a">5</span><span class="c g">1</span><span class="c g">3</span><span class="c g">4</span><span class="c g">6</span><span class="c g">7</span></div><span class="cap">再把后缀反转成升序</span></div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div>
+        <div class="eq"><span class="term">原地交换和反转</span></div>
+        <p class="why">找不到 i（整体降序，已经是最大排列）时 i = −1，反转 [0, n) 正好得到最小排列，不用单独处理。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">O(n!·n)</span></div>
+      <div>
+        <p class="why">暴力：列出所有排列、排好序，找到当前这个的下一个，排列有 n! 个。题目要求<b>原地修改、只用常数额外空间</b>，所以只能直接在数组上找规律。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">void</span> nextPermutation(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; nums) {",
+      "    <span class=\"t\">int</span> n = nums.size(), i = n - 2;",
+      "    <span class=\"k\">while</span> (i &gt;= 0 &amp;&amp; nums[i] &gt;= nums[i + 1])  <span class=\"c\">// ① 下降点</span>",
+      "        --i;",
+      "    <span class=\"k\">if</span> (i &gt;= 0) {",
+      "        <span class=\"t\">int</span> j = n - 1;",
+      "        <span class=\"k\">while</span> (nums[j] &lt;= nums[i])  <span class=\"c\">// ② 比它大的最小数</span>",
+      "            --j;",
+      "        <span class=\"t\">swap</span>(nums[i], nums[j]);",
+      "    }",
+      "    reverse(nums.begin() + i + 1, nums.end());  <span class=\"c\">// ③</span>",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> nextPermutation(<span class=\"t\">self</span>, nums):",
+      "    n = <span class=\"t\">len</span>(nums)",
+      "    i = n - 2",
+      "    <span class=\"k\">while</span> i &gt;= 0 <span class=\"k\">and</span> nums[i] &gt;= nums[i + 1]:  <span class=\"c\"># ① 下降点</span>",
+      "        i -= 1",
+      "    <span class=\"k\">if</span> i &gt;= 0:",
+      "        j = n - 1",
+      "        <span class=\"k\">while</span> nums[j] &lt;= nums[i]:  <span class=\"c\"># ② 比它大的最小数</span>",
+      "            j -= 1",
+      "        nums[i], nums[j] = nums[j], nums[i]",
+      "    nums[i + 1:] = nums[i + 1:][::-1]  <span class=\"c\"># ③ 反转后缀</span>"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 2, 3, 4, 5, 6, 7, 8, 9, 9, 10, 10];
+
+  const fill = nums => { $('nIn').value = nums.join(', '); };
+  const readNums = () => $('nIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+
+  const EXAMPLES = [[1, 5, 8, 4, 7, 6, 5, 3, 1], [1, 2, 3], [3, 2, 1], [2, 3, 1, 3, 3]];
+
+  function build(input) {
+    const a = input.slice(), n = a.length, s = [];
+    let i = n - 2, j = -1;
+    const snap = (o) => s.push({ a: a.slice(), ...o });
+    snap({ ph: 0, i: n - 2, line: 1, msg: `从倒数第二个开始往左看：i = ${n - 2}` });
+    // ① 从右往左找下降点
+    while (true) {
+      if (i < 0) { snap({ ph: 0, i, desc: 0, line: 2, kind: 'miss', msg: n === 1 ? '只有一个数，找不到下降点' : '整个数组都是降序，已经是最大的排列，找不到下降点，i = −1' }); break; }
+      if (a[i] >= a[i + 1]) {
+        snap({ ph: 0, i, cmp: [i, i + 1], desc: i + 1, line: 2, msg: `nums[${i}] = ${a[i]} ≥ nums[${i + 1}] = ${a[i + 1]}，右边还是降序，i 左移` });
+        i--;
+      } else {
+        snap({ ph: 0, i, cmp: [i, i + 1], desc: i + 1, piv: i, line: 2, kind: 'ok', msg: `nums[${i}] = ${a[i]} < nums[${i + 1}] = ${a[i + 1]}：下降点 i = ${i}。右边 [${a.slice(i + 1).join(', ')}] 是降序，已经最大，只能动 nums[${i}]` });
+        break;
+      }
+    }
+    if (i >= 0) {
+      j = n - 1;
+      snap({ ph: 1, i, j, desc: i + 1, piv: i, line: 5, msg: `去右边找比 ${a[i]} 大的最小数。右边是降序，从最右往左第一个比它大的就是` });
+      while (a[j] <= a[i]) {
+        snap({ ph: 1, i, j, desc: i + 1, piv: i, line: 6, kind: 'miss', msg: `nums[${j}] = ${a[j]} ≤ ${a[i]}，不够大，j 左移` });
+        j--;
+      }
+      snap({ ph: 1, i, j, desc: i + 1, piv: i, hot: j, line: 6, kind: 'ok', msg: `nums[${j}] = ${a[j]} > ${a[i]}，就是它` });
+      [a[i], a[j]] = [a[j], a[i]];
+      snap({ ph: 1, i, j, desc: i + 1, sw: [i, j], line: 8, msg: `交换 nums[${i}] 和 nums[${j}]：这一位变大了。右边仍是降序` });
+    }
+    // ③ 反转后缀
+    let l = i + 1, r = n - 1;
+    if (l >= r) snap({ ph: 2, i, fixTo: i, line: 10, msg: `后缀只有 ${Math.max(0, r - l + 1)} 个数，不用反转` });
+    while (l < r) {
+      [a[l], a[r]] = [a[r], a[l]];
+      snap({ ph: 2, i, fixTo: i, sw: [l, r], lr: [l, r], line: 10, msg: `把降序的后缀反转成升序（最小）：交换下标 ${l} 和 ${r}` });
+      l++; r--;
+    }
+    snap({ ph: 3, i: -9, fixTo: i, doneFrom: i + 1, line: 11, kind: 'ok', msg: `✓ 下一个排列 [${a.join(', ')}]` });
+    return s;
+  }
+
+  function render(st) {
+    $('array').innerHTML = st.a.map((v, k) => {
+      let c = '';
+      if (st.desc !== undefined && k >= st.desc) c += ' desc';
+      if (st.fixTo !== undefined && k <= st.fixTo) c += ' fix';
+      if (st.doneFrom !== undefined && k >= st.doneFrom) c += ' done';
+      if (k === st.piv || k === st.hot) c += ' piv';
+      if (st.sw && st.sw.includes(k)) c += ' sw';
+      if (st.cmp && st.cmp.includes(k)) c += ' cur';
+      let tag = '';
+      if (k === st.i) tag += '<span class="ta">i</span>';
+      if (k === st.j) tag += '<span class="tb">j</span>';
+      if (st.lr) tag = k === st.lr[0] ? '<span class="ta">l</span>' : k === st.lr[1] ? '<span class="tb">r</span>' : '';
+      return `<div class="cell ${c}"><div class="tags">${tag}</div><div class="box sm mono">${v}</div><div class="idx mono">${k}</div></div>`;
+    }).join('');
+    const names = ['① 找下降点 i', '② 找 j 并交换', '③ 反转后缀'];
+    $('phase').innerHTML = names.map((t, p) => `<span class="${p === st.ph ? 'on' : p < st.ph ? 'done' : ''}">${t}</span>`).join('');
+  }
+
+  const parse = () => {
+    const v = readNums();
+    return v.length >= 1 && v.length <= 9 && v.every(x => Number.isInteger(x) && x >= 0 && x <= 99) ? v : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>

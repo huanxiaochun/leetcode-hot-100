@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>287. 寻找重复数</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  .array.ptrs { padding-top: 40px; gap: 8px; }
+  .cell .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
+  .cell .tags span { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 8px; border-radius: 8px; color: #fff; }
+  .cell .tags .ta { background: var(--amber); }
+  .cell .tags .tb { background: var(--blue); }
+  .cell .tags .tg { background: var(--green); }
+  .box.sm { width: 60px; height: 60px; font-size: 24px; }
+  .cell.win .box { background: var(--blue-soft); color: var(--blue); }
+  .cell.past .box { opacity: .35; }
+  .cell.hot .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.ok .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .cell.cur .box { border-color: var(--blue); transform: translateY(-6px); }
+  .pillrow { margin-top: 22px; font-size: 22px; min-height: 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pillrow .v { padding: 2px 14px; border-radius: 12px; font-weight: 700; background: var(--inset); }
+  .pillrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .pillrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .pillrow .v.g { background: var(--green-soft); color: var(--green); }
+  .pillrow .right { margin-left: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; min-height: 52px; }
+  .chip2 { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; background: var(--inset); font-size: 20px; font-weight: 600; border: 2.5px solid transparent; transition: all .3s; }
+  .chip2 i { font-style: normal; color: var(--muted); }
+  .chip2.b { border-color: var(--blue); }
+  .chip2.a { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
+
+  .cell.sl .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+  .cell.fa .box { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .cell.sl.fa .box { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .gwrap { overflow-x: auto; }
+  svg.lk { display: block; overflow: visible; margin-top: 8px; }
+  svg.lk .e { fill: none; stroke: #c4c9d3; stroke-width: 2.5; }
+  svg.lk .e.dup { stroke: #dc2626; stroke-width: 3; stroke-dasharray: 7 5; }
+  svg.lk .e.hs { stroke: var(--blue); stroke-width: 4.5; stroke-dasharray: none; }
+  svg.lk .e.hf { stroke: var(--amber); stroke-width: 4.5; stroke-dasharray: none; }
+  svg.lk circle { fill: var(--card); stroke: #c9ced8; stroke-width: 2.5; }
+  svg.lk .n.ent circle { fill: #fee2e2; stroke: #dc2626; }
+  svg.lk .n.ans circle { fill: var(--green-soft); stroke: var(--green); stroke-width: 3.5; }
+  svg.lk .n.meet circle { stroke: #9333ea; stroke-width: 3.5; }
+  svg.lk text { font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; fill: var(--text); }
+  svg.lk .sub { font: 600 12px "JetBrains Mono", Menlo, monospace; fill: var(--muted); }
+  svg.lk .pt rect { rx: 8; }
+  svg.lk .pt text { font: 700 14px -apple-system, "PingFang SC", sans-serif; fill: #fff; }
+  svg.lk .lab { font: 600 14px -apple-system, "PingFang SC", sans-serif; fill: #dc2626; }
+  .phase { display: flex; gap: 8px; flex-wrap: wrap; }
+  .phase span { padding: 6px 14px; border-radius: 10px; background: var(--inset); color: var(--muted); font: 600 16px -apple-system, "PingFang SC", sans-serif; }
+  .phase span.on { background: var(--blue); color: #fff; }
+  .phase span.done { background: var(--green-soft); color: var(--green); }
+  .off { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .off b { font-family: "JetBrains Mono", Menlo, monospace; color: var(--text); }
+
+  .gd { margin-top: 24px; }
+  .gd h2 { margin: 0 0 6px; font-size: 26px; }
+  .gd .sub { color: var(--muted); font-size: 18px; margin: 0 0 20px; }
+  .gd .sub b { color: var(--text); }
+  /* 解题五步 */
+  .five { display: flex; flex-direction: column; }
+  .five .st { display: grid; grid-template-columns: 200px minmax(0, 1fr) 420px; gap: 28px; align-items: center; padding: 20px 0; }
+  .five .st.nofig { grid-template-columns: 200px minmax(0, 1fr); }
+  .five .st + .st { border-top: 1px solid var(--line); }
+  @media (max-width: 1100px) { .five .st, .five .st.nofig { grid-template-columns: 1fr; gap: 12px; } }
+  .five .hd { display: flex; align-items: center; gap: 12px; font-size: 21px; font-weight: 700; }
+  .five .hd i { font-style: normal; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex: none;
+                background: var(--blue); color: #fff; font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .five .bd { font-size: 20px; line-height: 1.7; }
+  .five .bd b { color: var(--blue); }
+  .five .bd .eq { display: inline-block; margin: 2px 0 6px; padding: 8px 16px; border-radius: 12px; background: var(--inset);
+                  font: 700 20px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); white-space: nowrap; }
+  .five .bd .note { display: block; font-size: 17px; color: var(--muted); }
+  .five .fg { display: flex; flex-direction: column; gap: 8px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--bg); }
+  .five .fg .cap { font-size: 15px; color: var(--muted); text-align: center; }
+  svg.mini { display: block; overflow: visible; }
+  svg.mini rect { rx: 10; fill: var(--card); stroke: #d0d4dc; stroke-width: 2; }
+  svg.mini .c rect { fill: var(--blue-soft); stroke: var(--blue); stroke-width: 2.5; }
+  svg.mini .d rect { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini .g rect { fill: var(--green-soft); stroke: var(--green); stroke-width: 2.5; }
+  svg.mini .p rect { fill: #f3e8ff; stroke: #9333ea; stroke-width: 2.5; }
+  svg.mini .r rect { fill: #fee2e2; stroke: #dc2626; stroke-width: 2.5; }
+  svg.mini .m rect { fill: none; stroke: none; }
+  svg.mini text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; fill: var(--text); }
+  svg.mini .c text { fill: var(--blue); } svg.mini .d text { fill: var(--amber); } svg.mini .g text { fill: var(--green); }
+  svg.mini .p text { fill: #9333ea; } svg.mini .r text { fill: #dc2626; } svg.mini .m text { fill: var(--muted); }
+  svg.mini text.ix { font-size: 12px; font-weight: 400; fill: var(--muted); }
+  svg.mini path.a { fill: none; stroke: var(--amber); stroke-width: 2.5; }
+  svg.mini path.a.r { stroke: #dc2626; }
+  svg.mini path.a.g { stroke: var(--green); }
+  svg.mini text.al { font: 700 13px -apple-system, "PingFang SC", sans-serif; fill: var(--amber); }
+  svg.mini text.al.r { fill: #dc2626; } svg.mini text.al.g { fill: var(--green); }
+  /* 递归树 */
+  .tree2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; align-items: center; }
+  @media (max-width: 1100px) { .tree2 { grid-template-columns: 1fr; } }
+  .tree2 .tv { overflow-x: auto; padding: 8px 0; }
+  svg.rt { display: block; overflow: visible; margin: 0 auto; }
+  svg.rt line { stroke: #c4c9d3; stroke-width: 2; }
+  svg.rt rect { rx: 10; stroke-width: 2.5; }
+  svg.rt text { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .tree2 .tx { font-size: 20px; line-height: 1.75; }
+  .tree2 .tx b { color: var(--blue); }
+  .tree2 .cnt { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .tree2 .cnt span { padding: 4px 12px; border-radius: 9px; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .tree2 .memo { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tree2 .memo span { padding: 4px 10px; border-radius: 8px; background: var(--green-soft); color: var(--green); font: 700 15px "JetBrains Mono", Menlo, monospace; }
+  /* 归纳 */
+  .sum .model { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 14px; background: var(--blue-soft);
+                font-size: 21px; font-weight: 700; color: var(--blue); margin-bottom: 18px; }
+  .sum .model i { font-style: normal; font-size: 15px; color: var(--muted); font-weight: 600; }
+  .sum .rel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .sum .rel .r { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 18px; align-items: baseline; padding: 12px 18px; border-radius: 14px; background: var(--inset); }
+  .sum .rel .r .nm { font-size: 19px; font-weight: 700; }
+  .sum .rel .r .nm span { font: 600 15px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-right: 6px; }
+  .sum .rel .r .df { font-size: 18px; line-height: 1.65; }
+  .sum .rel .r .df b { color: var(--blue); }
+  .sum .pit { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .sum .pit .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 20px; }
+  .sum .pit .p b { display: block; font-size: 19px; color: var(--amber); margin-bottom: 8px; }
+  .sum .pit .p span { font-size: 17px; line-height: 1.7; }
+  .sum .pit .p code { font: 600 .95em "JetBrains Mono", Menlo, monospace; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
+
+  .wy2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 32px; align-items: center; }
+  @media (max-width: 1100px) { .wy2 { grid-template-columns: 1fr; } }
+  .wy2 .props { display: flex; flex-direction: column; gap: 12px; }
+  .wy2 .pp { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; padding: 14px 18px; border-radius: 14px; background: var(--inset); font-size: 20px; line-height: 1.6; }
+  .wy2 .pp i { font-style: normal; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; margin-top: 2px;
+               background: var(--blue); color: #fff; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .wy2 .pp b { color: var(--blue); }
+  .wy2 .pp code { font: 700 .95em "JetBrains Mono", "SF Mono", Menlo, monospace; background: var(--card); padding: 1px 8px; border-radius: 7px; }
+  .wy2 .fw { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 20px 22px; border-radius: 16px; background: var(--bg); }
+  .wy2 .fw .cap { font-size: 16px; color: var(--muted); text-align: center; line-height: 1.6; }
+  .wy2 .fw .cap b { color: var(--text); }
+  .wr { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; font: 700 19px "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .wr .k { min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; display: grid; place-items: center; background: var(--card); border: 2px solid #d0d4dc; color: var(--text); }
+  .wr .k.b { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+  .wr .k.a { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .wr .k.g { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+  .wr .k.r { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+  .wr .k.w { background: #fff; }
+  .wr .k.x { opacity: .4; text-decoration: line-through; }
+  .wr .k.m { color: var(--muted); background: var(--inset); border-style: dashed; }
+  .f75 { display: flex; flex-direction: column; gap: 4px; }
+  .f75 .rw { display: grid; grid-template-columns: 74px repeat(9, 40px); gap: 6px; align-items: center; }
+  .f75 .lb { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); text-align: right; padding-right: 4px; }
+  .f75 .k { height: 40px; border-radius: 10px; display: grid; place-items: center; font: 700 19px "JetBrains Mono", Menlo, monospace; border: 2px solid #d0d4dc; background: #fff; color: var(--text); }
+  .f75 .k.r { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+  .f75 .k.b { background: #dbeafe; border-color: #93c5fd; color: #2563eb; }
+  .f75 .k.u { background: var(--inset); border-style: dashed; color: var(--muted); }
+  .f75 .k.sw { box-shadow: 0 0 0 3px var(--green); }
+  .f75 .sg { height: 30px; border-radius: 8px; display: grid; place-items: center; font: 700 14px "JetBrains Mono", Menlo, monospace; }
+  .f75 .sg.r { background: #fee2e2; color: #dc2626; } .f75 .sg.w { background: #eef0f4; color: #515154; }
+  .f75 .sg.u { border: 2px dashed #c9ced8; color: var(--muted); } .f75 .sg.b { background: #dbeafe; color: #2563eb; }
+  .f75 .gap { height: 8px; }
+  .wr .op { color: var(--muted); font-size: 18px; }
+  .wr .lb { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); min-width: 64px; text-align: right; margin-right: 4px; }
+  .wr .br { color: var(--muted); font-size: 22px; font-weight: 400; }
+  .wdn { color: var(--muted); font-size: 20px; line-height: 1; }
+  svg.rho { display: block; overflow: visible; }
+  svg.rho text { font: 700 16px "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.rho .lab { font: 700 16px -apple-system, "PingFang SC", sans-serif; }
+  .deriv { display: flex; flex-direction: column; gap: 6px; font: 600 18px/1.6 "JetBrains Mono", "SF Mono", Menlo, monospace; align-self: stretch; }
+  .deriv div { padding: 4px 12px; border-radius: 9px; background: var(--card); }
+  .deriv div.h { background: var(--green-soft); color: var(--green); }
+  .deriv span { font: 400 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); margin-left: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>287. 寻找重复数</h1>
+    <span class="pill mid">中等</span>
+    <span class="pill cat">技巧</span>
+    <a href="https://leetcode.cn/problems/find-the-duplicate-number/" target="_blank" rel="noopener">LeetCode ↗</a>
+  </header>
+  <p class="idea">把下标 i 当结点、<b>i → nums[i]</b> 当箭头，数组就成了一条带环的链表。重复的数有两个箭头指向它，正是<b>环的入口</b>。用 142 题的快慢指针：先在环里相遇，再一个回起点、同速走，相遇处就是答案。</p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="seg" id="seg" role="tablist" aria-label="示例"></div>
+      <form class="field" id="field">
+        <label for="nIn">nums</label><input id="nIn" autocomplete="off" style="flex:1">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="label">nums（<span style="color:var(--blue)">蓝</span>：慢指针所在下标，<span style="color:var(--amber)">橙</span>：快指针）</div>
+        <div class="array ptrs" id="array"></div>
+      </div>
+      <div>
+        <div class="label">看成链表：结点是下标 i，箭头指向 nums[i]（<span style="color:#dc2626">红色虚线</span>是指向同一个结点的两条箭头）</div>
+        <div class="gwrap"><div id="graph"></div></div>
+        <div class="off" id="off"></div>
+      </div>
+      <div class="phase" id="phase"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+  </section>
+  <section class="card code">
+    <div class="code-tabs" role="tablist" aria-label="代码语言">
+      <button type="button" role="tab" data-lang="cpp">C++</button>
+      <button type="button" role="tab" data-lang="py">Python</button>
+    </div>
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+
+  <section class="card gd">
+    <h2>为什么这个技巧成立</h2>
+    <p class="sub">把下标 i 当结点、<b>i → nums[i]</b> 当箭头：值都在 1 ~ n，从 0 出发永远走不出去，一定会走进一个环</p>
+    <div class="wy2"><div class="props"><div class="pp"><i>1</i><div>重复的数 x 有<b>两个下标</b>都指向它：一个来自环外、一个来自环里，所以 <b>x 就是环的入口</b></div></div><div class="pp"><i>2</i><div>第一阶段：慢指针一次 1 步、快指针一次 2 步。进环以后快的每轮追近一步，一定会在环里<b>相遇</b></div></div><div class="pp"><i>3</i><div>相遇时慢走了 <b>a + b</b>，快走了 <b>a + b + kL</b>（多绕了 k 圈），又因为快 = 2 × 慢，推出 <b>a = (k−1)L + c</b></div></div><div class="pp"><i>4</i><div>第二阶段：一个从起点、一个从相遇点，都一次 1 步。走 a 步后，前者到入口；后者走了 c 再加整圈，<b>也到入口</b></div></div></div><div class="fw"><svg class="rho" viewBox="0 0 470 230" width="470" height="230" role="img" aria-label="快慢指针推导示意">
+  <defs><marker id="rh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9aa1ad"/></marker></defs>
+  <circle cx="340" cy="115" r="90" fill="none" stroke="#c4c9d3" stroke-width="3"/>
+  <line x1="40" y1="115" x2="242" y2="115" stroke="#c4c9d3" stroke-width="3" marker-end="url(#rh)"/>
+  <path d="M 250 115 A 90 90 0 0 1 404 51" fill="none" stroke="#2f6bff" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 404 51 A 90 90 0 1 1 250 115" fill="none" stroke="#d97706" stroke-width="6" stroke-linecap="round" stroke-dasharray="9 7"/>
+  <line x1="40" y1="115" x2="250" y2="115" stroke="#16a34a" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="40" cy="115" r="16" fill="#fff" stroke="#86868b" stroke-width="2.5"/><text x="40" y="115">0</text>
+  <circle cx="250" cy="115" r="18" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/><text x="250" y="115" fill="#dc2626">入</text>
+  <circle cx="404" cy="51" r="18" fill="#e8efff" stroke="#2f6bff" stroke-width="3"/><text x="404" y="51" fill="#2f6bff">遇</text>
+  <text class="lab" x="145" y="95" fill="#16a34a">a</text>
+  <text class="lab" x="300" y="22" fill="#2f6bff">b</text>
+  <text class="lab" x="420" y="210" fill="#d97706">c</text>
+  <text class="lab" x="145" y="140" fill="#86868b">起点到入口</text>
+  <text class="lab" x="340" y="115" fill="#86868b">环长 L = b + c</text>
+</svg><div class="deriv"><div>慢 = a + b<span>相遇时慢指针走的</span></div><div>快 = a + b + kL<span>快的多绕了 k 圈</span></div><div>快 = 2 × 慢 ⇒ a + b = kL</div><div class="h">a = kL − b = (k−1)L + c</div></div><div class="cap"><b>a 步</b>（起点到入口）= <b>c 步</b>（相遇点到入口）再加 k−1 整圈：两个指针同速走，一定在入口相遇</div></div></div>
+  </section>
+  <section class="card gd sum">
+    <h2>归纳 · 同类题 · 易错点</h2>
+    <div class="model">判圈（Floyd 快慢指针）<i>把数组看成链表，重复数就是环的入口</i></div>
+    <div class="rel"><div class="r"><div class="nm"><span>142</span>环形链表 II</div><div class="df"><b>完全一样</b>的两阶段：next 指针换成了 <code>nums[i]</code>，结点换成了下标</div></div><div class="r"><div class="nm"><span>141</span>环形链表</div><div class="df">只做第一阶段：快慢指针相遇就说明有环</div></div><div class="r"><div class="nm"><span>41</span>缺失的第一个正数</div><div class="df">那题用<b>原地哈希</b>（把数换到它该在的位置、或者标负号）。本题不许改数组，只能把数组当成链表来走</div></div></div>
+    <div class="pit"><div class="p"><b>从下标 0 出发</b><span>值都在 1 ~ n，没有箭头指向 0，所以 0 一定在环外，从它出发才能保证走到「入口」。从别的下标出发可能本来就在环里</span></div><div class="p"><b>先走再判断</b><span>一开始 slow == fast == 0。用 while 先判断会直接退出，要用 <code>do-while</code>（Python 用 while True + break）</span></div></div>
+  </section>  <section class="card cx-card">
+    <div class="cx-row time nofig">
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
+      <div>
+        <div class="eq"><span class="term">第一阶段 <b>≤ a + L</b> 轮</span><span class="op">+</span><span class="term">第二阶段 <b>a</b> 步</span></div>
+        <p class="why">慢指针进环前走 a 步；进环以后快指针每轮追近 1 步，不到一圈（L 步）就追上。第二阶段再走 a 步。a 和 L 都不超过 n。</p>
+      </div>
+    </div>
+    <div class="cx-row space nofig">
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div>
+        <div class="eq"><span class="term">两个指针 <b>slow</b>、<b>fast</b></span></div>
+        <p class="why">链表是「想象」出来的：下一个结点就是 nums[当前]，不用真的建链表，也不用记走过哪些点。</p>
+      </div>
+    </div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">哈希 / 排序</span></div>
+      <div>
+        <p class="why"><b>哈希集合</b>记录见过的数：O(n) 空间。<b>排序</b>后看相邻：要改数组。<b>标负号</b>做原地标记：也改了数组。题目要求<b>不修改数组、O(1) 空间</b>，这三种都不行；按值域二分（数 ≤ mid 的个数）也满足要求，但是 O(n log n)。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CODE = [
+      "<span class=\"t\">int</span> findDuplicate(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; nums) {",
+      "    <span class=\"t\">int</span> slow = 0, fast = 0;",
+      "    do {",
+      "        slow = nums[slow];  <span class=\"c\">// 走 1 步</span>",
+      "        fast = nums[nums[fast]];  <span class=\"c\">// 走 2 步</span>",
+      "    } <span class=\"k\">while</span> (slow != fast);",
+      "    slow = 0;  <span class=\"c\">// 一个回到起点</span>",
+      "    <span class=\"k\">while</span> (slow != fast) {  <span class=\"c\">// 同速走</span>",
+      "        slow = nums[slow];",
+      "        fast = nums[fast];",
+      "    }",
+      "    <span class=\"k\">return</span> slow;  <span class=\"c\">// 环的入口</span>",
+      "}"
+  ];
+  const PY = [
+      "<span class=\"k\">def</span> findDuplicate(<span class=\"t\">self</span>, nums):",
+      "    slow = fast = 0",
+      "    <span class=\"k\">while</span> True:",
+      "        slow = nums[slow]  <span class=\"c\"># 走 1 步</span>",
+      "        fast = nums[nums[fast]]  <span class=\"c\"># 走 2 步</span>",
+      "        <span class=\"k\">if</span> slow == fast:",
+      "            <span class=\"k\">break</span>",
+      "    slow = 0  <span class=\"c\"># 一个回到起点</span>",
+      "    <span class=\"k\">while</span> slow != fast:  <span class=\"c\"># 同速走</span>",
+      "        slow = nums[slow]",
+      "        fast = nums[fast]",
+      "    <span class=\"k\">return</span> slow  <span class=\"c\"># 环的入口</span>"
+  ];
+  // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
+  const PYMAP = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 8, 11, 11];
+
+  const arr = (a, cls = () => '', tags = () => '') => a.map((v, k) =>
+    `<div class="cell ${cls(k)}"><div class="tags">${tags(k)}</div><div class="box sm mono">${v}</div><div class="idx mono">${k}</div></div>`).join('');
+
+  const fill = nums => { $('nIn').value = nums.join(', '); };
+  const readNums = () => $('nIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+
+  const EXAMPLES = [[1, 3, 4, 2, 2], [3, 1, 3, 4, 2], [2, 5, 9, 6, 9, 3, 8, 9, 7, 1]];
+
+  function build(nums) {
+    const s = [];
+    let slow = 0, fast = 0;
+    const snap = o => s.push({ nums, slow, fast, ...o });
+    snap({ ph: 0, line: 1, msg: '把下标 i 当结点、i → nums[i] 当箭头。值都在 1 ~ n，没有箭头指向 0，从 0 出发一直走，一定会走进环' });
+    do {
+      const s0 = slow, f0 = fast, f1 = nums[fast];
+      slow = nums[slow];
+      fast = nums[nums[fast]];
+      snap({ ph: 1, line: 4, hs: [s0], hf: [f0, f1],
+        msg: `慢走 1 步：${s0} → ${slow}；快走 2 步：${f0} → ${f1} → ${fast}${slow === fast ? '' : '。还没相遇'}` });
+    } while (slow !== fast);
+    const meet = slow;
+    snap({ ph: 1, line: 5, meet, kind: 'ok', msg: `在结点 ${meet} 相遇：进环以后快的每轮多走一步，迟早追上慢的` });
+    slow = 0;
+    snap({ ph: 2, line: 6, meet, msg: `慢指针回到起点 0，快指针留在相遇点 ${meet}。从现在起两个都一次只走 1 步` });
+    while (slow !== fast) {
+      const s0 = slow, f0 = fast;
+      slow = nums[slow];
+      fast = nums[fast];
+      snap({ ph: 2, line: 9, meet, hs: [s0], hf: [f0], msg: `慢：${s0} → ${slow}；快：${f0} → ${fast}${slow === fast ? '' : '。还没相遇'}` });
+    }
+    const cnt = nums.filter(x => x === slow).length;
+    snap({ ph: 3, line: 11, meet, ans: slow, kind: 'ok',
+      msg: `✓ 在 ${slow} 相遇，这就是环的入口：有 ${cnt} 个下标的值都是 ${slow}，所以 ${slow} 是重复的数` });
+    return s;
+  }
+
+  // 布局：从 0 出发的路径，环外的部分排成一行，环画成一个圆
+  function layout(nums) {
+    const seen = new Map(), seq = [];
+    let u = 0;
+    while (!seen.has(u)) { seen.set(u, seq.length); seq.push(u); u = nums[u]; }
+    const a = seen.get(u), tail = seq.slice(0, a), cyc = seq.slice(a), L = cyc.length;
+    const SX = 96, R = Math.max(62, L * 92 / (2 * Math.PI)), cy = R + 44;
+    const pos = {};
+    tail.forEach((v, k) => pos[v] = [40 + k * SX, cy]);
+    const ex = 40 + tail.length * SX, cx = ex + R;
+    cyc.forEach((v, k) => { const t = Math.PI + 2 * Math.PI * k / L; pos[v] = [cx + R * Math.cos(t), cy + R * Math.sin(t)]; });
+    return { tail, cyc, pos, R, cx, cy, W: cx + R + 44, H: cy + R + 40 };
+  }
+
+  function render(st) {
+    const nums = st.nums;
+    $('array').innerHTML = arr(nums, k => (k === st.slow ? 'sl ' : '') + (k === st.fast ? 'fa' : ''));
+    const g = layout(nums), { pos, cyc, R, cx, cy } = g, NR = 24;
+    const entry = cyc[0], hs = new Set(st.hs || []), hf = new Set(st.hf || []);
+    const into = Object.keys(pos).map(Number).filter(v => nums[v] === entry);
+    const ecls = v => 'e' + (hs.has(v) ? ' hs' : hf.has(v) ? ' hf' : into.length > 1 && nums[v] === entry ? ' dup' : '');
+    let s = `<defs>${[['g', '#9aa1ad'], ['b', '#2f6bff'], ['a', '#d97706'], ['r', '#dc2626']].map(([k, c]) =>
+      `<marker id="m${k}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`).join('')}</defs>`;
+    const mk = c => c.includes('hs') ? 'mb' : c.includes('hf') ? 'ma' : c.includes('dup') ? 'mr' : 'mg';
+    // 环外的箭头：直线
+    g.tail.forEach(v => {
+      const [x1, y1] = pos[v], [x2, y2] = pos[nums[v]], d = Math.hypot(x2 - x1, y2 - y1);
+      const c = ecls(v);
+      s += `<path class="${c}" d="M ${x1 + (x2 - x1) / d * NR} ${y1 + (y2 - y1) / d * NR} L ${x2 - (x2 - x1) / d * (NR + 4)} ${y2 - (y2 - y1) / d * (NR + 4)}" marker-end="url(#${mk(c)})"/>`;
+    });
+    // 环上的箭头：沿着圆弧
+    const L = cyc.length;
+    cyc.forEach((v, k) => {
+      const c = ecls(v);
+      if (L === 1) {
+        const [x, y] = pos[v];
+        s += `<path class="${c}" d="M ${x + 10} ${y - NR + 2} C ${x + 60} ${y - 90}, ${x - 60} ${y - 90}, ${x - 10} ${y - NR - 2}" marker-end="url(#${mk(c)})"/>`;
+        return;
+      }
+      const t1 = Math.PI + 2 * Math.PI * k / L, t2 = Math.PI + 2 * Math.PI * (k + 1) / L, dt = (NR + 5) / R;
+      const p = t => [cx + R * Math.cos(t), cy + R * Math.sin(t)];
+      const [x1, y1] = p(t1 + dt), [x2, y2] = p(t2 - dt);
+      s += `<path class="${c}" d="M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}" marker-end="url(#${mk(c)})"/>`;
+    });
+    if (into.length > 1) {
+      const [x, y] = pos[entry];
+      s += `<text class="lab" x="${x - 12}" y="${y + NR + 18}" style="text-anchor:end">${into.length} 条箭头指向 ${entry}</text>`;
+    }
+    Object.entries(pos).forEach(([v, [x, y]]) => {
+      v = +v;
+      const c = 'n' + (st.ans === v ? ' ans' : v === entry && st.ph === 3 ? ' ent' : '') + (st.meet === v && st.ans !== v ? ' meet' : '');
+      s += `<g class="${c}"><circle cx="${x}" cy="${y}" r="${NR}"/><text x="${x}" y="${y}">${v}</text></g>`;
+    });
+    // 指针标签
+    const tags = {};
+    (tags[st.slow] = tags[st.slow] || []).push(['慢', '#2f6bff']);
+    (tags[st.fast] = tags[st.fast] || []).push(['快', '#d97706']);
+    if (st.meet !== undefined && st.meet !== st.slow && st.meet !== st.fast) (tags[st.meet] = tags[st.meet] || []).push(['相遇点', '#9333ea']);
+    Object.entries(tags).forEach(([v, ts]) => {
+      if (!pos[v]) return;
+      const [x, y] = pos[v], tw = t => t.length * 15 + 14, total = ts.reduce((a, [t]) => a + tw(t) + 4, -4);
+      let x0 = x - total / 2;
+      ts.forEach(([t, col]) => {
+        s += `<g class="pt"><rect x="${x0}" y="${y - NR - 30}" width="${tw(t)}" height="24" fill="${col}"/><text x="${x0 + tw(t) / 2}" y="${y - NR - 18}">${t}</text></g>`;
+        x0 += tw(t) + 4;
+      });
+    });
+    $('graph').innerHTML = `<svg class="lk" viewBox="0 -10 ${g.W} ${g.H + 10}" width="${g.W}" height="${g.H + 10}" role="img" aria-label="下标到值的链表">${s}</svg>`;
+    const off = nums.map((_, i) => i).filter(i => pos[i] === undefined);
+    $('off').innerHTML = off.length ? '从 0 走不到的下标：' + off.map(i => `<b>${i} → ${nums[i]}</b>`).join('，') + '（不影响答案）' : '';
+    const names = ['① 快慢指针找相遇点', '② 一个回起点，同速找入口'];
+    $('phase').innerHTML = names.map((t, p) => `<span class="${p + 1 === st.ph ? 'on' : p + 1 < st.ph ? 'done' : ''}">${t}</span>`).join('');
+  }
+
+  const parse = () => {
+    const v = readNums(), n = v.length - 1;
+    if (v.length < 2 || v.length > 10 || !v.every(x => Number.isInteger(x) && x >= 1 && x <= n)) return null;
+    const c = {};
+    v.forEach(x => c[x] = (c[x] || 0) + 1);
+    return Object.values(c).filter(t => t > 1).length === 1 ? v : null;
+  };
+
+
+  const $ = id => document.getElementById(id);
+  let steps = [], cur = 0, timer = null;
+  const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>';
+  const stop = () => { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; };
+  const play = () => {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, 1000);
+  };
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const ln = lang === 'py' ? PYMAP[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${(cur / Math.max(1, steps.length - 1)) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function load(input) {
+    stop();
+    steps = build(input); cur = 0;
+    fill(input); $('field').classList.remove('bad');
+    draw();
+  }
+
+  // 示例分段切换
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  EXAMPLES.forEach((ex, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `例 ${k + 1}`;
+    b.title = JSON.stringify(ex);
+    b.onclick = () => { setOn(k); load(ex); };
+    seg.appendChild(b);
+  });
+  setOn(0);
+
+  // 自定义输入
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const input = parse();
+    $('field').classList.toggle('bad', !input);
+    if (!input) return;
+    setOn(-1);
+    load(input);
+  });
+
+  // C++ / Python 切换，选择记在 localStorage，所有题共用
+  const LANG_KEY = 'lc-lang';
+  let lang = 'cpp';
+  try { lang = localStorage.getItem(LANG_KEY) === 'py' ? 'py' : 'cpp'; } catch (e) {}
+  function showCode() {
+    $('code').innerHTML = (lang === 'py' ? PY : CODE).map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.code-tabs button').forEach(b => {
+      const on = b.dataset.lang === lang;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+    });
+  }
+  document.querySelectorAll('.code-tabs button').forEach(b => b.addEventListener('click', () => {
+    lang = b.dataset.lang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+    showCode();
+    typeof draw === 'function' ? draw() : render();   // 重新高亮当前行
+  }));
+  showCode();
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+
+  load(EXAMPLES[0]);
+
+
+})();
+</script>
+<script>
+  // 复杂度写得长时：先略缩字号，还放不下就把整张卡片的左栏加宽，保证不压到右边的文字
+  function fitCx() {
+    const card = document.querySelector('.cx-card');
+    if (!card) return;
+    card.style.removeProperty('--cxw');
+    let need = 0;
+    card.querySelectorAll('.cx-head .val').forEach(v => {
+      v.style.fontSize = '';
+      let f = parseFloat(getComputedStyle(v).fontSize);
+      while (v.scrollWidth > v.clientWidth + 1 && f > 26) v.style.fontSize = --f + 'px';
+      need = Math.max(need, v.scrollWidth);
+    });
+    if (need > 200) card.style.setProperty('--cxw', need + 4 + 'px');
+  }
+  fitCx(); document.fonts.ready.then(fitCx); addEventListener('resize', fitCx);
+</script>
+</body>
+</html>

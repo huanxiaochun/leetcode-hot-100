@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python BFS 与 DFS · 动画演示</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  main { max-width: 1480px; }
+  .algos { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 16px; padding: 5px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); width: fit-content; }
+  .algos button { font: inherit; font-size: 18px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .algos button:hover { color: var(--text); }
+  .algos button.on { background: var(--blue); color: #fff; }
+  .algos button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .toolbar .row { display: flex; gap: 10px; width: 100%; align-items: center; flex-wrap: wrap; }
+  .card.info { margin-top: 24px; }
+  .card.info h2 { margin: 0 0 6px; font-size: 24px; }
+  .card.info .sub { color: var(--muted); font-size: 17px; margin: 0 0 18px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 18px; }
+  .tbl th { text-align: left; color: var(--muted); font-size: 15px; font-weight: 600; padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tbl td.mono { font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
+  .tbl .good { color: var(--green); } .tbl .bad { color: var(--amber); }
+  .tbl code, .grid2 code, .pits code { font: 600 .92em "JetBrains Mono", Menlo, monospace; background: var(--inset); padding: 1px 6px; border-radius: 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .blk { background: var(--inset); border-radius: 14px; padding: 18px 20px; }
+  .blk h3 { margin: 0 0 10px; font-size: 19px; }
+  .blk p { margin: 8px 0 0; font-size: 17px; line-height: 1.7; }
+  .blk pre { margin: 0; padding: 0; background: none; color: var(--text); box-shadow: none; border-radius: 0; font: 16px/1.65 "JetBrains Mono", "SF Mono", Menlo, monospace; white-space: pre; overflow-x: auto; }
+  .blk pre .c { color: var(--muted); }
+  .pits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1100px) { .pits { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pits .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 18px; }
+  .pits .p b { display: block; font-size: 18px; color: var(--amber); margin-bottom: 8px; }
+  .pits .p span { font-size: 16px; line-height: 1.65; }
+
+  .maze { display: grid; gap: 4px; width: fit-content; }
+  .mz { position: relative; display: grid; place-items: center; border-radius: 9px; background: #f1f3f6;
+        font: 700 17px "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); transition: background .3s, box-shadow .2s; }
+  .mz.w { background: #4b5263; }
+  .mz.s { background: #fff7d6; box-shadow: inset 0 0 0 2.5px #e0b100; }
+  .mz.e { background: #fff7d6; box-shadow: inset 0 0 0 2.5px #e0b100; }
+  .mz.q { box-shadow: inset 0 0 0 2.5px var(--blue); }
+  .mz.cur { box-shadow: inset 0 0 0 4px var(--amber); }
+  .mz.new { animation: ripple .5s ease-out; }
+  @keyframes ripple { from { transform: scale(.6); } to { transform: scale(1); } }
+  .mz.stk { background: var(--amber-soft); color: var(--amber); }
+  .mz.dead { background: #e5e7eb; color: #9ca3af; }
+  .mz.dead::after { content: '×'; position: absolute; right: 3px; top: -1px; font-size: 13px; color: #dc2626; }
+  .mz.path { background: var(--green) !important; color: #fff !important; }
+  .mz .emo { font-size: 1.25em; line-height: 1; }
+  .mazes { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .mzcol .sl { font-size: 15px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+  .mzcol .sl b { color: var(--text); }
+  .mzcol .cnt { margin-top: 8px; font-size: 16px; color: var(--muted); }
+  .mzcol .cnt b { font-family: "JetBrains Mono", Menlo, monospace; color: var(--text); font-size: 18px; }
+  .aux { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 40px; font-size: 16px; }
+  .aux .lbl { color: var(--muted); font-size: 15px; font-weight: 700; margin-right: 6px; }
+  .aux .ch { padding: 4px 9px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); font: 700 15px "JetBrains Mono", Menlo, monospace; }
+  .aux .ch.a { background: var(--amber-soft); color: var(--amber); }
+  .aux .ch.hd { box-shadow: inset 0 0 0 2.5px currentColor; }
+  .aux .ar { color: var(--muted); font-weight: 700; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; color: var(--muted); }
+  .legend i { display: inline-block; width: 16px; height: 16px; border-radius: 5px; margin-right: 6px; vertical-align: -3px; }
+
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+  .meta { border-radius: 16px; padding: 20px 22px; }
+  .meta.b { background: var(--blue-soft); } .meta.d { background: var(--amber-soft); }
+  .meta h3 { margin: 0 0 6px; font-size: 22px; }
+  .meta.b h3 { color: var(--blue); } .meta.d h3 { color: var(--amber); }
+  .meta p { margin: 6px 0 0; font-size: 18px; line-height: 1.7; }
+  .meta .pic { margin: 12px 0 4px; display: flex; justify-content: center; }
+  .meta .pic svg { max-width: 100%; height: auto; }
+  .plates { display: flex; gap: 26px; align-items: flex-end; justify-content: center; margin: 14px 0 6px; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .plates .col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .plates .lane { display: flex; gap: 4px; align-items: center; }
+  .plates span.it { padding: 6px 12px; border-radius: 8px; background: #fff; }
+  .plates .cap { font: 600 14px -apple-system, "PingFang SC", sans-serif; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>BFS 与 DFS · 动画演示</h1>
+    <span class="pill cat">Python 知识点</span>
+  </header>
+  <div class="algos" id="algos" role="tablist" aria-label="演示内容"></div>
+  <p class="idea" id="idea"></p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="row"><div class="seg" id="seg" role="tablist" aria-label="示例数据"></div></div>
+      <form class="field" id="field">
+        <label for="mIn">迷宫</label><input id="mIn" autocomplete="off" style="flex:1" title="S 起点，E 奶酪，# 墙，. 空地；每行用 / 隔开">
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+    <div class="stage">
+      <div class="legend" id="legend"></div>
+      <div class="mazes" id="mazes"></div>
+      <div class="aux" id="aux"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--muted)">慢
+      <input type="range" id="speed" min="150" max="1400" step="50" value="800" style="flex:1;direction:rtl" aria-label="播放速度"> 快</label>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card info">
+    <h2>一句话分清：排队 vs 叠盘子</h2>
+    <p class="sub">两种搜索的代码几乎一样，区别只是「下一个处理谁」：取最早放进去的，还是最晚放进去的</p>
+    <div class="duo">
+      <div class="meta b"><h3>BFS · 宽度优先 · 队列</h3>
+        <div class="plates"><div class="col"><div class="lane"><span class="it">先来</span><span class="it">…</span><span class="it">后来</span></div><span class="cap">排队：从队头取，新的排到队尾</span></div></div>
+        <div class="pic"><svg class="fg" viewBox="0 0 310 248" width="310" height="248"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="85.0" y1="142" x2="50" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="85.0" y1="142" x2="120" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="225.0" y1="142" x2="190" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="225.0" y1="142" x2="260" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="155.0" y1="56" x2="85.0" y2="98" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="155.0" y1="56" x2="225.0" y2="98" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="22.0" y="184" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="50" y="206" font-size="20" font-weight="700" fill="#2f6bff">4</text><rect x="92.0" y="184" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="120" y="206" font-size="20" font-weight="700" fill="#2f6bff">5</text><rect x="57.0" y="98" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="85.0" y="120" font-size="20" font-weight="700" fill="#2f6bff">2</text><rect x="162.0" y="184" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="190" y="206" font-size="20" font-weight="700" fill="#2f6bff">6</text><rect x="232.0" y="184" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="260" y="206" font-size="20" font-weight="700" fill="#2f6bff">7</text><rect x="197.0" y="98" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="225.0" y="120" font-size="20" font-weight="700" fill="#2f6bff">3</text><rect x="127.0" y="12" width="56" height="44" rx="11" fill="#e8efff" stroke="#2f6bff" stroke-width="2.5" stroke-dasharray=""/><text x="155.0" y="34" font-size="20" font-weight="700" fill="#2f6bff">1</text></svg></div>
+        <p>结点上的数字是访问顺序：<b>一层一层</b>往下，同一层从左到右。离起点近的一定先被访问，所以<b>第一次碰到目标时走的就是最短路</b>（每步代价都是 1 时）。</p></div>
+      <div class="meta d"><h3>DFS · 深度优先 · 栈 / 递归</h3>
+        <div class="plates"><div class="col"><div class="lane" style="flex-direction:column-reverse"><span class="it">先放</span><span class="it">…</span><span class="it">后放</span></div><span class="cap">叠盘子：总是拿最上面那个</span></div></div>
+        <div class="pic"><svg class="fg" viewBox="0 0 310 248" width="310" height="248"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><line x1="85.0" y1="142" x2="50" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="85.0" y1="142" x2="120" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="225.0" y1="142" x2="190" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="225.0" y1="142" x2="260" y2="184" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="155.0" y1="56" x2="85.0" y2="98" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><line x1="155.0" y1="56" x2="225.0" y2="98" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><rect x="22.0" y="184" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="50" y="206" font-size="20" font-weight="700" fill="#d97706">3</text><rect x="92.0" y="184" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="120" y="206" font-size="20" font-weight="700" fill="#d97706">4</text><rect x="57.0" y="98" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="85.0" y="120" font-size="20" font-weight="700" fill="#d97706">2</text><rect x="162.0" y="184" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="190" y="206" font-size="20" font-weight="700" fill="#d97706">6</text><rect x="232.0" y="184" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="260" y="206" font-size="20" font-weight="700" fill="#d97706">7</text><rect x="197.0" y="98" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="225.0" y="120" font-size="20" font-weight="700" fill="#d97706">5</text><rect x="127.0" y="12" width="56" height="44" rx="11" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="155.0" y="34" font-size="20" font-weight="700" fill="#d97706">1</text></svg></div>
+        <p>先沿着一个孩子<b>一直走到底</b>，走不下去才退回来走下一个孩子。递归函数自带一个栈（调用栈），记着「怎么走回去」。树上的先序 / 中序 / 后序遍历都是 DFS。</p></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>什么时候用哪个</h2>
+    <table class="tbl"><thead><tr><th>要解决的问题</th><th>用</th><th>为什么</th></tr></thead><tbody>
+      <tr><td><b>最少几步</b>能到（每步代价相同）</td><td class="mono good">BFS</td><td>按距离一圈圈往外，第一次碰到就是最短；DFS 找到的路可能绕远</td></tr>
+      <tr><td>按<b>层</b>处理、一分钟一分钟扩散</td><td class="mono good">BFS</td><td>队列里天然是一层一层的；先记下这一层有几个</td></tr>
+      <tr><td>有几个<b>连通块</b>、能不能到达</td><td class="mono">都行</td><td>只要把能到的都走一遍；DFS 递归最好写</td></tr>
+      <tr><td>列出<b>所有路径 / 方案</b></td><td class="mono bad">DFS</td><td>沿着一条路走，回来时撤销，就是回溯</td></tr>
+      <tr><td>先后依赖：<b>拓扑排序</b></td><td class="mono">都行</td><td>BFS：入度为 0 的先出；DFS：后序的逆序</td></tr>
+      <tr><td>树的深度、路径和</td><td class="mono">都行</td><td>DFS 递归天然带着「从根到这里」的信息</td></tr>
+    </tbody></table>
+  </section>
+  <section class="card info">
+    <h2>模板</h2>
+    <p class="sub">网格和图都是这几种写法；树的层序遍历就是不需要 seen 的 BFS</p>
+    <div class="grid2">
+      <div class="blk"><h3>BFS：按层处理（层序遍历、最短步数）</h3><pre>from collections import deque
+q = deque([s])
+seen = {s}                     <span class="c"># 入队就标记</span>
+step = 0
+while q:
+    for _ in range(len(q)):    <span class="c"># 这一层有几个</span>
+        u = q.popleft()
+        if u == target:
+            return step
+        for v in adj[u]:
+            if v not in seen:
+                seen.add(v)
+                q.append(v)
+    step += 1                  <span class="c"># 一层走完，步数 +1</span></pre></div>
+      <div class="blk"><h3>DFS：递归（连通块、能不能到、所有路径）</h3><pre>seen = set()
+def dfs(u):
+    seen.add(u)                <span class="c"># 进来先标记</span>
+    for v in adj[u]:
+        if v not in seen:
+            dfs(v)
+
+<span class="c"># 网格：四个方向 + 越界判断</span>
+for dr, dc in ((0, 1), (-1, 0), (0, -1), (1, 0)):
+    x, y = r + dr, c + dc
+    if not (0 &lt;= x &lt; m and 0 &lt;= y &lt; n):
+        continue
+    ...</pre></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>复杂度</h2>
+    <p class="sub">每个格子 / 结点只进出一次，每条边只看一次</p>
+    <table class="tbl"><thead><tr><th></th><th>时间</th><th>额外空间</th><th>空间最坏的时候</th></tr></thead><tbody>
+      <tr><td><b>BFS</b></td><td class="mono">O(V + E)，网格 O(m·n)</td><td class="mono">队列：最宽的一层</td><td>空地上的水波一圈比一圈大</td></tr>
+      <tr><td><b>DFS</b></td><td class="mono">O(V + E)，网格 O(m·n)</td><td class="mono">递归栈：最长的那条路</td><td>蛇形走满整个网格，深度 m·n</td></tr>
+    </tbody></table>
+  </section>
+  <section class="card info">
+    <h2>易错点</h2>
+    <div class="pits"><div class="p"><b>list.pop(0) 当队列</b><span>每次 O(n)，BFS 会超时；用 <code>deque.popleft()</code>。</span></div><div class="p"><b>出队时才标记</b><span>同一个格子会被几个邻居重复放进队列。<b>入队时就标记</b>。</span></div><div class="p"><b>递归深度 1000</b><span>Python 默认最多递归约 1000 层，大网格的 DFS 会报 RecursionError。改用 BFS 或手写栈。</span></div><div class="p"><b>负下标不报错</b><span><code>g[-1][c]</code> 会悄悄读到最后一行。<b>先判断范围</b>再访问。</span></div></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const PLAY = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M7 4.5v15l13-7.5z\"/></svg>", PAUSE = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><rect x=\"6\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/><rect x=\"14\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/></svg>";
+  const MODES = {"bfs": {"name": "BFS：水波一圈圈扩散", "idea": "BFS 像往水里丢一颗石子：水波从起点<b>一圈一圈</b>往外扩。用<b>队列</b>，先发现的格子先处理，所以第 d 圈的格子全部处理完才轮到第 d+1 圈。<b>第一次碰到奶酪时走的就是最短路</b>。格子里的数字 = 从起点走几步能到。", "examples": [["迷宫", "S.....#.../.####.#.#./.#....#.#./.#.##...#./...#..#.#E/##...##..."], ["空地", "S....../......./......./......./......E"], ["死路多", "..S....../..#####../.......#./####.#.#./E....#..."], ["到不了", "S..#..../.#.#.###/.#...#E./...#.###/.#......"]], "code": ["<span class=\"k\">def</span> bfs(g, sr, sc):", "    m, n = <span class=\"t\">len</span>(g), <span class=\"t\">len</span>(g[0])", "    dist = [[-1] * n <span class=\"k\">for</span> _ <span class=\"k\">in</span> <span class=\"t\">range</span>(m)]", "    q = <span class=\"t\">deque</span>([(sr, sc)])", "    dist[sr][sc] = 0                  <span class=\"c\"># 入队就标记</span>", "    <span class=\"k\">while</span> q:", "        r, c = q.popleft()", "        <span class=\"k\">if</span> g[r][c] == \"E\":", "            <span class=\"k\">return</span> dist[r][c]         <span class=\"c\"># 第一次碰到就是最短</span>", "        <span class=\"k\">for</span> dr, dc <span class=\"k\">in</span> DIRS:", "            x, y = r + dr, c + dc", "            <span class=\"k\">if</span> <span class=\"k\">not</span> (0 &lt;= x &lt; m <span class=\"k\">and</span> 0 &lt;= y &lt; n):", "                <span class=\"k\">continue</span>", "            <span class=\"k\">if</span> g[x][y] == \"<span class=\"c\">#\" or dist[x][y] != -1:</span>", "                <span class=\"k\">continue</span>", "            dist[x][y] = dist[r][c] + 1   <span class=\"c\"># 下一圈</span>", "            q.append((x, y))", "    <span class=\"k\">return</span> -1                         <span class=\"c\"># 队列空了：到不了</span>"], "map": [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 15, 16, 16, 5, 17, 17]}, "dfs": {"name": "DFS：一条路走到黑", "idea": "DFS 像一只钻迷宫的老鼠：认准一个方向<b>一直往前走</b>，撞了墙就换个方向；四面都走不通，就<b>退回上一格</b>再试别的路。递归（系统栈）记着来时的路。它能找到<b>一条</b>路，但<b>不一定最短</b>。", "examples": [["迷宫", "S.....#.../.####.#.#./.#....#.#./.#.##...#./...#..#.#E/##...##..."], ["空地", "S....../......./......./......./......E"], ["死路多", "..S....../..#####../.......#./####.#.#./E....#..."], ["到不了", "S..#..../.#.#.###/.#...#E./...#.###/.#......"]], "code": ["<span class=\"k\">def</span> dfs(r, c):                     <span class=\"c\"># g、m、n、path 在外层</span>", "    <span class=\"k\">if</span> <span class=\"k\">not</span> (0 &lt;= r &lt; m <span class=\"k\">and</span> 0 &lt;= c &lt; n):", "        <span class=\"k\">return</span> False", "    <span class=\"k\">if</span> g[r][c] <span class=\"k\">in</span> \"<span class=\"c\">#v\":               # 墙或走过</span>", "        <span class=\"k\">return</span> False", "    path.append((r, c))", "    <span class=\"k\">if</span> g[r][c] == \"E\":", "        <span class=\"k\">return</span> True                   <span class=\"c\"># 找到了</span>", "    g[r][c] = \"v\"                     <span class=\"c\"># 做记号，不再进来</span>", "    <span class=\"k\">for</span> dr, dc <span class=\"k\">in</span> DIRS:               <span class=\"c\"># 右、上、左、下</span>", "        <span class=\"k\">if</span> dfs(r + dr, c + dc):", "            <span class=\"k\">return</span> True", "    path.pop()                        <span class=\"c\"># 四面都不通：退回去</span>", "    <span class=\"k\">return</span> False"], "map": [0, 1, 3, 5, 7, 8, 9, 10, 12, 13, 13]}, "race": {"name": "同一个迷宫，两个一起跑", "idea": "每一步两边各探索<b>一个新格子</b>。BFS 均匀地往四周铺开，铺到奶酪时走的一定是最短路；DFS 一头扎进去，可能很快碰到奶酪，也可能绕一大圈，而且路线不一定最短。", "examples": [["迷宫", "S.....#.../.####.#.#./.#....#.#./.#.##...#./...#..#.#E/##...##..."], ["空地", "S....../......./......./......./......E"], ["死路多", "..S....../..#####../.......#./####.#.#./E....#..."], ["到不了", "S..#..../.#.#.###/.#...#E./...#.###/.#......"]], "code": ["<span class=\"c\"># BFS：队列，先来的先走 → 一圈圈往外扩</span>", "q = <span class=\"t\">deque</span>([s]); seen = {s}", "<span class=\"k\">while</span> q:", "    u = q.popleft()", "    <span class=\"k\">for</span> v <span class=\"k\">in</span> neighbors(u):", "        <span class=\"k\">if</span> v <span class=\"k\">not</span> <span class=\"k\">in</span> seen:", "            seen.add(v); q.append(v)", "", "<span class=\"c\"># DFS：递归（系统栈），后来的先走 → 一条路走到黑</span>", "<span class=\"k\">def</span> dfs(u):", "    seen.add(u)", "    <span class=\"k\">for</span> v <span class=\"k\">in</span> neighbors(u):", "        <span class=\"k\">if</span> v <span class=\"k\">not</span> <span class=\"k\">in</span> seen:", "            dfs(v)"], "map": [0, 1, 2, 3, 6, 2, 7, 8, 9, 10, 13, 13]}};
+  const ORDER = Object.keys(MODES);
+
+  // 右、上、左、下：DFS 先往右试
+  const DIRS = [[0, 1], [-1, 0], [0, -1], [1, 0]], DN = ['右', '上', '左', '下'];
+  const P = (r, c) => `(${r},${c})`;
+  function grid(str) {
+    const g = str.split('/').map(r => r.split(''));
+    let S, E;
+    g.forEach((row, r) => row.forEach((ch, c) => { if (ch === 'S') S = [r, c]; if (ch === 'E') E = [r, c]; }));
+    return { g, m: g.length, n: g[0].length, S, E };
+  }
+  // 一帧 = 每个格子的样式和文字
+  function base(G) { return G.g.map(row => row.map(ch => ch === '#' ? ['w', ''] : ch === 'S' ? ['s', '起'] : ch === 'E' ? ['e', '<span class="emo">🧀</span>'] : ['', ''])); }
+  const clone = f => f.map(row => row.map(x => x.slice()));
+
+  function runBFS(G) {
+    const { g, m, n, S, E } = G, dist = G.g.map(row => row.map(() => -1)), par = {};
+    const q = [S]; let head = 0;
+    dist[S[0]][S[1]] = 0;
+    const frames = [], f = base(G);
+    const paint = () => {
+      const x = clone(f);
+      for (let k = head; k < q.length; k++) { const [r, c] = q[k]; x[r][c][0] += ' q'; }
+      return x;
+    };
+    const qtxt = () => q.slice(head).map(([r, c]) => [P(r, c), dist[r][c]]);
+    frames.push({ cells: paint(), line: 4, aux: qtxt(), msg: '起点入队，标成 0。BFS 像往水里丢一颗石子，水波会从这里一圈一圈往外扩', seen: 1 });
+    let found = -1;
+    while (head < q.length) {
+      const [r, c] = q[head++];
+      if (g[r][c] === 'E') { found = dist[r][c]; break; }
+      const news = [];
+      for (const [dr, dc] of DIRS) {
+        const x = r + dr, y = c + dc;
+        if (x < 0 || x >= m || y < 0 || y >= n || g[x][y] === '#' || dist[x][y] !== -1) continue;
+        dist[x][y] = dist[r][c] + 1; par[x + ',' + y] = [r, c]; q.push([x, y]); news.push([x, y]);
+        f[x][y] = [g[x][y] === 'E' ? 'e lay' : 'lay', g[x][y] === 'E' ? '<span class="emo">🧀</span>' : String(dist[x][y])];
+      }
+      const x = paint();
+      x[r][c][0] += ' cur';
+      news.forEach(([a, b]) => x[a][b][0] += ' new');
+      const d = dist[r][c];
+      frames.push({ cells: x, line: 13, aux: qtxt(), seen: q.length,
+        msg: `取出队头 ${P(r, c)}（离起点 ${d} 步）` + (news.length ? `，旁边新发现 ${news.length} 格，都标成 ${d + 1}，排到队尾` : '，四周都是墙或已经标过了，什么也没加') });
+    }
+    if (found >= 0) {
+      const x = clone(f);
+      let k = E;
+      const path = [];
+      while (k) { path.push(k); k = par[k[0] + ',' + k[1]]; }
+      path.forEach(([r, c]) => x[r][c][0] += ' path');
+      frames.push({ cells: x, line: 7, aux: qtxt(), kind: 'ok', done: true, seen: q.length, dist: found,
+        msg: `队头是奶酪！它的数字是 ${found}，这就是最短路。顺着「数字每次少 1」倒着走回起点，就是绿色这条路` });
+    } else {
+      frames.push({ cells: clone(f), line: 17, aux: [], kind: 'miss', done: true, seen: q.length, dist: -1,
+        msg: `队列空了：从起点能到的 ${q.length} 格全部铺满了，奶酪不在里面，返回 −1` });
+    }
+    return frames;
+  }
+
+  function runDFS(G) {
+    const { g, m, n, S } = G, seen = new Set(), path = [], f = base(G), frames = [];
+    const key = (r, c) => r + ',' + c;
+    const paint = (cur, extra) => {
+      const x = clone(f);
+      path.forEach(([r, c], k) => { if (g[r][c] !== 'E') x[r][c] = [g[r][c] === 'S' ? 's stk' : 'stk', g[r][c] === 'S' ? '起' : String(k)]; });
+      if (cur) { const [r, c] = cur; x[r][c][0] += ' cur'; x[r][c][1] = '<span class="emo">🐭</span>'; }
+      if (extra) extra(x);
+      return x;
+    };
+    const stk = () => path.map(([r, c]) => [P(r, c)]);
+    let found = false;
+    const blockedDirs = (r, c) => DIRS.map(([dr, dc], k) => {
+      const x = r + dr, y = c + dc;
+      return x < 0 || x >= m || y < 0 || y >= n || g[x][y] === '#' || seen.has(key(x, y)) ? null : k;
+    });
+    function go(r, c, how) {
+      path.push([r, c]);
+      if (g[r][c] === 'E') {
+        found = true;
+        frames.push({ cells: paint(null, x => path.forEach(([a, b]) => x[a][b][0] += ' path')), line: 4, aux: stk(), kind: 'ok', done: true, seen: seen.size + 1, dist: path.length - 1,
+          msg: `${how}，找到奶酪了！这条路走了 ${path.length - 1} 步。DFS 只管找到一条，不保证最短` });
+        return true;
+      }
+      seen.add(key(r, c));
+      const open = blockedDirs(r, c).filter(k => k !== null).map(k => DN[k]);
+      frames.push({ cells: paint([r, c]), line: 5, aux: stk(), seen: seen.size,
+        msg: `${how}，做个记号` + (open.length ? `。能走的方向：${open.join('、')}，按「右、上、左、下」的顺序先试${open[0]}` : '。四面都是墙或走过的格子') });
+      for (let k = 0; k < 4; k++) {
+        const x = r + DIRS[k][0], y = c + DIRS[k][1];
+        if (x < 0 || x >= m || y < 0 || y >= n || g[x][y] === '#' || seen.has(key(x, y))) continue;
+        if (go(x, y, `从 ${P(r, c)} 往${DN[k]}走到 ${P(x, y)}`)) return true;
+        const rest = blockedDirs(r, c).map((v, j) => v !== null && j > k ? DN[j] : null).filter(Boolean);
+        frames.push({ cells: paint([r, c]), line: 7, aux: stk(), seen: seen.size,
+          msg: `退回到 ${P(r, c)}。往${DN[k]}那边是死路` + (rest.length ? `，接着试${rest[0]}` : '，这里也没有别的方向了') });
+      }
+      path.pop();
+      f[r][c] = [g[r][c] === 'S' ? 's dead' : 'dead', g[r][c] === 'S' ? '起' : ''];
+      const back = path.length ? path[path.length - 1] : null;
+      frames.push({ cells: paint(back, x => { x[r][c][0] += ' cur'; }), line: 8, aux: stk(), seen: seen.size,
+        msg: `${P(r, c)} 四面都走不通，是死胡同：从路径里删掉（标 ×），` + (back ? `退回 ${P(back[0], back[1])}` : '退回起点之外，整个迷宫都试完了') });
+      return false;
+    }
+    frames.push({ cells: paint(null), line: 0, aux: [], seen: 0, msg: '老鼠站在起点。它会一条路走到底，撞墙了再回头' });
+    go(S[0], S[1], '老鼠走进起点');
+    if (!found) frames.push({ cells: clone(f), line: 9, aux: [], kind: 'miss', done: true, seen: seen.size, dist: -1,
+      msg: `能走的 ${seen.size} 格都走过了，没碰到奶酪：返回 false` });
+    return frames;
+  }
+
+  function build(mode, str) {
+    const G = grid(str);
+    if (mode === 'bfs') return runBFS(G).map(fr => ({ ...fr, G, one: fr }));
+    if (mode === 'dfs') return runDFS(G).map(fr => ({ ...fr, G, one: fr }));
+    // 两边各取「每探索一个新格子」的那几帧，按步对齐
+    const pick = fs => fs.filter((fr, k) => k === 0 || fr.done || fr.seen > fs[k - 1].seen);
+    const A = pick(runBFS(G)), B = pick(runDFS(G)), T = Math.max(A.length, B.length), out = [];
+    for (let t = 0; t < T; t++) {
+      const a = A[Math.min(t, A.length - 1)], b = B[Math.min(t, B.length - 1)];
+      const ad = t >= A.length - 1, bd = t >= B.length - 1;
+      let msg = `第 ${t} 步：BFS 探索了 ${a.seen} 格，DFS 探索了 ${b.seen} 格`;
+      if (ad && bd) {
+        msg = a.dist < 0 ? '两边都把能走的格子走遍了，都没找到奶酪'
+          : `都结束了。BFS 找到的路 ${a.dist} 步（最短），DFS 找到的路 ${b.dist} 步` + (b.dist > a.dist ? '：绕远了' : '：这次刚好也是最短');
+      } else if (ad) msg += `。BFS 已经结束（${a.dist >= 0 ? '最短 ' + a.dist + ' 步' : '到不了'}），DFS 还在找`;
+      else if (bd) msg += `。DFS 已经结束（${b.dist >= 0 ? '走了 ' + b.dist + ' 步' : '到不了'}），BFS 还在铺`;
+      out.push({ G, a, b, line: ad ? 10 : 4, kind: ad && bd ? (a.dist >= 0 ? 'ok' : 'miss') : '', msg });
+    }
+    return out;
+  }
+
+  function mazeHTML(G, cells, sz) {
+    const lay = d => `background:hsl(${205 - (d % 6) * 6}, 85%, ${d % 2 ? 82 : 90}%)`;
+    let h = '';
+    cells.forEach(row => row.forEach(([cls, lab]) => {
+      const st = cls.includes('lay') && !cls.includes('path') && /^\d+$/.test(lab) ? lay(+lab) : '';
+      h += `<div class="mz ${cls}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz * .36)}px;${st}">${lab}</div>`;
+    }));
+    return `<div class="maze" style="grid-template-columns:repeat(${G.n}, ${sz}px)">${h}</div>`;
+  }
+  const chips = (list, cls, head) => list.map(([t, d], k) => `<span class="ch ${cls} ${k === head ? 'hd' : ''}">${t}${d !== undefined ? '·' + d : ''}</span>`);
+  const LEG = {
+    bfs: [['#4b5263', '墙'], ['hsl(205,85%,86%)', '已铺到（数字 = 几步能到）'], ['#fff;box-shadow:inset 0 0 0 2.5px #2f6bff', '在队列里'], ['#fef3c7;box-shadow:inset 0 0 0 3px #d97706', '刚取出的队头'], ['#16a34a', '最短路']],
+    dfs: [['#4b5263', '墙'], ['#fef3c7', '当前路径（数字 = 第几步）'], ['#e5e7eb', '死胡同'], ['#16a34a', '找到的路']],
+  };
+  LEG.race = LEG.bfs.slice(0, 2).concat([[LEG.dfs[1][0], 'DFS 当前路径'], ['#16a34a', '找到的路']]);
+  function render(st) {
+    $('legend').innerHTML = LEG[mode].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+    const G = st.G;
+    if (mode !== 'race') {
+      const sz = Math.min(54, Math.floor(640 / G.n));
+      $('mazes').innerHTML = `<div class="mzcol">${mazeHTML(G, st.one.cells, sz)}</div>`;
+      $('aux').innerHTML = mode === 'bfs'
+        ? '<span class="lbl">队列（队头 → 队尾）</span>' + (chips(st.aux, '', 0).join('') || '<span class="lbl">空</span>')
+        : '<span class="lbl">递归栈 = 来时的路（栈底 → 栈顶）</span>' + (chips(st.aux, 'a', st.aux.length - 1).join('<span class="ar">→</span>') || '<span class="lbl">空</span>');
+      return;
+    }
+    const sz = Math.min(34, Math.floor(310 / G.n));
+    const col = (t, fr, name) => `<div class="mzcol"><div class="sl"><b>${t}</b> ${name}</div>${mazeHTML(G, fr.cells, sz)}<div class="cnt">探索了 <b>${fr.seen}</b> 格${fr.done ? (fr.dist >= 0 ? `，路长 <b>${fr.dist}</b>` : '，到不了') : ''}</div></div>`;
+    $('mazes').innerHTML = col('BFS', st.a, '队列 · 水波') + col('DFS', st.b, '递归 · 老鼠');
+    $('aux').innerHTML = '';
+  }
+
+  function fill(m, v) { $('mIn').value = v; }
+  function parse() {
+    const v = $('mIn').value.replace(/\s/g, ''), rows = v.split('/');
+    if (rows.length < 2 || rows.length > 9) return null;
+    const n = rows[0].length;
+    if (n < 2 || n > 12 || rows.some(r => r.length !== n || !/^[SE#.]+$/.test(r))) return null;
+    const cnt = ch => v.split(ch).length - 1;
+    return cnt('S') === 1 && cnt('E') === 1 ? v : null;
+  }
+  function showFields() {}
+
+
+  let mode = ORDER[0], steps = [], cur = 0, timer = null, input = null;
+  const speed = () => +$('speed').value;
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const m = MODES[mode], ln = m.map ? m.map[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${cur / Math.max(1, steps.length - 1) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function stop() { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; }
+  function play() {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, speed());
+  }
+  function load() {
+    stop();
+    steps = build(mode, input); cur = 0;
+    fill(mode, input);
+    $('field').classList.remove('bad');
+    $('idea').innerHTML = MODES[mode].idea;
+    $('code').innerHTML = MODES[mode].code.map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.algos button').forEach(b => b.classList.toggle('on', b.dataset.k === mode));
+    showFields(mode);
+    draw();
+  }
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  function loadExamples() {
+    seg.innerHTML = '';
+    MODES[mode].examples.forEach(([name, v], k) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = name;
+      b.onclick = () => { setOn(k); input = structuredClone(v); load(); };
+      seg.appendChild(b);
+    });
+    setOn(0); input = structuredClone(MODES[mode].examples[0][1]);
+  }
+  ORDER.forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.k = k; b.textContent = MODES[k].name;
+    b.onclick = () => { mode = k; loadExamples(); load(); };
+    $('algos').appendChild(b);
+  });
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = parse(mode);
+    $('field').classList.toggle('bad', !v);
+    if (!v) return;
+    setOn(-1); input = v; load();
+  });
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  $('speed').oninput = () => { if (timer) { stop(); play(); } };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+  loadExamples(); load();
+
+})();
+</script>
+</body>
+</html>
