@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C++ 背包问题 · 动画演示</title>
+<style>
+  /* 亮色主题 */
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7; --card: #fff; --text: #1d1d1f; --muted: #86868b; --line: #e5e5ea;
+    --blue: #2f6bff; --blue-soft: #e8efff;
+    --green: #16a34a; --green-soft: #dcfce7;
+    --amber: #d97706; --amber-soft: #fef3c7;
+    --inset: #f4f5f7; --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-hl: rgba(137, 180, 250, .18);
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 36px 32px 48px; }
+
+  /* 左：演示  右：代码 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .side, .main-col { display: flex; flex-direction: column; gap: 24px; }
+  .side { position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } .side { position: static; } }
+  .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* 头部 */
+  header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 34px; margin: 0; letter-spacing: -.5px; }
+  .pill { font-size: 15px; padding: 4px 12px; border-radius: 999px; font-weight: 600; }
+  .pill.easy { background: var(--green-soft); color: var(--green); }
+  .pill.mid { background: var(--amber-soft); color: var(--amber); }
+  .pill.hard { background: #fee2e2; color: #dc2626; }
+  .pill.cat { background: var(--blue-soft); color: var(--blue); }
+  header a { margin-left: auto; color: var(--muted); font-size: 16px; text-decoration: none; }
+  header a:hover { color: var(--blue); }
+  .idea { margin: 14px 0 24px; font-size: 22px; color: var(--muted); }
+  .idea b { color: var(--text); }
+
+  .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 32px; }
+  .card.player { padding: 24px; }
+  .card.code { padding: 0; overflow: hidden; }
+
+  /* 工具栏：示例分段切换 + 自定义输入 */
+  .toolbar { display: flex; gap: 12px; flex-direction: column; align-items: flex-start; margin-bottom: 28px; }
+  .seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--inset); }
+  .seg button {
+    font: inherit; font-size: 16px; font-weight: 600; padding: 8px 18px; border: none; border-radius: 9px;
+    background: transparent; color: var(--muted); cursor: pointer; transition: all .2s;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .field {
+    width: 100%; display: flex; align-items: center; height: 48px; padding: 0 6px 0 16px;
+    border-radius: 12px; background: var(--inset); border: 2px solid transparent; transition: border-color .2s;
+  }
+  .field:focus-within { border-color: var(--blue); background: var(--card); }
+  .field.bad { border-color: #ef4444; }
+  .field label { font-size: 14px; color: var(--muted); font-weight: 600; margin-right: 8px; }
+  .field input {
+    font: 18px "JetBrains Mono", "SF Mono", Menlo, monospace; border: none; outline: none;
+    background: transparent; color: var(--text); min-width: 0;
+  }
+  .field input#numsIn { flex: 1; }
+  .field input#tIn { width: 56px; }
+  .field .sep { width: 1px; height: 22px; background: var(--line); margin: 0 14px; }
+  .field .go {
+    font: inherit; font-size: 15px; font-weight: 600; height: 36px; padding: 0 14px; margin-left: 6px;
+    border: none; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer;
+  }
+
+  /* 舞台 */
+  .stage { display: flex; flex-direction: column; gap: 20px; }
+  .label { font-size: 15px; color: var(--muted); margin-bottom: 14px; font-weight: 600; }
+
+  .array { display: flex; gap: 12px; flex-wrap: wrap; padding-top: 30px; }
+  .cell { position: relative; text-align: center; }
+  .box {
+    width: 72px; height: 72px; border-radius: 16px; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; background: var(--inset); border: 2.5px solid transparent;
+    transition: all .35s cubic-bezier(.2,.8,.2,1);
+  }
+  .idx { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .arrow {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    color: var(--blue); font-weight: 700; font-size: 18px; opacity: 0; transition: opacity .2s;
+  }
+  .cell.past .box { opacity: .4; }
+  .cell.cur .box { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); transform: translateY(-6px); }
+  .cell.cur .arrow { opacity: 1; }
+  .cell.hit .box { border-color: var(--green); background: var(--green-soft); color: var(--green); transform: translateY(-6px); }
+
+  .need { margin-top: 16px; font-size: 24px; min-height: 40px; }
+  .need .v {
+    display: inline-block; min-width: 52px; text-align: center; padding: 2px 14px; border-radius: 12px;
+    background: var(--amber-soft); color: var(--amber); font-weight: 700; margin-left: 6px;
+  }
+
+  /* 哈希表 */
+  .map { display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; }
+  .kv {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px; border-radius: 14px; background: var(--inset); font-size: 22px; font-weight: 600;
+    border: 2.5px solid transparent; transition: all .3s;
+  }
+  .kv i { font-style: normal; color: var(--muted); font-size: 18px; }
+  .kv span:last-child { color: var(--muted); font-size: 18px; }
+  .kv.new { animation: pop .4s cubic-bezier(.2,.8,.2,1); border-color: var(--blue); }
+  .kv.hit { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+  .kv.hit span:last-child { color: var(--green); }
+  .map .empty { color: var(--muted); font-size: 18px; padding: 10px 4px; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+
+  /* 状态 */
+  .status {
+    padding: 18px 22px; border-radius: 14px; font-size: 22px; font-weight: 600;
+    background: var(--inset); min-height: 70px; display: flex; align-items: center; gap: 12px;
+  }
+  .status.miss { background: var(--amber-soft); color: var(--amber); }
+  .status.ok { background: var(--green-soft); color: var(--green); }
+
+  /* 控制栏 */
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--inset); color: var(--text); display: grid; place-items: center;
+    transition: background .2s, color .2s;
+  }
+  .btn svg { width: 20px; height: 20px; }
+  .btn:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.play { width: 56px; background: var(--blue); color: #fff; }
+  .btn.play:hover { background: var(--blue); color: #fff; filter: brightness(1.08); }
+  .btn:focus-visible, .seg button:focus-visible, .go:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .progress { flex: 1; height: 6px; border-radius: 3px; background: var(--inset); overflow: hidden; margin-left: 10px; }
+  .progress div { height: 100%; background: var(--blue); transition: width .3s; }
+  .count { color: var(--muted); font-size: 16px; min-width: 56px; text-align: right; }
+
+  /* 代码 */
+  pre {
+    margin: 0; padding: 24px 0; background: var(--code-bg); color: var(--code-text);
+    border-radius: 0; font: 17px/1.8 "JetBrains Mono", "SF Mono", Menlo, monospace; overflow-x: auto;
+  }
+  pre .l { display: block; padding: 0 24px; border-left: 4px solid transparent; transition: background .2s; }
+  pre .l.on { background: var(--code-hl); border-left-color: #89b4fa; }
+  .k { color: #cba6f7; } .t { color: #f9e2af; } .c { color: #6c7086; }
+
+  /* 复杂度卡片：每项一整行 */
+  .cx-card {
+    padding: 8px 32px; margin-top: 24px;
+    --t: #4f6bed; --t-soft: #eef1fe; --s: #10a37f; --s-soft: #e7f6f1; --x: var(--amber); --x-soft: var(--amber-soft);
+  }
+  .cx-row { display: grid; grid-template-columns: var(--cxw, 200px) minmax(0, 1fr) 440px; gap: 32px; align-items: center; padding: 26px 0; }
+  .cx-row + .cx-row { border-top: 1px solid var(--line); }
+  .cx-row.nofig { grid-template-columns: var(--cxw, 200px) minmax(0, 1fr); }
+  @media (max-width: 1100px) { .cx-row, .cx-row.nofig { grid-template-columns: 1fr; gap: 14px; } }
+  .cx-head { display: flex; flex-direction: column; gap: 6px; }
+  .cx-head .tag { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
+  .cx-head .val { font: 700 34px/1.2 "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--t); white-space: nowrap; }
+  .cx-row.space .val { color: var(--s); }
+  .cx-row.cmp .val { color: var(--x); font-size: 24px; }
+  .eq { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; margin-bottom: 12px; }
+  .eq .term { padding: 4px 12px; border-radius: 10px; background: var(--inset); }
+  .eq .term b { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .eq .op { color: var(--muted); font-weight: 700; font-size: 20px; }
+  .why { margin: 0; font-size: 20px; line-height: 1.6; color: var(--text); }
+  .why b { color: var(--t); background: var(--t-soft); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+  .cx-row.space .why b { color: var(--s); background: var(--s-soft); }
+  .cx-row.cmp .why b { color: var(--x); background: var(--x-soft); }
+
+  /* 图示 */
+  .fig { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; background: var(--bg); }
+  .fig .cap { font-size: 15px; color: var(--muted); }
+  .fig .cells { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fig .c {
+    min-width: 40px; height: 40px; padding: 0 8px; border-radius: 10px; background: var(--card);
+    display: grid; place-items: center; font: 600 16px "JetBrains Mono", "SF Mono", Menlo, monospace;
+    border: 2px solid transparent;
+  }
+  .fig .c.b { border-color: var(--t); color: var(--t); }
+  .fig .c.g { background: var(--s-soft); color: var(--s); }
+  .fig .c.a { background: var(--amber-soft); color: var(--amber); }
+  .fig .c.m { color: var(--muted); }
+  .fig .ar { color: var(--muted); font-weight: 700; }
+  .fig .gap { width: 14px; }
+  .fig .sweep { position: relative; height: 12px; border-bottom: 3px solid var(--t); margin-right: 8px; }
+  .fig .sweep::after {
+    content: ""; position: absolute; right: -8px; bottom: -8px;
+    border: 6.5px solid transparent; border-left: 10px solid var(--t);
+  }
+  .fig .lbl { display: flex; gap: 6px; }
+  .fig .lbl span { min-width: 40px; text-align: center; font-size: 13px; font-weight: 700; color: var(--green); }
+  .fig .tri { display: grid; grid-template-columns: repeat(6, 24px); gap: 5px; }
+  .fig .d { width: 24px; height: 24px; border-radius: 6px; background: var(--card); }
+  .fig .d.on { background: var(--x-soft); box-shadow: inset 0 0 0 2px var(--x); }
+  .fig .vs { display: grid; grid-template-columns: auto auto 1fr; gap: 8px 10px; align-items: center; font-size: 16px; }
+  .fig .vs .k { font-weight: 700; }
+  .fig .vs .k.a { color: var(--x); }
+  .fig .vs .k.g { color: var(--t); }
+
+  /* 代码语言切换 */
+  .code-tabs { display: flex; gap: 4px; padding: 14px 16px 0; background: var(--code-bg); }
+  .code-tabs button {
+    font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 6px 16px; border: none; border-radius: 8px;
+    background: transparent; color: #7f849c; cursor: pointer; transition: all .2s;
+  }
+  .code-tabs button:hover { color: #cdd6f4; }
+  .code-tabs button.on { background: rgba(205, 214, 244, .1); color: #cdd6f4; }
+  .code-tabs button:focus-visible { outline: 2px solid #89b4fa; outline-offset: 2px; }
+  .card.code pre { padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  main { max-width: 1480px; }
+  .algos { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 16px; padding: 5px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); width: fit-content; }
+  .algos button { font: inherit; font-size: 18px; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; transition: all .2s; }
+  .algos button:hover { color: var(--text); }
+  .algos button.on { background: var(--blue); color: #fff; }
+  .algos button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .toolbar .row { display: flex; gap: 10px; width: 100%; align-items: center; flex-wrap: wrap; }
+  .card.info { margin-top: 24px; }
+  .card.info h2 { margin: 0 0 6px; font-size: 24px; }
+  .card.info .sub { color: var(--muted); font-size: 17px; margin: 0 0 18px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 18px; }
+  .tbl th { text-align: left; color: var(--muted); font-size: 15px; font-weight: 600; padding: 8px 12px; border-bottom: 2px solid var(--line); }
+  .tbl td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .tbl td.mono { font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
+  .tbl .good { color: var(--green); } .tbl .bad { color: var(--amber); }
+  .tbl code, .grid2 code, .pits code { font: 600 .92em "JetBrains Mono", Menlo, monospace; background: var(--inset); padding: 1px 6px; border-radius: 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .blk { background: var(--inset); border-radius: 14px; padding: 18px 20px; }
+  .blk h3 { margin: 0 0 10px; font-size: 19px; }
+  .blk p { margin: 8px 0 0; font-size: 17px; line-height: 1.7; }
+  .blk pre { margin: 0; padding: 0; background: none; color: var(--text); box-shadow: none; border-radius: 0; font: 16px/1.65 "JetBrains Mono", "SF Mono", Menlo, monospace; white-space: pre; overflow-x: auto; }
+  .blk pre .c { color: var(--muted); }
+  .pits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 1100px) { .pits { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .pits .p { background: var(--amber-soft); border-radius: 14px; padding: 16px 18px; }
+  .pits .p b { display: block; font-size: 18px; color: var(--amber); margin-bottom: 8px; }
+  .pits .p span { font-size: 16px; line-height: 1.65; }
+
+  .items { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .items .lbl, .bag .lbl { color: var(--muted); font-size: 15px; font-weight: 700; margin-right: 4px; }
+  .it { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 12px; background: var(--inset); border: 2.5px solid transparent;
+        font: 600 15px "JetBrains Mono", "SF Mono", Menlo, monospace; }
+  .it b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: #fff; font-size: 16px; }
+  .it.on { border-color: var(--blue); background: var(--blue-soft); }
+  .it.past { opacity: .5; }
+  .fx { font: 600 18px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 10px 16px; border-radius: 12px; background: var(--inset); min-height: 46px; line-height: 1.5; }
+  .fx .k { color: var(--amber); } .fx .g { color: var(--green); } .fx .b { color: var(--blue); }
+  .bag { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 16px; min-height: 40px; }
+  .bag .chip { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: #fff; font: 700 16px "JetBrains Mono", Menlo, monospace; }
+  .bag .sum { color: var(--muted); font-weight: 600; margin-left: 6px; }
+  .bag .sum b { color: var(--text); font-family: "JetBrains Mono", Menlo, monospace; }
+  svg.kp { display: block; width: 100%; height: auto; overflow: visible; }
+  svg.kp text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  svg.fg { max-width: 100%; height: auto; }
+  svg.fg text { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 15px; color: var(--muted); }
+  .legend i { display: inline-block; width: 16px; height: 16px; border-radius: 5px; margin-right: 6px; vertical-align: -3px; }
+
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .duo { grid-template-columns: 1fr; } }
+  .box2 { border-radius: 16px; padding: 18px 22px; background: var(--inset); }
+  .box2.b { background: var(--blue-soft); } .box2.a { background: var(--amber-soft); } .box2.g { background: var(--green-soft); }
+  .box2 h3 { margin: 0 0 8px; font-size: 20px; }
+  .box2.b h3 { color: var(--blue); } .box2.a h3 { color: var(--amber); } .box2.g h3 { color: var(--green); }
+  .box2 p { margin: 6px 0 0; font-size: 17px; line-height: 1.7; }
+  .box2 .pic { margin: 10px 0 4px; display: flex; justify-content: center; }
+  .box2 code, .tbl code { font: 600 .92em "JetBrains Mono", Menlo, monospace; background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; }
+  .model { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; justify-content: center; margin: 4px 0 10px; }
+  .model .goods { display: flex; gap: 10px; }
+  .model .g1 { width: 74px; padding: 10px 0; border-radius: 12px; color: #fff; text-align: center; font: 700 15px/1.5 "JetBrains Mono", Menlo, monospace; }
+  .model .arr { font-size: 30px; color: var(--muted); }
+  .model .bagbig { font-size: 64px; line-height: 1; position: relative; }
+  .model .bagbig span { position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); white-space: nowrap; font: 700 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); }
+  .tbl.var td:nth-child(1) { white-space: nowrap; font-weight: 700; }
+  .tbl.var td { font-size: 16px; }
+  .tbl tr.sec td { background: var(--inset); font-weight: 700; color: var(--muted); font-size: 14px; letter-spacing: 1px; padding: 6px 12px; }
+  .tr-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 1100px) { .tr-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tr { background: var(--inset); border-radius: 14px; padding: 14px 16px; }
+  .tr .t { font-weight: 700; font-size: 17px; }
+  .tr .t small { color: var(--muted); font-weight: 600; margin-right: 6px; font-family: "JetBrains Mono", Menlo, monospace; }
+  .tr .tag { display: inline-block; margin: 6px 0; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #fff; background: var(--blue); }
+  .tr .tag.full { background: var(--amber); } .tr .tag.two { background: #9333ea; }
+  .tr p { margin: 4px 0 0; font-size: 15px; line-height: 1.6; color: var(--muted); }
+  .tr p b { color: var(--text); }
+  .tr code { font: 600 .92em "JetBrains Mono", Menlo, monospace; background: var(--card); padding: 1px 5px; border-radius: 5px; color: var(--text); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>背包问题 · 动画演示</h1>
+    <span class="pill cat">C++ 知识点</span>
+  </header>
+  <div class="algos" id="algos" role="tablist" aria-label="演示内容"></div>
+  <p class="idea" id="idea"></p>
+
+  <div class="layout">
+  <div class="main-col">
+  <section class="card">
+    <div class="toolbar">
+      <div class="row"><div class="seg" id="seg" role="tablist" aria-label="示例数据"></div></div>
+      <form class="field" id="field">
+        <span id="fgI" style="display:contents"><label for="iIn">重量:价值</label><input id="iIn" autocomplete="off" style="flex:1" title="例如 1:15, 3:20, 4:30">
+        <span class="sep"></span><label for="wIn">容量 W</label><input id="wIn" autocomplete="off" style="width:56px"></span>
+        <span id="fgC" style="display:contents"><label for="cIn">硬币</label><input id="cIn" autocomplete="off" style="flex:1" title="例如 1, 2, 5">
+        <span class="sep"></span><label for="aIn">金额</label><input id="aIn" autocomplete="off" style="width:56px"></span>
+        <button class="go" type="submit">运行</button>
+      </form>
+    </div>
+    <div class="stage">
+      <div class="legend" id="legend"></div>
+      <div class="items" id="items"></div>
+      <div id="table"></div>
+      <div class="fx" id="fx"></div>
+      <div class="bag" id="bag"></div>
+    </div>
+  </section>
+  </div>
+
+  <div class="side">
+  <section class="card player">
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="reset" aria-label="重置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+      <button class="btn" id="prev" aria-label="上一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="btn play" id="play" aria-label="播放"></button>
+      <button class="btn" id="next" aria-label="下一步"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="progress"><div id="bar"></div></div>
+      <span class="count mono" id="count"></span>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--muted)">慢
+      <input type="range" id="speed" min="150" max="1400" step="50" value="800" style="flex:1;direction:rtl" aria-label="播放速度"> 快</label>
+  </section>
+  <section class="card code">
+    <pre id="code"></pre>
+  </section>
+  </div>
+  </div>
+
+  <section class="card info">
+    <h2>背包问题在问什么</h2>
+    <p class="sub">一个容量有限的背包，一堆物品，每件有「重量」和「价值」：怎么挑，才能在不超重的前提下价值最大？</p>
+    <div class="model">
+      <div class="goods"><div class="g1" style="background:#2f6bff">A<br>重 1 · 值 15</div><div class="g1" style="background:#9333ea">B<br>重 3 · 值 20</div><div class="g1" style="background:#0d9488">C<br>重 4 · 值 30</div></div>
+      <div class="arr">→</div>
+      <div class="bagbig">🎒<span>容量 4</span></div>
+      <div class="arr">⇒</div>
+      <div class="box2 g" style="padding:12px 18px"><b style="font-size:18px">A + B</b><p style="margin:2px 0 0;font-size:16px">重 1 + 3 = 4，值 15 + 20 = <b>35</b></p></div>
+    </div>
+    <div class="duo" style="margin-top:22px">
+      <div class="box2 b"><h3>为什么不能贪心</h3><p>按「性价比」从高到低装：A（15/1）、C（30/4 = 7.5）、B（20/3 ≈ 6.7）。装了 A 以后只剩 3，C 放不下，只能放 B，得 35，这次碰巧对。
+        换成「重 1 值 6、重 2 值 10、重 3 值 12」、容量 5：贪心装 A、B 得 16，最优是 B + C = <b>22</b>。物品不能切开，局部最优拼不出全局最优。</p></div>
+      <div class="box2 a"><h3>为什么能 DP</h3><p>看<b>最后一件</b>物品：要么不放，问题变成「前 n−1 件、容量 W」；要么放，变成「前 n−1 件、容量 W − w」再加 v。
+        两个子问题都是同样的「背包问题」，只是规模更小，而且会被反复用到：这正是动态规划的两个条件。</p></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>两个循环顺序，决定了题目的意思</h2>
+    <p class="sub">同一行代码 <code>dp[j] = max(dp[j], dp[j − w] + v)</code>（或 <code>dp[j] += dp[j − w]</code>），只改循环的方向和内外层，意思就完全不同</p>
+    <div class="duo">
+      <div class="box2"><h3>内层容量：倒序 = 0/1，正序 = 完全</h3>
+        <p>只有一件物品 A（重 1，值 15），容量 4，从全 0 开始：</p>
+        <div class="pic"><div><svg class="fg" viewBox="0 0 460 146" width="460" height="146"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><text x="116" y="81.0" font-size="18" fill="#86868b" font-weight="700" style="text-anchor:end">倒序</text><rect x="133" y="56" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="161.0" y="81.0" font-size="20" font-weight="700" fill="#1d1d1f">0</text><text x="161.0" y="126" font-size="12" fill="#86868b">0</text><rect x="195" y="56" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="223.0" y="81.0" font-size="20" font-weight="700" fill="#16a34a">15</text><text x="223.0" y="126" font-size="12" fill="#86868b">1</text><rect x="257" y="56" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="285.0" y="81.0" font-size="20" font-weight="700" fill="#16a34a">15</text><text x="285.0" y="126" font-size="12" fill="#86868b">2</text><rect x="319" y="56" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="347.0" y="81.0" font-size="20" font-weight="700" fill="#16a34a">15</text><text x="347.0" y="126" font-size="12" fill="#86868b">3</text><rect x="381" y="56" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="409.0" y="81.0" font-size="20" font-weight="700" fill="#16a34a">15</text><text x="409.0" y="126" font-size="12" fill="#86868b">4</text><path d="M347.0 52 C347.0 26 409.0 26 403.0 50" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#ara)"/><path d="M161.0 52 C161.0 26 223.0 26 217.0 50" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#ara)"/></svg><svg class="fg" viewBox="0 0 460 146" width="460" height="146"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><text x="116" y="81.0" font-size="18" fill="#86868b" font-weight="700" style="text-anchor:end">正序</text><rect x="133" y="56" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="161.0" y="81.0" font-size="20" font-weight="700" fill="#1d1d1f">0</text><text x="161.0" y="126" font-size="12" fill="#86868b">0</text><rect x="195" y="56" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="223.0" y="81.0" font-size="20" font-weight="700" fill="#16a34a">15</text><text x="223.0" y="126" font-size="12" fill="#86868b">1</text><rect x="257" y="56" width="56" height="50" rx="10" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="285.0" y="81.0" font-size="20" font-weight="700" fill="#dc2626">30</text><text x="285.0" y="126" font-size="12" fill="#86868b">2</text><rect x="319" y="56" width="56" height="50" rx="10" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="347.0" y="81.0" font-size="20" font-weight="700" fill="#dc2626">45</text><text x="347.0" y="126" font-size="12" fill="#86868b">3</text><rect x="381" y="56" width="56" height="50" rx="10" fill="#fff" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 5"/><text x="409.0" y="81.0" font-size="20" font-weight="700" fill="#dc2626">60</text><text x="409.0" y="126" font-size="12" fill="#86868b">4</text><path d="M161.0 52 C161.0 26 223.0 26 217.0 50" fill="none" stroke="#d97706" stroke-width="3" marker-end="url(#ara)"/><path d="M223.0 52 C223.0 26 285.0 26 279.0 50" fill="none" stroke="#dc2626" stroke-width="3" marker-end="url(#arr)"/><path d="M285.0 52 C285.0 26 347.0 26 341.0 50" fill="none" stroke="#dc2626" stroke-width="3" marker-end="url(#arr)"/><path d="M347.0 52 C347.0 26 409.0 26 403.0 50" fill="none" stroke="#dc2626" stroke-width="3" marker-end="url(#arr)"/></svg></div></div>
+        <p><b>倒序</b>：算 dp[4] 时 dp[3] 还是旧的 0，A 只放一次，每格都是 15。<br>
+        <b>正序</b>：dp[2] 用到的 dp[1] 已经放过 A 了（红色），于是 dp[2] = 30、dp[4] = 60，A 被放了 4 次。</p></div>
+      <div class="box2"><h3>计数：外层物品 = 组合，外层容量 = 排列</h3>
+        <p>硬币 [1, 2] 凑金额 0~3 的方法数：</p>
+        <div class="pic"><div><svg class="fg" viewBox="0 0 398 110" width="398" height="110"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><text x="116" y="45.0" font-size="18" fill="#86868b" font-weight="700" style="text-anchor:end">硬币在外</text><rect x="133" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="161.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">1</text><text x="161.0" y="90" font-size="12" fill="#86868b">0</text><rect x="195" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="223.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">1</text><text x="223.0" y="90" font-size="12" fill="#86868b">1</text><rect x="257" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="285.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">2</text><text x="285.0" y="90" font-size="12" fill="#86868b">2</text><rect x="319" y="20" width="56" height="50" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2.5" stroke-dasharray=""/><text x="347.0" y="45.0" font-size="20" font-weight="700" fill="#16a34a">2</text><text x="347.0" y="90" font-size="12" fill="#86868b">3</text></svg><svg class="fg" viewBox="0 0 398 110" width="398" height="110"><defs><marker id="arb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2f6bff"/></marker><marker id="ara" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker><marker id="arg" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker><marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#86868b"/></marker></defs><text x="116" y="45.0" font-size="18" fill="#86868b" font-weight="700" style="text-anchor:end">金额在外</text><rect x="133" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="161.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">1</text><text x="161.0" y="90" font-size="12" fill="#86868b">0</text><rect x="195" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="223.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">1</text><text x="223.0" y="90" font-size="12" fill="#86868b">1</text><rect x="257" y="20" width="56" height="50" rx="10" fill="#f4f5f7" stroke="#c9ced8" stroke-width="2.5" stroke-dasharray=""/><text x="285.0" y="45.0" font-size="20" font-weight="700" fill="#1d1d1f">2</text><text x="285.0" y="90" font-size="12" fill="#86868b">2</text><rect x="319" y="20" width="56" height="50" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2.5" stroke-dasharray=""/><text x="347.0" y="45.0" font-size="20" font-weight="700" fill="#d97706">3</text><text x="347.0" y="90" font-size="12" fill="#86868b">3</text></svg></div></div>
+        <p><b>硬币在外</b>：先只用 1，再加入 2，凑 3 只有 1+1+1、1+2 两种，2+1 不会出现。<br>
+        <b>金额在外</b>：每个金额都枚举「最后一枚」，凑 3 有 1+1+1、1+2、2+1 三种。题目说「顺序不同算不同」就用这个。</p></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>所有变体一张表</h2>
+    <p class="sub">先看「每件能用几次」决定内层循环方向，再看「问什么」决定初始化和合并方式</p>
+    <table class="tbl var"><thead><tr><th>变体</th><th>每件物品</th><th>循环</th><th>转移</th><th>初始化</th><th>例题</th></tr></thead><tbody>
+      <tr class="sec"><td colspan="6">按「每件能用几次」分</td></tr>
+      <tr><td>0/1 背包</td><td>最多 1 次</td><td>物品在外，容量<b>倒序</b></td><td><code>max(dp[j], dp[j−w] + v)</code></td><td>全 0</td><td>416、494、1049</td></tr>
+      <tr><td>完全背包</td><td>无限次</td><td>物品在外，容量<b>正序</b></td><td>同上</td><td>全 0</td><td>322、279、518</td></tr>
+      <tr><td>多重背包</td><td>第 i 件最多 s 次</td><td>把 s 拆成 1、2、4…、余数件，当成 0/1 物品</td><td>同 0/1</td><td>全 0</td><td>拆分后 O(W·Σlog s)</td></tr>
+      <tr><td>分组背包</td><td>每组最多选 1 件</td><td>组在外 → 容量倒序 → 组内物品在最内层</td><td>同 0/1</td><td>全 0</td><td>每组挑一个</td></tr>
+      <tr><td>二维费用</td><td>同时有两种容量</td><td>两维容量都倒序</td><td><code>dp[i][j] = max(…, dp[i−a][j−b] + 1)</code></td><td>全 0</td><td>474 一和零</td></tr>
+      <tr class="sec"><td colspan="6">按「问什么」分</td></tr>
+      <tr><td>最大价值（不超过 W）</td><td colspan="2">上面任意一种</td><td><code>max</code></td><td>全 0</td><td>经典背包</td></tr>
+      <tr><td>恰好装满的最大价值</td><td colspan="2">同上</td><td><code>max</code></td><td>dp[0] = 0，其余 <b>−∞</b></td><td>装不满的状态不能用</td></tr>
+      <tr><td>最少几件</td><td colspan="2">一般是完全背包</td><td><code>min(dp[j], dp[j−w] + 1)</code></td><td>dp[0] = 0，其余 <b>+∞</b></td><td>322、279</td></tr>
+      <tr><td>能不能凑出</td><td colspan="2">一般是 0/1</td><td><code>dp[j] || dp[j−w]</code></td><td>dp[0] = true</td><td>416</td></tr>
+      <tr><td>方案数（组合）</td><td colspan="2">物品在外</td><td><code>dp[j] += dp[j−w]</code></td><td>dp[0] = 1</td><td>518、494</td></tr>
+      <tr><td>方案数（排列）</td><td colspan="2">容量在外，物品在内</td><td><code>dp[j] += dp[j−w]</code></td><td>dp[0] = 1</td><td>377、70、139</td></tr>
+    </tbody></table>
+  </section>
+  <section class="card info">
+    <h2>题目怎么翻译成背包</h2>
+    <p class="sub">先找出「物品」「重量」「容量」「问什么」四样东西，再查上面那张表</p>
+    <div class="tr-list"><div class="tr"><div class="t"><small>416</small>分割等和子集</div><span class="tag ">0/1 · 能否</span><p>物品 = 每个数，重量 = 数值；容量 = <code>sum / 2</code>（sum 是奇数直接 false）。问能不能<b>恰好</b>装满。</p></div><div class="tr"><div class="t"><small>494</small>目标和</div><span class="tag ">0/1 · 组合数</span><p>加正号的和 P、负号的和 N：P − N = target，P + N = sum，所以 <b>P = (sum + target) / 2</b>。问选出和为 P 的子集有几种。</p></div><div class="tr"><div class="t"><small>1049</small>最后一块石头的重量 II</div><span class="tag ">0/1 · 最大值</span><p>把石头分成两堆，差越小越好：容量 <code>sum / 2</code>，价值 = 重量，尽量装满。答案 <code>sum − 2·dp[sum/2]</code>。</p></div><div class="tr"><div class="t"><small>474</small>一和零</div><span class="tag two">二维费用</span><p>每个字符串是一件物品，有两种「重量」：0 的个数、1 的个数；两个容量 m、n。价值都是 1，问最多装几件。</p></div><div class="tr"><div class="t"><small>322</small>零钱兑换</div><span class="tag full">完全 · 最少</span><p>硬币无限用，凑出 amount 最少几枚。dp[0] = 0，其余设成「凑不出」；最后还是凑不出就返回 −1。</p></div><div class="tr"><div class="t"><small>279</small>完全平方数</div><span class="tag full">完全 · 最少</span><p>物品是 1、4、9、16… 这些平方数，容量 n，问最少几个。和 322 是同一题换了物品。</p></div><div class="tr"><div class="t"><small>518</small>零钱兑换 II</div><span class="tag full">完全 · 组合数</span><p>硬币无限用，凑出 amount 有几种组合。<b>硬币在外层</b>，不计顺序。</p></div><div class="tr"><div class="t"><small>377</small>组合总和 IV</div><span class="tag full">完全 · 排列数</span><p>「顺序不同算不同」：<b>金额在外层</b>。注意中间值可能很大。</p></div><div class="tr"><div class="t"><small>139</small>单词拆分</div><span class="tag full">完全 · 排列（能否）</span><p>物品是单词，可以重复用；容量是字符串长度，必须<b>按顺序</b>拼出来，所以长度在外层、单词在内层。</p></div></div>
+  </section>
+  <section class="card info">
+    <h2>模板</h2>
+    <p class="sub">一维数组的写法，n 件物品，重量 w、价值 v，容量 W</p>
+    <div class="grid2">
+      <div class="blk"><h3>0/1 背包、完全背包</h3><pre>vector&lt;int&gt; dp(W + 1, 0);
+<span class="c">// 0/1：每件最多一次，容量倒序</span>
+for (int i = 0; i &lt; n; ++i)
+    for (int j = W; j &gt;= w[i]; --j)
+        dp[j] = max(dp[j], dp[j - w[i]] + v[i]);
+
+<span class="c">// 完全：每件无限次，容量正序</span>
+for (int i = 0; i &lt; n; ++i)
+    for (int j = w[i]; j &lt;= W; ++j)
+        dp[j] = max(dp[j], dp[j - w[i]] + v[i]);</pre></div>
+      <div class="blk"><h3>多重背包：二进制拆分</h3><pre><span class="c">// 第 i 件最多 s[i] 次：拆成 1、2、4…、余数件</span>
+<span class="c">// 这几包能拼出 0 ~ s[i] 的任意件数</span>
+for (int i = 0; i &lt; n; ++i) {
+    int left = s[i];
+    for (int k = 1; left &gt; 0; k *= 2) {
+        int t = min(k, left);
+        left -= t;
+        int ww = t * w[i], vv = t * v[i];  <span class="c">// 打包成一件</span>
+        for (int j = W; j &gt;= ww; --j)
+            dp[j] = max(dp[j], dp[j - ww] + vv);
+    }
+}</pre></div>
+      <div class="blk"><h3>分组背包：每组最多选一件</h3><pre>for (auto&amp; g : groups)            <span class="c">// 组在最外层</span>
+    for (int j = W; j &gt;= 0; --j)  <span class="c">// 容量倒序</span>
+        for (auto [wi, vi] : g)   <span class="c">// 组内物品在最内层</span>
+            if (j &gt;= wi)
+                dp[j] = max(dp[j], dp[j - wi] + vi);
+<span class="c">// 物品放最内层：同一个 j 只会从一件里挑一件</span></pre></div>
+      <div class="blk"><h3>恰好装满、最少件数</h3><pre><span class="c">// 恰好装满的最大价值：装不满的状态设成「不可能」</span>
+const int NEG = INT_MIN / 2;      <span class="c">// 加上 v 也不会溢出</span>
+vector&lt;int&gt; dp(W + 1, NEG);
+dp[0] = 0;
+
+<span class="c">// 最少件数（322）：+∞ 用 amount + 1 就够</span>
+vector&lt;int&gt; f(amount + 1, amount + 1);
+f[0] = 0;
+for (int c : coins)
+    for (int j = c; j &lt;= amount; ++j)
+        f[j] = min(f[j], f[j - c] + 1);
+return f[amount] &gt; amount ? -1 : f[amount];</pre></div>
+    </div>
+  </section>
+  <section class="card info">
+    <h2>复杂度</h2>
+    <p class="sub">状态数 × 每个状态的转移数</p>
+    <table class="tbl"><thead><tr><th>变体</th><th>时间</th><th>空间（一维）</th></tr></thead><tbody>
+      <tr><td><b>0/1、完全背包</b></td><td class="mono">O(n · W)</td><td class="mono">O(W)</td></tr>
+      <tr><td><b>多重背包</b>（二进制拆分）</td><td class="mono">O(W · Σ log s)</td><td class="mono">O(W)</td></tr>
+      <tr><td><b>分组背包</b></td><td class="mono">O(W · 物品总数)</td><td class="mono">O(W)</td></tr>
+      <tr><td><b>二维费用</b></td><td class="mono">O(n · M · N)</td><td class="mono">O(M · N)</td></tr>
+    </tbody></table>
+    <p class="sub" style="margin:14px 0 0">W 是容量的<b>数值</b>，不是输入的长度：W 到 10⁹ 时这个做法就不行了（这叫伪多项式时间）。这时要换思路，比如物品很少时用折半枚举。</p>
+  </section>
+  <section class="card info">
+    <h2>易错点</h2>
+    <div class="pits"><div class="p"><b>0/1 背包写成正序</b><span>同一件会被放很多次，悄悄变成了完全背包。一维数组时，0/1 的容量<b>一定倒序</b>。</span></div><div class="p"><b>−∞ / +∞ 溢出</b><span><code>INT_MIN + v</code> 会溢出成很大的正数，<code>INT_MAX + 1</code> 会变成负数。用 <code>INT_MIN / 2</code>，或者 <code>amount + 1</code> 当无穷大。</span></div><div class="p"><b>组合和排列的循环顺序</b><span>518（组合）物品在外层，377（排列）金额在外层。写反了数字都对不上。</span></div><div class="p"><b>计数的中间值溢出</b><span>377 的答案在 int 内，但中间某些 dp[j] 会超；用 <code>unsigned long long</code> 或 <code>unsigned</code>（溢出自动取模，最后结果不受影响）。</span></div></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const PLAY = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M7 4.5v15l13-7.5z\"/></svg>", PAUSE = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><rect x=\"6\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/><rect x=\"14\" y=\"4.5\" width=\"4\" height=\"15\" rx=\"1\"/></svg>";
+  const MODES = {"d2": {"name": "0/1 背包 · 二维表", "idea": "每件物品<b>最多放一次</b>。<b>dp[i][j] = 只考虑前 i 件、背包容量为 j 时，能装下的最大价值</b>。第 i 件只有两种选择：<b>不放</b>，等于上一行同一列；<b>放</b>，先在上一行腾出它的重量 w，再加上它的价值 v。两者取大的。", "examples": [["经典", {"w": [1, 3, 4], "v": [15, 20, 30], "W": 4}], ["四件", {"w": [2, 3, 4, 5], "v": [3, 4, 5, 6], "W": 8}], ["按性价比贪心会错", {"w": [1, 2, 3], "v": [6, 10, 12], "W": 5}]], "code": ["<span class=\"t\">int</span> knapsack01(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; w, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; v, <span class=\"t\">int</span> W) {", "    <span class=\"t\">int</span> n = w.size();", "    <span class=\"c\">// dp[i][j]：前 i 件、容量 j 时的最大价值</span>", "    <span class=\"t\">vector</span>&lt;<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&gt; dp(n + 1, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;(W + 1, 0));", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 1; i &lt;= n; ++i) {", "        <span class=\"t\">int</span> wi = w[i - 1], vi = v[i - 1];  <span class=\"c\">// 第 i 件</span>", "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = 0; j &lt;= W; ++j) {", "            dp[i][j] = dp[i - 1][j];  <span class=\"c\">// 不放</span>", "            <span class=\"k\">if</span> (j &gt;= wi)  <span class=\"c\">// 放得下：放</span>", "                dp[i][j] = <span class=\"t\">max</span>(dp[i][j],", "                               dp[i - 1][j - wi] + vi);", "        }", "    }", "    <span class=\"k\">return</span> dp[n][W];", "}"]}, "r1": {"name": "0/1 背包 · 一维倒序", "idea": "第 i 行只用到第 i−1 行，所以一行就够：<b>dp[j] = 容量 j 的最大价值</b>，每来一件物品就把这一行原地更新一遍。关键是<b>容量从大到小</b>：算 dp[j] 时用到的 dp[j − w] 在它左边，<b>还没被这件物品改过</b>，是「没放它」时的旧值，所以每件最多放一次。", "examples": [["经典", {"w": [1, 3, 4], "v": [15, 20, 30], "W": 4}], ["四件", {"w": [2, 3, 4, 5], "v": [3, 4, 5, 6], "W": 8}], ["按性价比贪心会错", {"w": [1, 2, 3], "v": [6, 10, 12], "W": 5}]], "code": ["<span class=\"t\">int</span> knapsack01(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; w, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; v, <span class=\"t\">int</span> W) {", "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; dp(W + 1, 0);  <span class=\"c\">// dp[j]：容量 j 的最大价值</span>", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 0; i &lt; w.size(); ++i)", "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = W; j &gt;= w[i]; --j)  <span class=\"c\">// 倒序！</span>", "            dp[j] = <span class=\"t\">max</span>(dp[j], dp[j - w[i]] + v[i]);", "    <span class=\"k\">return</span> dp[W];", "}"]}, "f1": {"name": "完全背包 · 一维正序", "idea": "每件物品能放<b>无限次</b>。代码和 0/1 背包只差一个地方：<b>容量从小到大</b>。这样算 dp[j] 时，左边的 dp[j − w] 已经是「可能放过这件」的新值，再加一次就等于<b>又放了一件</b>。和上一个模式用同样的例子对比结果。", "examples": [["经典", {"w": [1, 3, 4], "v": [15, 20, 30], "W": 4}], ["四件", {"w": [2, 3, 4, 5], "v": [3, 4, 5, 6], "W": 8}], ["按性价比贪心会错", {"w": [1, 2, 3], "v": [6, 10, 12], "W": 5}]], "code": ["<span class=\"t\">int</span> knapsackFull(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; w, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; v, <span class=\"t\">int</span> W) {", "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; dp(W + 1, 0);", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 0; i &lt; w.size(); ++i)", "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = w[i]; j &lt;= W; ++j)  <span class=\"c\">// 正序：还能再放</span>", "            dp[j] = <span class=\"t\">max</span>(dp[j], dp[j - w[i]] + v[i]);", "    <span class=\"k\">return</span> dp[W];", "}"]}, "comb": {"name": "方案数 · 组合（硬币在外）", "idea": "问「有几种凑法」时把 max 换成<b>加法</b>：<b>dp[j] = 凑出金额 j 的方法数</b>，dp[0] = 1（什么都不选也是一种）。<b>硬币在外层</b>：硬币按固定顺序加入，同一组硬币只会以一种顺序被数到，所以 1+2 和 2+1 算<b>同一种</b>（518 零钱兑换 II）。每格下面列出了具体是哪几种。", "examples": [["[1,2,3] 凑 4", {"c": [1, 2, 3], "A": 4}], ["[1,2,5] 凑 5", {"c": [1, 2, 5], "A": 5}], ["[2,3] 凑 7", {"c": [2, 3], "A": 7}]], "code": ["<span class=\"t\">int</span> change(<span class=\"t\">int</span> amount, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; coins) {", "    <span class=\"t\">vector</span>&lt;long long&gt; dp(amount + 1, 0);", "    dp[0] = 1;  <span class=\"c\">// 凑出 0：不选，1 种</span>", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> c : coins)  <span class=\"c\">// 外层硬币</span>", "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = c; j &lt;= amount; ++j)  <span class=\"c\">// 内层金额</span>", "            dp[j] += dp[j - c];", "    <span class=\"k\">return</span> dp[amount];", "}"]}, "perm": {"name": "方案数 · 排列（金额在外）", "idea": "把两层循环<b>反过来</b>：<b>金额在外层</b>，每个金额都把所有硬币当成「最后一枚」试一遍。这样 1+2 和 2+1 的最后一枚不同，会被分别数到，算<b>两种</b>（377 组合总和 IV）。用同样的例子和上一个模式对比。", "examples": [["[1,2,3] 凑 4", {"c": [1, 2, 3], "A": 4}], ["[1,2,5] 凑 5", {"c": [1, 2, 5], "A": 5}], ["[2,3] 凑 7", {"c": [2, 3], "A": 7}]], "code": ["<span class=\"t\">int</span> combinationSum4(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; nums, <span class=\"t\">int</span> target) {", "    <span class=\"t\">vector</span>&lt;unsigned long long&gt; dp(target + 1, 0);", "    dp[0] = 1;", "    <span class=\"k\">for</span> (<span class=\"t\">int</span> j = 1; j &lt;= target; ++j)  <span class=\"c\">// 外层金额</span>", "        <span class=\"k\">for</span> (<span class=\"t\">int</span> c : nums)  <span class=\"c\">// 最后一枚是谁</span>", "            <span class=\"k\">if</span> (j &gt;= c) dp[j] += dp[j - c];", "    <span class=\"k\">return</span> dp[target];", "}"]}};
+  const ORDER = Object.keys(MODES);
+
+  const LET = 'ABCDE', COL = ['#2f6bff', '#9333ea', '#0d9488', '#db2777', '#ea580c'];
+  const AM = '#d97706', GR = '#16a34a', BL = '#2f6bff';
+  const K = (c, t) => `<span class="${c}">${t}</span>`;
+  const chip = k => `<span class="chip" style="background:${COL[k]}">${LET[k]}</span>`;
+  const isItem = m => m === 'd2' || m === 'r1' || m === 'f1';
+
+  // ---------------- 0/1 背包二维表 ----------------
+  function b2({ w, v, W }) {
+    const n = w.length, s = [];
+    const dp = [Array(W + 1).fill(0)], plan = [Array.from({ length: W + 1 }, () => [])];
+    const snap = o => s.push({ w, v, W, dp: dp.map(r => r.slice()), plan: plan.map(r => r.map(p => p && p.slice())), ...o });
+    snap({ line: 3, ci: 0, f: `dp[0][j] = ${K('g', 0)}`, msg: '第 0 行：一件物品都没有，背包再大也装不了东西，价值都是 0' });
+    for (let i = 1; i <= n; i++) {
+      const wi = w[i - 1], vi = v[i - 1];
+      dp.push(Array(W + 1).fill(null)); plan.push(Array(W + 1).fill(null));
+      snap({ line: 5, ci: i, f: `第 ${i} 件 ${LET[i - 1]}：重量 ${K('k', wi)}，价值 ${K('k', vi)}`,
+        msg: `第 ${i} 行：新加入物品 ${LET[i - 1]}（重 ${wi}，值 ${vi}）。每个容量 j 都问一句：放不放它？` });
+      for (let j = 0; j <= W; j++) {
+        const up = dp[i - 1][j];
+        if (j < wi) {
+          dp[i][j] = up; plan[i][j] = plan[i - 1][j];
+          snap({ line: 7, ci: i, cj: j, src: [[i - 1, j, 1, '不放']],
+            f: `j = ${j} < ${wi}：dp[${i}][${j}] = dp[${i - 1}][${j}] = ${K('g', up)}`,
+            msg: `容量 ${j} 装不下 ${LET[i - 1]}（重 ${wi}）：只能不放，照抄上面一格 ${up}` });
+        } else {
+          const base = dp[i - 1][j - wi], take = base + vi, ok = take > up;
+          dp[i][j] = ok ? take : up; plan[i][j] = ok ? [...plan[i - 1][j - wi], i - 1] : plan[i - 1][j];
+          snap({ line: 9, ci: i, cj: j, src: [[i - 1, j, !ok, '不放'], [i - 1, j - wi, ok, '放 +' + vi]],
+            f: `dp[${i}][${j}] = max(dp[${i - 1}][${j}], dp[${i - 1}][${j - wi}] + ${vi}) = max(${up}, ${base} + ${vi}) = ${K('g', dp[i][j])}`,
+            msg: ok ? `放 ${LET[i - 1]} 更值：先腾出 ${wi} 的空间（看上一行容量 ${j - wi} 的 ${base}），再加上 ${vi}，${take} > 不放的 ${up}`
+                    : `不放 ${LET[i - 1]}：放它要腾出 ${wi}，只能拿到 ${base} + ${vi} = ${take}，${take === up ? '和' : '不如'}不放的 ${up}${take === up ? '一样' : ''}` });
+        }
+      }
+    }
+    const path = [];
+    for (let i = n, j = W; i >= 1; i--) {
+      path.push([i, j]);
+      if (dp[i][j] !== dp[i - 1][j]) j -= w[i - 1];
+      if (i === 1) path.push([0, j]);
+    }
+    const pk = plan[n][W];
+    snap({ line: 13, ci: n + 1, path, kind: 'ok', done: true,
+      f: `答案 dp[${n}][${W}] = ${K('g', dp[n][W])}`,
+      msg: `✓ 最大价值 ${dp[n][W]}：放 ${pk.map(k => LET[k]).join(' + ') || '什么都不放'}。绿色是倒着找回来的路线：和上一格不同，说明这一行的物品被放进去了` });
+    return s;
+  }
+
+  // ---------------- 一维：0/1 倒序 / 完全正序 ----------------
+  function b1({ w, v, W }, full) {
+    const n = w.length, s = [];
+    const dp = Array(W + 1).fill(0), plan = Array.from({ length: W + 1 }, () => []);
+    let old = dp.slice(), oldPlan = plan.map(p => p.slice()), vis = [];
+    const snap = o => s.push({ w, v, W, dp: dp.slice(), old: old.slice(), plan: plan.map(p => p.slice()), oldPlan: oldPlan.map(p => p.slice()), vis: vis.slice(), ...o });
+    snap({ line: 1, ci: -1, f: 'dp = [' + dp.join(', ') + ']', msg: '只用一行：dp[j] = 容量 j 时能装的最大价值。一开始什么都没放，全是 0' });
+    for (let i = 0; i < n; i++) {
+      const wi = w[i], vi = v[i];
+      old = dp.slice(); oldPlan = plan.map(p => p.slice()); vis = [];
+      snap({ line: 2, ci: i, f: `物品 ${LET[i]}：重量 ${K('k', wi)}，价值 ${K('k', vi)}`,
+        msg: full ? `物品 ${LET[i]}（重 ${wi}，值 ${vi}）：j 从 ${wi} 往右走到 ${W}（正序）` : `物品 ${LET[i]}（重 ${wi}，值 ${vi}）：j 从 ${W} 往左走到 ${wi}（倒序）` });
+      const order = [];
+      if (full) for (let j = wi; j <= W; j++) order.push(j); else for (let j = W; j >= wi; j--) order.push(j);
+      for (const j of order) {
+        const a = dp[j], b = dp[j - wi], take = b + vi, ok = take > a;
+        const fresh = plan[j - wi].includes(i) && vis.includes(j - wi);
+        if (ok) { dp[j] = take; plan[j] = [...plan[j - wi], i]; }
+        vis.push(j);
+        let why;
+        if (full) why = fresh ? `dp[${j - wi}] = ${b} 这一轮已经放过 ${LET[i]} 了，再加一次 = 又放了一件 ${LET[i]}（完全背包允许）`
+                              : `dp[${j - wi}] = ${b}`;
+        else why = `dp[${j - wi}] 在左边，这一轮还没被改过，还是没考虑 ${LET[i]} 时的旧值 ${b}，所以 ${LET[i]} 只会放一次`;
+        snap({ line: 4, ci: i, cj: j, sj: j - wi, ok, fresh,
+          f: `dp[${j}] = max(dp[${j}], dp[${j - wi}] + ${vi}) = max(${a}, ${b} + ${vi}) = ${K('g', dp[j])}`,
+          msg: `${why}。${ok ? `放：${take} > ${a}，更新` : `不放更好：${take} ≤ ${a}`}` });
+      }
+    }
+    snap({ line: 5, ci: n, done: true, kind: 'ok', f: `答案 dp[${W}] = ${K('g', dp[W])}`,
+      msg: `✓ 最大价值 ${dp[W]}：放 ${plan[W].map(k => LET[k]).join(' + ') || '什么都不放'}` + (full ? '（同一件可以放多次）' : '（每件最多一次）') });
+    return s;
+  }
+
+  // ---------------- 计数：组合 / 排列 ----------------
+  function bc({ c, A }, perm) {
+    const s = [], dp = Array(A + 1).fill(0), ways = Array.from({ length: A + 1 }, () => []);
+    dp[0] = 1; ways[0] = [[]];
+    const snap = o => s.push({ c, A, dp: dp.slice(), ways: ways.map(x => x.map(y => y.slice())), ...o });
+    snap({ line: 2, f: `dp[0] = ${K('g', 1)}`, msg: 'dp[0] = 1：凑出 0 只有一种办法，就是一枚都不拿。后面所有方法都是从它「接」出来的' });
+    const step = (j, ci, newOnly) => {
+      const cc = c[ci], add = dp[j - cc], before = dp[j];
+      dp[j] += add;
+      ways[j] = ways[j].concat(ways[j - cc].map(x => [...x, cc]));
+      snap({ line: 5, cj: j, sj: j - cc, ci, hl: before, f: `dp[${j}] += dp[${j - cc}]：${before} + ${add} = ${K('g', dp[j])}`,
+        msg: perm ? `最后一枚是 ${cc}：凑 ${j - cc} 的 ${add} 种方法（任意顺序）后面各接一枚 ${cc}，新增 ${add} 种`
+                  : `用上硬币 ${cc}：凑 ${j - cc} 的 ${add} 种方法后面再加一枚 ${cc}，新增 ${add} 种。硬币按顺序加入，所以每种方法里的硬币都是从小到大排的` });
+    };
+    if (!perm) {
+      c.forEach((cc, ci) => {
+        snap({ line: 3, ci, f: `加入硬币 ${K('k', cc)}`, msg: `外层第 ${ci + 1} 枚硬币 ${cc}：金额从 ${cc} 往右走，可以用很多次（完全背包，正序）` });
+        for (let j = cc; j <= A; j++) step(j, ci);
+      });
+    } else {
+      for (let j = 1; j <= A; j++) {
+        snap({ line: 3, cj: j, f: `算 dp[${j}]`, msg: `外层金额 ${j}：把每枚硬币都当成「最后一枚」试一遍` });
+        c.forEach((cc, ci) => { if (j >= cc) step(j, ci); });
+      }
+    }
+    snap({ line: 6, done: true, kind: 'ok', f: `答案 dp[${A}] = ${K('g', dp[A])}`,
+      msg: `✓ 一共 ${dp[A]} 种` + (perm ? '：顺序不同算不同的方法' : '：不计顺序，1+2 和 2+1 算同一种') });
+    return s;
+  }
+
+  function build(m, inp) {
+    if (m === 'd2') return b2(inp);
+    if (m === 'r1') return b1(inp, false);
+    if (m === 'f1') return b1(inp, true);
+    return bc(inp, m === 'perm');
+  }
+
+  // ---------------- 画图 ----------------
+  const head = (x2, y2, ux, uy, col) => {
+    const hx = x2 - ux * 13, hy = y2 - uy * 13;
+    return `<path d="M${x2} ${y2} L${hx - uy * 7} ${hy + ux * 7} L${hx + uy * 7} ${hy - ux * 7}z" fill="${col}"/>`;
+  };
+  function line(x1, y1, x2, y2, col, dash, cut) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+    const a = [x1 + ux * cut, y1 + uy * cut], b = [x2 - ux * cut, y2 - uy * cut];
+    return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0] - ux * 11}" y2="${b[1] - uy * 11}" stroke="${col}" stroke-width="3.5" stroke-dasharray="${dash ? '7 6' : ''}" stroke-linecap="round" opacity="${dash ? .55 : 1}"/>`
+      + head(b[0], b[1], ux, uy, col);
+  }
+  function arc(x1, x2, y, col, h, dash) {
+    const y2 = y - 2;
+    return `<path d="M${x1} ${y} C${x1} ${y - h} ${x2} ${y - h} ${x2} ${y2 - 11}" fill="none" stroke="${col}" stroke-width="3.5" stroke-dasharray="${dash ? '7 6' : ''}"/>`
+      + `<path d="M${x2} ${y2} l-7 -13 h14z" fill="${col}"/>`;
+  }
+  const rect = (x, y, w, h, fill, stroke, sw = 2, dash = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="9" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-dasharray="${dash}"/>`;
+  const txt = (x, y, t, size, col, wt = 700, anchor = 'middle') => `<text x="${x}" y="${y}" font-size="${size}" fill="${col}" font-weight="${wt}" style="text-anchor:${anchor}">${t}</text>`;
+
+  function drawD2(st) {
+    const { w, v, W, dp } = st, n = w.length, CW = Math.max(40, Math.min(54, Math.floor(540 / (W + 1)))), LW = 92, TH = 34, RH = 50;
+    const X = j => LW + j * CW, Y = i => TH + i * RH;
+    let s = '';
+    for (let j = 0; j <= W; j++) s += txt(X(j) + CW / 2, 16, 'j=' + j, 14, '#86868b', 600);
+    for (let i = 0; i <= n; i++) {
+      s += i === 0 ? txt(LW - 12, Y(i) + RH / 2, '0 件', 15, '#86868b', 700, 'end')
+                   : `<rect x="4" y="${Y(i) + 9}" width="30" height="30" rx="8" fill="${COL[i - 1]}"/>` + txt(19, Y(i) + RH / 2 + 1, LET[i - 1], 16, '#fff')
+                     + txt(LW - 10, Y(i) + RH / 2, `${w[i - 1]},${v[i - 1]}`, 13, '#86868b', 600, 'end');
+    }
+    const srcs = {}; (st.src || []).forEach(([i, j, on]) => srcs[i + ',' + j] = on);
+    const onPath = new Set((st.path || []).map(([i, j]) => i + ',' + j));
+    for (let i = 0; i <= n; i++) for (let j = 0; j <= W; j++) {
+      const val = dp[i] ? dp[i][j] : null, k = i + ',' + j;
+      let fill = '#f4f5f7', stroke = '#d5d9e0', col = '#1d1d1f', sw = 2, dash = '';
+      if (val === null) { fill = '#fafafa'; stroke = '#ececf0'; }
+      if (i === st.ci && val === null) { fill = '#fff'; stroke = '#c9d6ff'; dash = '4 4'; }
+      if (k in srcs) { fill = srcs[k] ? '#fef3c7' : '#fffbeb'; stroke = AM; col = AM; sw = srcs[k] ? 3 : 2; dash = srcs[k] ? '' : '6 4'; }
+      if (i === st.ci && j === st.cj) { fill = '#e8efff'; stroke = BL; col = BL; sw = 3; }
+      if (onPath.has(k)) { fill = '#dcfce7'; stroke = GR; col = GR; sw = 3; }
+      s += rect(X(j) + 3, Y(i) + 4, CW - 6, RH - 8, fill, stroke, sw, dash);
+      if (val !== null) s += txt(X(j) + CW / 2, Y(i) + RH / 2, val, 17, col);
+    }
+    if (st.cj !== undefined && st.src) {
+      const tx = X(st.cj) + CW / 2, ty = Y(st.ci) + RH / 2;
+      st.src.forEach(([i, j, on, lab]) => {
+        const sx = X(j) + CW / 2, sy = Y(i) + RH / 2;
+        s += line(sx, sy, tx, ty, AM, !on, 15);
+        const lx = j === st.cj ? sx + CW / 2 + 4 : (sx + tx) / 2 - 10, ly = j === st.cj ? (sy + ty) / 2 : (sy + ty) / 2 - 12;
+        s += `<rect x="${lx - 3}" y="${ly - 11}" width="${lab.length * 9 + 12}" height="22" rx="6" fill="#fff" opacity=".92"/>` + txt(lx + 3, ly, lab, 13, AM, 700, 'start');
+      });
+    }
+    const Wd = LW + (W + 1) * CW + 30, Hd = TH + (n + 1) * RH + 6;
+    return `<svg class="kp" viewBox="0 0 ${Wd} ${Hd}" style="max-width:${Wd}px">${s}</svg>`;
+  }
+
+  function drawRow(st, full) {
+    const { W, dp, old } = st, CW = Math.max(42, Math.min(60, Math.floor(560 / (W + 1)))), LW = 70, top = 96 + Math.min(40, W * 4);
+    const X = j => LW + j * CW;
+    let s = '';
+    const vis = new Set(st.vis || []);
+    s += txt(LW - 10, 32, '旧', 14, '#86868b', 700, 'end') + txt(LW - 10, top + 24, 'dp', 15, '#1d1d1f', 700, 'end');
+    for (let j = 0; j <= W; j++) {
+      s += rect(X(j) + 4, 18, CW - 8, 28, '#fafafa', '#e5e7eb', 1.5) + txt(X(j) + CW / 2, 32, old[j], 14, '#9ca3af', 600);
+      let fill = '#f4f5f7', stroke = '#d5d9e0', col = '#1d1d1f', sw = 2, dash = '';
+      if (vis.has(j)) { fill = '#fff'; stroke = '#93c5fd'; col = '#1d4ed8'; }
+      if (j === st.sj) { fill = st.fresh ? '#fee2e2' : '#fef3c7'; stroke = st.fresh ? '#dc2626' : AM; col = stroke; sw = 3; }
+      if (j === st.cj) { fill = '#e8efff'; stroke = BL; col = BL; sw = 3; }
+      if (st.done && j === W) { fill = '#dcfce7'; stroke = GR; col = GR; sw = 3; }
+      s += rect(X(j) + 3, top, CW - 6, 48, fill, stroke, sw, dash) + txt(X(j) + CW / 2, top + 24, dp[j], 18, col);
+      s += txt(X(j) + CW / 2, top + 64, j, 13, '#86868b', 500);
+      const pl = st.plan[j];
+      pl.slice(0, 4).forEach((k, q) => { s += `<rect x="${X(j) + CW / 2 - 11}" y="${top + 78 + q * 25}" width="22" height="22" rx="6" fill="${COL[k]}"/>` + txt(X(j) + CW / 2, top + 89 + q * 25, LET[k], 13, '#fff'); });
+      if (pl.length > 4) s += txt(X(j) + CW / 2, top + 89 + 4 * 25, '+' + (pl.length - 4), 13, '#86868b');
+    }
+    if (st.cj !== undefined && st.sj !== undefined) {
+      const col = st.fresh ? '#dc2626' : AM;
+      s += arc(X(st.sj) + CW / 2, X(st.cj) + CW / 2, top - 2, col, 16 + Math.abs(st.cj - st.sj) * 7);
+      s += txt((X(st.sj) + X(st.cj)) / 2 + CW / 2, top - 14 - (16 + Math.abs(st.cj - st.sj) * 7) * .75, st.fresh ? '已含本件（新值）' : full ? '+' + st.v[st.ci] : '旧值 + ' + st.v[st.ci], 13, col);
+    }
+    const maxPl = Math.max(1, ...st.plan.map(p => Math.min(5, p.length)));
+    const Wd = LW + (W + 1) * CW + 20, Hd = top + 82 + maxPl * 25;
+    return `<svg class="kp" viewBox="0 0 ${Wd} ${Hd}" style="max-width:${Wd}px">${s}</svg>`;
+  }
+
+  function drawCount(st) {
+    const { A, dp, ways } = st, CW = Math.max(56, Math.min(74, Math.floor(600 / (A + 1)))), top = 80 + Math.min(40, A * 4), LW = 46;
+    const X = j => LW + j * CW;
+    let s = txt(LW - 10, top + 24, 'dp', 15, '#1d1d1f', 700, 'end');
+    const lim = 6;
+    for (let j = 0; j <= A; j++) {
+      let fill = '#f4f5f7', stroke = '#d5d9e0', col = '#1d1d1f', sw = 2;
+      if (j === st.sj) { fill = '#fef3c7'; stroke = AM; col = AM; sw = 3; }
+      if (j === st.cj) { fill = '#e8efff'; stroke = BL; col = BL; sw = 3; }
+      if (st.done && j === A) { fill = '#dcfce7'; stroke = GR; col = GR; sw = 3; }
+      s += rect(X(j) + 3, top, CW - 6, 48, fill, stroke, sw) + txt(X(j) + CW / 2, top + 24, dp[j], 19, col);
+      s += txt(X(j) + CW / 2, top + 64, j, 13, '#86868b', 500);
+      const wl = ways[j];
+      wl.slice(0, lim).forEach((x, q) => {
+        const isNew = j === st.cj && q >= (st.hl || 0) && st.hl !== undefined;
+        s += txt(X(j) + CW / 2, top + 86 + q * 20, x.length ? x.join('+') : '不拿', 13, isNew ? GR : '#515154', isNew ? 700 : 500);
+      });
+      if (wl.length > lim) s += txt(X(j) + CW / 2, top + 86 + lim * 20, `…共 ${wl.length} 种`, 12, '#86868b', 600);
+    }
+    if (st.sj !== undefined && st.cj !== undefined) {
+      s += arc(X(st.sj) + CW / 2, X(st.cj) + CW / 2, top - 2, AM, 16 + (st.cj - st.sj) * 8);
+      s += txt((X(st.sj) + X(st.cj)) / 2 + CW / 2, top - 14 - (16 + (st.cj - st.sj) * 8) * .75, '+' + st.c[st.ci], 14, AM);
+    }
+    const maxW = Math.max(1, ...ways.map(x => Math.min(lim + 1, x.length)));
+    const Wd = LW + (A + 1) * CW + 20, Hd = top + 80 + maxW * 20;
+    return `<svg class="kp" viewBox="0 0 ${Wd} ${Hd}" style="max-width:${Wd}px">${s}</svg>`;
+  }
+
+  const LEG = {
+    d2: [['#e8efff;border:2px solid #2f6bff', '正在算'], ['#fef3c7;border:2px solid #d97706', '来源（实线 = 选中，虚线 = 没选）'], ['#dcfce7;border:2px solid #16a34a', '答案路线']],
+    r1: [['#e8efff;border:2px solid #2f6bff', '正在算'], ['#fef3c7;border:2px solid #d97706', '来源：旧值'], ['#fff;border:2px solid #93c5fd', '这一轮已更新'], ['#fafafa;border:1px solid #e5e7eb', '上一件之后的旧值']],
+    f1: [['#e8efff;border:2px solid #2f6bff', '正在算'], ['#fef3c7;border:2px solid #d97706', '来源'], ['#fee2e2;border:2px solid #dc2626', '来源已经放过本件'], ['#fff;border:2px solid #93c5fd', '这一轮已更新']],
+    comb: [['#e8efff;border:2px solid #2f6bff', '正在算'], ['#fef3c7;border:2px solid #d97706', '从这里接一枚'], ['#dcfce7;border:2px solid #16a34a', '答案']],
+  };
+  LEG.perm = LEG.comb;
+
+  function render(st) {
+    $('legend').innerHTML = LEG[mode].map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('');
+    if (isItem(mode)) {
+      const cur = mode === 'd2' ? st.ci - 1 : st.ci;
+      $('items').innerHTML = '<span class="lbl">物品</span>' + st.w.map((wi, k) =>
+        `<span class="it ${k === cur ? 'on' : k < cur ? 'past' : ''}"><b style="background:${COL[k]}">${LET[k]}</b>重 ${wi} · 值 ${st.v[k]}</span>`).join('')
+        + `<span class="lbl" style="margin-left:8px">容量 W = ${st.W}</span>`;
+      $('table').innerHTML = mode === 'd2' ? drawD2(st) : drawRow(st, mode === 'f1');
+      let pl = null, cap = null;
+      if (mode === 'd2' && st.cj !== undefined) { pl = st.plan[st.ci][st.cj]; cap = st.cj; }
+      else if (mode === 'd2' && st.done) { pl = st.plan[st.w.length][st.W]; cap = st.W; }
+      else if (mode !== 'd2' && st.cj !== undefined) { pl = st.plan[st.cj]; cap = st.cj; }
+      else if (mode !== 'd2' && st.done) { pl = st.plan[st.W]; cap = st.W; }
+      $('bag').innerHTML = pl ? `<span class="lbl">🎒 容量 ${cap} 的最优装法</span>` + (pl.map(chip).join('') || '<span class="lbl">空</span>')
+        + `<span class="sum">重 <b>${pl.reduce((a, k) => a + st.w[k], 0)}</b> / ${cap}，值 <b>${pl.reduce((a, k) => a + st.v[k], 0)}</b></span>` : '';
+    } else {
+      $('items').innerHTML = '<span class="lbl">硬币</span>' + st.c.map((cc, k) =>
+        `<span class="it ${k === st.ci ? 'on' : ''}"><b style="background:${COL[k]}">${cc}</b>可以用无限次</span>`).join('')
+        + `<span class="lbl" style="margin-left:8px">凑金额 ${st.A}</span>`;
+      $('table').innerHTML = drawCount(st);
+      $('bag').innerHTML = '';
+    }
+    $('fx').innerHTML = st.f || '';
+  }
+
+  function fill(m, inp) {
+    if (isItem(m)) { $('iIn').value = inp.w.map((wi, k) => `${wi}:${inp.v[k]}`).join(', '); $('wIn').value = inp.W; }
+    else { $('cIn').value = inp.c.join(', '); $('aIn').value = inp.A; }
+  }
+  function parse(m) {
+    if (isItem(m)) {
+      const parts = $('iIn').value.split(/[,，]/).map(x => x.trim()).filter(Boolean), W = Number($('wIn').value);
+      if (!parts.length || parts.length > 5 || !Number.isInteger(W) || W < 1 || W > 10) return null;
+      const w = [], v = [];
+      for (const p of parts) {
+        const mm = p.match(/^(\d+)\s*[:：]\s*(\d+)$/);
+        if (!mm) return null;
+        const a = +mm[1], b = +mm[2];
+        if (a < 1 || a > 10 || b < 1 || b > 99) return null;
+        w.push(a); v.push(b);
+      }
+      return { w, v, W };
+    }
+    const c = $('cIn').value.split(/[,，\s]+/).filter(Boolean).map(Number), A = Number($('aIn').value);
+    if (!c.length || c.length > 4 || !c.every(x => Number.isInteger(x) && x >= 1 && x <= 9) || new Set(c).size !== c.length) return null;
+    return Number.isInteger(A) && A >= 1 && A <= 8 ? { c, A } : null;
+  }
+  function showFields(m) {
+    $('fgI').style.display = isItem(m) ? 'contents' : 'none';
+    $('fgC').style.display = isItem(m) ? 'none' : 'contents';
+  }
+
+
+  let mode = ORDER[0], steps = [], cur = 0, timer = null, input = null;
+  const speed = () => +$('speed').value;
+  function draw() {
+    const st = steps[cur];
+    render(st);
+    $('status').textContent = st.msg;
+    $('status').className = 'status ' + (st.kind || '');
+    const m = MODES[mode], ln = m.map ? m.map[st.line] : st.line;
+    document.querySelectorAll('#code .l').forEach((el, k) => el.classList.toggle('on', k === ln));
+    $('count').textContent = `${cur + 1}/${steps.length}`;
+    $('bar').style.width = `${cur / Math.max(1, steps.length - 1) * 100}%`;
+    $('prev').disabled = cur === 0;
+    $('next').disabled = cur === steps.length - 1;
+    if (cur === steps.length - 1) stop();
+  }
+  function stop() { clearInterval(timer); timer = null; $('play').innerHTML = PLAY; $('play').ariaLabel = '播放'; }
+  function play() {
+    if (cur === steps.length - 1) { cur = 0; draw(); }
+    $('play').innerHTML = PAUSE; $('play').ariaLabel = '暂停';
+    timer = setInterval(() => { cur < steps.length - 1 ? (cur++, draw()) : stop(); }, speed());
+  }
+  function load() {
+    stop();
+    steps = build(mode, input); cur = 0;
+    fill(mode, input);
+    $('field').classList.remove('bad');
+    $('idea').innerHTML = MODES[mode].idea;
+    $('code').innerHTML = MODES[mode].code.map(c => `<span class="l">${c}</span>`).join('');
+    document.querySelectorAll('.algos button').forEach(b => b.classList.toggle('on', b.dataset.k === mode));
+    showFields(mode);
+    draw();
+  }
+  const seg = $('seg');
+  const setOn = k => seg.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === k));
+  function loadExamples() {
+    seg.innerHTML = '';
+    MODES[mode].examples.forEach(([name, v], k) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = name;
+      b.onclick = () => { setOn(k); input = structuredClone(v); load(); };
+      seg.appendChild(b);
+    });
+    setOn(0); input = structuredClone(MODES[mode].examples[0][1]);
+  }
+  ORDER.forEach(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.k = k; b.textContent = MODES[k].name;
+    b.onclick = () => { mode = k; loadExamples(); load(); };
+    $('algos').appendChild(b);
+  });
+  $('field').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = parse(mode);
+    $('field').classList.toggle('bad', !v);
+    if (!v) return;
+    setOn(-1); input = v; load();
+  });
+  $('prev').onclick = () => { stop(); cur > 0 && (cur--, draw()); };
+  $('next').onclick = () => { stop(); cur < steps.length - 1 && (cur++, draw()); };
+  $('reset').onclick = () => { stop(); cur = 0; draw(); };
+  $('play').onclick = () => (timer ? stop() : play());
+  $('speed').oninput = () => { if (timer) { stop(); play(); } };
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+    else if (e.key === ' ') { e.preventDefault(); $('play').click(); }
+  });
+  loadExamples(); load();
+
+})();
+</script>
+</body>
+</html>
