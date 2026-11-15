@@ -11,15 +11,18 @@ using namespace std;
 class Solution {
 public:
     int maxProduct(vector<int>& nums) {
-        // mx / mn = 以当前数结尾的子数组，乘积最大 / 最小是多少
+        int n = nums.size();
+        // mx[i] / mn[i] = 以 nums[i] 结尾的子数组，乘积最大 / 最小是多少
         // 要记最小：乘上一个负数，最小的会变成最大的
-        int mx = nums[0], mn = nums[0], ans = nums[0];
-        for (size_t i = 1; i < nums.size(); ++i) {
+        vector<int> mx(n), mn(n);
+        mx[0] = mn[0] = nums[0];                    // 以第一个数结尾的只有它自己
+        int ans = nums[0];
+        for (int i = 1; i < n; ++i) {
             int x = nums[i];
-            int a = mx * x, b = mn * x;             // 接在前面那段后面
-            mx = max({x, a, b});                    // 或者从 x 自己重新开始
-            mn = min({x, a, b});
-            ans = max(ans, mx);
+            int a = mx[i - 1] * x, b = mn[i - 1] * x;   // 接在以 nums[i - 1] 结尾的那段后面
+            mx[i] = max({x, a, b});                 // 或者从 x 自己重新开始
+            mn[i] = min({x, a, b});
+            ans = max(ans, mx[i]);
         }
         return ans;
     }

@@ -11,15 +11,16 @@ using namespace std;
 class Solution {
 public:
     int lengthOfLIS(vector<int>& nums) {
-        // tails[k] = 所有长度为 k + 1 的递增子序列里，最小的结尾
-        // tails 一定是严格递增的，所以能二分
-        vector<int> tails;
-        for (int x : nums) {
-            auto it = lower_bound(tails.begin(), tails.end(), x);   // 第一个 >= x 的位置
-            if (it == tails.end()) tails.push_back(x);  // 比所有结尾都大：接在最长的后面
-            else *it = x;                           // 替换成更小的结尾，以后更容易接
+        int n = nums.size(), ans = 1;
+        // dp[i] = 以 nums[i] 结尾的最长递增子序列的长度
+        vector<int> dp(n, 1);                       // 每个数自己就是长度 1
+        for (int i = 1; i < n; ++i) {
+            for (int j = 0; j < i; ++j)             // 看 i 左边的每一个数
+                if (nums[j] < nums[i])              // 比 nums[i] 小，nums[i] 能接在它后面
+                    dp[i] = max(dp[i], dp[j] + 1);
+            ans = max(ans, dp[i]);                  // 最长的不一定以最后一个数结尾
         }
-        return tails.size();
+        return ans;
     }
 };
 

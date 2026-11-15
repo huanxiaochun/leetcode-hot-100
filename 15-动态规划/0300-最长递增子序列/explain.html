@@ -302,15 +302,13 @@
   .pills span { padding: 4px 12px; border-radius: 10px; background: var(--inset); font-family: "JetBrains Mono", Menlo, monospace; font-weight: 600; }
   .pills span b { color: var(--blue); }
 
-  .tl { display: flex; flex-direction: column; gap: 6px; }
-  .tl .row { display: flex; align-items: center; gap: 10px; font: 600 16px "JetBrains Mono", Menlo, monospace; }
-  .tl .row .len { width: 84px; color: var(--muted); font-size: 14px; }
-  .tl .row .seq { display: flex; gap: 4px; }
-  .tl .row .seq span { padding: 2px 8px; border-radius: 7px; background: var(--inset); }
-  .tl .row .seq span:last-child { background: var(--blue-soft); color: var(--blue); font-weight: 700; }
-  .tl .row.on .seq span:last-child { background: var(--amber-soft); color: var(--amber); }
-  .tl .row.on .len { color: var(--amber); font-weight: 700; }
-  .bsl { font: 600 16px "JetBrains Mono", Menlo, monospace; color: var(--muted); min-height: 24px; }
+  .chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 38px; font: 700 17px "JetBrains Mono", Menlo, monospace; }
+  .chain .lb { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); margin-right: 4px; }
+  .chain span.v { padding: 4px 11px; border-radius: 9px; background: var(--amber-soft); color: var(--amber); }
+  .chain.cur span.v { background: var(--blue-soft); color: var(--blue); }
+  .chain.ok span.v { background: var(--green-soft); color: var(--green); }
+  .chain .ar { color: var(--muted); }
+  .chain .len { font: 600 15px -apple-system, "PingFang SC", sans-serif; color: var(--muted); margin-left: 6px; }
 
   .gd { margin-top: 24px; }
   .gd h2 { margin: 0 0 6px; font-size: 26px; }
@@ -388,7 +386,7 @@
     <span class="pill cat">动态规划</span>
     <a href="https://leetcode.cn/problems/longest-increasing-subsequence/" target="_blank" rel="noopener">LeetCode ↗</a>
   </header>
-  <p class="idea">状态：<b>tails[k] = 所有长度为 k+1 的递增子序列里，最小的结尾</b>。结尾越小越容易往后接。新数 x 用二分找第一个 ≥ x 的位置：替换它；找不到就接在最后，长度 +1。</p>
+  <p class="idea">状态：<b>dp[i] = 以 nums[i] 结尾的最长递增子序列的长度</b>。nums[i] 能接在左边任何一个<b>比它小</b>的 nums[j] 后面，接在最长的那条后面最好：<b>dp[i] = max(dp[j] + 1)</b>。答案是所有 dp[i] 里最大的。</p>
 
   <div class="layout">
   <div class="main-col">
@@ -403,19 +401,17 @@
 
     <div class="stage">
       <div>
-        <div class="rl">nums：<span class="k c">蓝</span> 正在处理的数</div>
+        <div class="rl">nums：<span class="k c">蓝</span> 正在算的 nums[i]　<span class="k d">橙</span> 比它小、能接的 nums[j]　虚线：不比它小，不能接</div>
         <div id="nums"></div>
       </div>
       <div>
-        <div class="rl">tails：下标 k 存「长度为 k+1 的递增子序列，最小的结尾」，从左到右一定严格递增</div>
-        <div id="tails"></div>
-        <div class="bsl" id="bs"></div>
+        <div class="rl">dp[i]：以 nums[i] 结尾的最长递增子序列有多长（灰色的还没算）</div>
+        <div id="dp"></div>
       </div>
-      <div>
-        <div class="rl">每个 tails[k] 对应的一条子序列（只是帮助理解，代码里不存）</div>
-        <div class="tl" id="seqs"></div>
-      </div>
+      <div class="chain" id="chainJ"></div>
+      <div class="chain cur" id="chainI"></div>
       <div id="fm"></div>
+      <div class="pills" id="ans"></div>
     </div>
   </section>
   </div>
@@ -446,35 +442,34 @@
   <section class="card gd">
     <h2>解题五步</h2>
     <p class="sub">所有动态规划题都按这五步想：先把「状态」说清楚，剩下几步就顺了</p>
-    <div class="five"><div class="st nofig"><div class="hd"><i>1</i>状态定义</div><div class="bd"><b>dp[i]</b> = 以 nums[i] <b>结尾</b>的最长递增子序列的长度<span class="note">页面动画用的是优化版：tails[k] = 长度为 k+1 的递增子序列里最小的结尾</span></div></div><div class="st"><div class="hd"><i>2</i>转移方程</div><div class="bd"><span class="eq">dp[i] = max(dp[j] + 1)，j &lt; i 且 nums[j] &lt; nums[i]</span><span class="note">nums[i] 能接在任何一个<b>比它小</b>的 nums[j] 后面；接在最长的那条后面</span></div><div class="fg"><svg class="mini" viewBox="-4 0 258 106" width="258" height="106" role="img" aria-label="依赖关系示意"><defs><marker id="mkd" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d97706"/></marker><marker id="mkr" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mkg" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker></defs><path class="a " d="M 26.0 54 Q 122.0 -30 218.0 54" marker-end="url(#mkd)"/><path class="a " d="M 158.0 54 Q 194.0 -21.680000000000007 230.0 54" marker-end="url(#mkd)"/><g class="d"><rect x="0" y="56" width="52" height="44"/><text x="26.0" y="78.0">j₁</text></g><g class=""><rect x="66" y="56" width="52" height="44"/><text x="92.0" y="78.0">j₂</text></g><g class="d"><rect x="132" y="56" width="52" height="44"/><text x="158.0" y="78.0">j₃</text></g><g class="c"><rect x="198" y="56" width="52" height="44"/><text x="224.0" y="78.0">i</text></g></svg><span class="cap">橙色：nums[j] < nums[i] 的位置</span></div></div><div class="st nofig"><div class="hd"><i>3</i>初始化</div><div class="bd">每个 dp[i] = 1<span class="note">nums[i] 自己就是一条长度为 1 的递增子序列</span></div></div><div class="st nofig"><div class="hd"><i>4</i>遍历顺序</div><div class="bd">i 从左到右，j 在 i 左边<span class="note">子序列只能往后接，所以只看左边</span></div></div><div class="st nofig"><div class="hd"><i>5</i>答案</div><div class="bd"><b>max(dp[i])</b>，不是 dp[n−1]<span class="note">最长的那条不一定以最后一个数结尾。tails 版本的答案是 tails 的长度</span></div></div></div>
+    <div class="five"><div class="st nofig"><div class="hd"><i>1</i>状态定义</div><div class="bd"><b>dp[i]</b> = 以 nums[i] <b>结尾</b>的最长递增子序列的长度<span class="note">一定要「以 nums[i] 结尾」：这样才知道最后一个数是多少，下一个数能不能接上去</span></div></div><div class="st"><div class="hd"><i>2</i>转移方程</div><div class="bd"><span class="eq">dp[i] = max(dp[j] + 1)，j &lt; i 且 nums[j] &lt; nums[i]</span><span class="note">nums[i] 能接在任何一个<b>比它小</b>的 nums[j] 后面；接在最长的那条后面</span></div><div class="fg"><svg class="mini" viewBox="-4 0 258 106" width="258" height="106" role="img" aria-label="依赖关系示意"><defs><marker id="mkd" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#d97706"/></marker><marker id="mkr" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mkg" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#16a34a"/></marker></defs><path class="a " d="M 26.0 54 Q 122.0 -30 218.0 54" marker-end="url(#mkd)"/><path class="a " d="M 158.0 54 Q 194.0 -21.680000000000007 230.0 54" marker-end="url(#mkd)"/><g class="d"><rect x="0" y="56" width="52" height="44"/><text x="26.0" y="78.0">j₁</text></g><g class=""><rect x="66" y="56" width="52" height="44"/><text x="92.0" y="78.0">j₂</text></g><g class="d"><rect x="132" y="56" width="52" height="44"/><text x="158.0" y="78.0">j₃</text></g><g class="c"><rect x="198" y="56" width="52" height="44"/><text x="224.0" y="78.0">i</text></g></svg><span class="cap">橙色：nums[j] < nums[i] 的位置</span></div></div><div class="st nofig"><div class="hd"><i>3</i>初始化</div><div class="bd">每个 dp[i] = 1<span class="note">nums[i] 自己就是一条长度为 1 的递增子序列</span></div></div><div class="st nofig"><div class="hd"><i>4</i>遍历顺序</div><div class="bd">i 从左到右，j 在 i 左边<span class="note">子序列只能往后接，所以只看左边</span></div></div><div class="st nofig"><div class="hd"><i>5</i>答案</div><div class="bd"><b>max(dp[i])</b>，不是 dp[n−1]<span class="note">最长的那条不一定以最后一个数结尾</span></div></div></div>
   </section>
   <section class="card gd sum">
     <h2>归纳 · 同类题 · 易错点</h2>
     <div class="model">以 i 结尾的线性 DP<i>可以用二分优化到 O(n log n)</i></div>
     <div class="rel"><div class="r"><div class="nm"><span>152</span>乘积最大子数组</div><div class="df">也是「以 i 结尾」，答案也是所有位置取最大。区别：子数组必须<b>连续</b>，只能接在 i−1 后面；子序列可以接在左边任何一个后面</div></div><div class="r"><div class="nm"><span>53</span>最大子数组和（普通数组）</div><div class="df">「以 i 结尾的最大和」，只看 i−1，O(n)</div></div><div class="r"><div class="nm"><span>32</span>最长有效括号</div><div class="df">同样是「以 i 结尾」+ 答案取最大</div></div></div>
-    <div class="pit"><div class="p"><b>答案是 max(dp)</b><span>[1, 3, 2]：dp = [1, 2, 2]，碰巧对；[3, 4, 1]：dp[2] = 1，但答案是 2。一定要取所有位置的最大</span></div><div class="p"><b>用 lower_bound</b><span>严格递增，相等的数不能接在后面：[7, 7, 7] 答案是 1。lower_bound 找第一个 ≥ x，相等时替换；upper_bound 会把 7 接上去，算出 3</span></div></div>
+    <div class="pit"><div class="p"><b>答案是 max(dp)</b><span>[1, 3, 2]：dp = [1, 2, 2]，碰巧对；[3, 4, 1]：dp[2] = 1，但答案是 2。一定要取所有位置的最大</span></div><div class="p"><b>严格递增：用 &lt;</b><span>相等的数不能接在后面：[7, 7, 7] 答案是 1。条件写成 <code>nums[j] &lt;= nums[i]</code> 会算出 3</span></div></div>
   </section>  <section class="card cx-card">
     <div class="cx-row time">
-      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n log n)</span></div>
+      <div class="cx-head"><span class="tag">时间</span><span class="val">O(n²)</span></div>
       <div>
-        <div class="eq"><span class="term"><b>n</b> 个数</span><span class="op">×</span><span class="term">每个在 tails 上二分 <b>O(log n)</b></span></div>
-        <p class="why">为什么 tails 递增：长度为 k+2 的子序列去掉最后一个，就是一条长度 k+1 的、结尾更小的子序列，所以 tails[k] < tails[k+1]。<b>有序才能二分</b>。</p>
+        <div class="eq"><span class="term">每个 <b>i</b></span><span class="op">×</span><span class="term">往左看 <b>i</b> 个 <b>j</b></span><span class="op">=</span><span class="term"><b>0 + 1 + … + (n−1)</b></span></div>
+        <p class="why">一共比较 n(n−1)/2 次，每次只是比一下大小、取一次 max。n = 2500（题目上限）时大约 300 万次，很快。</p>
       </div>
-      <div class="fig"><div class="cells"><span class="c ">2</span><span class="c ">3</span><span class="c ">7</span><span class="c b">18</span></div><span class="cap">[10,9,2,5,3,7,101,18] 最后 tails，长度 4</span></div>
+      <div class="fig"><div class="cells"><span class="c ">10</span><span class="c ">9</span><span class="c a">2</span><span class="c a">5</span><span class="c a">3</span><span class="c b">7</span></div><span class="cap">dp[5]：7 能接在 2、5、3 后面，max(1, 2, 2) + 1 = 3</span></div>
     </div>
     <div class="cx-row space nofig">
       <div class="cx-head"><span class="tag">空间</span><span class="val">O(n)</span></div>
       <div>
-        <div class="eq"><span class="term">tails 最长 <b>n</b></span></div>
-        <p class="why">tails 里的数<b>不一定</b>组成一条真实的子序列（比如被后面更小的数替换过），但它的长度一定等于答案。</p>
+        <div class="eq"><span class="term">一个 <b>dp</b> 数组</span></div>
+        <p class="why">和爬楼梯、打家劫舍不同：dp[i] 要往左看<b>所有</b> j，不只是前一两格，所以整张表都要留着，不能只用几个变量滚动。</p>
       </div>
     </div>
-    <div class="cx-row cmp">
-      <div class="cx-head"><span class="tag">对比</span><span class="val">dp O(n²)</span></div>
+    <div class="cx-row cmp nofig">
+      <div class="cx-head"><span class="tag">对比</span><span class="val">二分 O(n log n)</span></div>
       <div>
-        <p class="why">更直接的 dp：<b>dp[i] = 以 nums[i] 结尾的最长递增子序列长度</b>，dp[i] = max(dp[j] + 1)，j < i 且 nums[j] < nums[i]；答案是所有 dp[i] 的最大值。每个 i 往前扫一遍，O(n²)。tails 的做法把「往前扫」换成了二分。</p>
+        <p class="why">进阶做法：维护 tails[k] =「长度为 k+1 的递增子序列里，最小的结尾」。tails 是递增的，每来一个数用二分找到位置替换，或者接在最后。能把 O(n²) 降到 O(n log n)，但不如 dp[i] 直观，先把这个 dp 吃透再看它。</p>
       </div>
-      <div class="fig"><div class="cells"><span class="c m">10</span><span class="c m">9</span><span class="c m">2</span><span class="c ">5</span><span class="c ">3</span><span class="c ">7</span><span class="gap"></span><span class="c ">1</span><span class="c ">1</span><span class="c ">1</span><span class="c ">2</span><span class="c ">2</span><span class="c b">3</span></div><span class="cap">dp[5] = dp[3] + 1 = 3（2 → 5 → 7）</span></div>
     </div>
   </section>
 </main>
@@ -483,31 +478,30 @@
 (() => {
   const CODE = [
       "<span class=\"t\">int</span> lengthOfLIS(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; nums) {",
-      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; t;  <span class=\"c\">// tails：长度 k+1 的最小结尾</span>",
-      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> x : nums) {",
-      "        <span class=\"c\">// 第一个 &gt;= x 的位置</span>",
-      "        <span class=\"k\">auto</span> it = lower_bound(t.begin(), t.end(), x);",
-      "        <span class=\"k\">if</span> (it == t.end())",
-      "            t.push_back(x);  <span class=\"c\">// 接在最后</span>",
-      "        <span class=\"k\">else</span>",
-      "            *it = x;  <span class=\"c\">// 换成更小的结尾</span>",
+      "    <span class=\"t\">int</span> n = nums.size(), ans = 1;",
+      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt; dp(n, 1);  <span class=\"c\">// 自己就是长度 1</span>",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 1; i &lt; n; ++i) {",
+      "        <span class=\"k\">for</span> (<span class=\"t\">int</span> j = 0; j &lt; i; ++j)  <span class=\"c\">// 看左边每个数</span>",
+      "            <span class=\"k\">if</span> (nums[j] &lt; nums[i])  <span class=\"c\">// 能接在后面</span>",
+      "                dp[i] = <span class=\"t\">max</span>(dp[i], dp[j] + 1);",
+      "        ans = <span class=\"t\">max</span>(ans, dp[i]);",
       "    }",
-      "    <span class=\"k\">return</span> t.size();",
+      "    <span class=\"k\">return</span> ans;",
       "}"
   ];
   const PY = [
       "<span class=\"k\">def</span> lengthOfLIS(<span class=\"t\">self</span>, nums):",
-      "    tails = []  <span class=\"c\"># tails[k]：长度 k+1 的最小结尾</span>",
-      "    <span class=\"k\">for</span> x <span class=\"k\">in</span> nums:",
-      "        k = bisect_left(tails, x)  <span class=\"c\"># 第一个 &gt;= x 的位置</span>",
-      "        <span class=\"k\">if</span> k == <span class=\"t\">len</span>(tails):",
-      "            tails.append(x)  <span class=\"c\"># 接在最后</span>",
-      "        <span class=\"k\">else</span>:",
-      "            tails[k] = x  <span class=\"c\"># 换成更小的结尾</span>",
-      "    <span class=\"k\">return</span> <span class=\"t\">len</span>(tails)"
+      "    n, ans = <span class=\"t\">len</span>(nums), 1",
+      "    dp = [1] * n  <span class=\"c\"># 自己就是长度 1</span>",
+      "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(1, n):",
+      "        <span class=\"k\">for</span> j <span class=\"k\">in</span> <span class=\"t\">range</span>(i):  <span class=\"c\"># 看左边每个数</span>",
+      "            <span class=\"k\">if</span> nums[j] &lt; nums[i]:  <span class=\"c\"># 能接在后面</span>",
+      "                dp[i] = <span class=\"t\">max</span>(dp[i], dp[j] + 1)",
+      "        ans = <span class=\"t\">max</span>(ans, dp[i])",
+      "    <span class=\"k\">return</span> ans"
   ];
   // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
-  const PYMAP = [0, 1, 2, 3, 3, 4, 5, 6, 7, 2, 8, 8];
+  const PYMAP = [0, 1, 2, 3, 4, 5, 6, 7, 3, 8, 8];
 
   const K = (c, t) => `<span class="${c}">${t}</span>`;
   const fm = (lines, why) => `<div class="fm">${lines.map(l => `<div class="ln${l.sm ? ' sm' : ''}">${l.t ?? l}</div>`).join('')}${why ? `<div class="why">${why}</div>` : ''}</div>`;
@@ -544,62 +538,71 @@
   };
 
   const EXAMPLES = [[10, 9, 2, 5, 3, 7, 101, 18], [0, 1, 0, 3, 2, 3], [4, 10, 4, 3, 8, 9], [7, 7, 7, 7]];
+  // 顺着 pre 往回走，拿到「以 nums[i] 结尾的最长递增子序列」本身
+  const chainOf = (nums, pre, i) => { const q = []; for (let k = i; k >= 0; k = pre[k]) q.unshift(nums[k]); return q; };
+  const show = q => q.map(v => `<span class="v">${v}</span>`).join('<span class="ar">→</span>');
 
   function build(nums) {
-    const tails = [], seqs = [], s = [];
-    const snap = o => s.push({ nums, tails: tails.slice(), seqs: seqs.map(q => q.slice()), ...o });
-    snap({ i: -1, line: 1, f: ['tails = []'], why: '还没看任何数，一条递增子序列都没有', msg: '从左到右看每个数，维护 tails' });
-    nums.forEach((x, i) => {
-      // 二分：在 [l, r) 里找第一个 >= x 的
-      let l = 0, r = tails.length;
-      const probes = [];
-      while (l < r) { const m = (l + r) >> 1; probes.push([m, tails[m] < x]); tails[m] < x ? l = m + 1 : r = m; }
-      snap({ i, line: 4, probes, pos: l,
-        f: [`二分找第一个 ≥ ${K('c', x)} 的位置：${probes.length ? probes.map(([m, lt]) => `tails[${m}] = ${tails[m]} ${lt ? '<' : '≥'} ${x}`).join('，') : 'tails 是空的'}`, `→ 位置 k = ${K('p', l)}`],
-        why: l === tails.length ? `所有结尾都比 ${x} 小：${x} 能接在最长的那条后面` : `tails[${l}] = ${tails[l]} 是第一个 ≥ ${x} 的。${l ? `tails[${l - 1}] = ${tails[l - 1]} < ${x}，所以 ${x} 能接在长度 ${l} 的那条后面，变成长度 ${l + 1}` : `${x} 比所有结尾都小，只能自己开头，长度 1`}`,
-        msg: `x = ${x}：二分落在 k = ${l}` });
-      if (l === tails.length) {
-        tails.push(x); seqs.push([...(l ? seqs[l - 1] : []), x]);
-        snap({ i, line: 6, pos: l, push: true,
-          f: [`t.push_back(${K('c', x)})，长度变成 ${K('g', tails.length)}`],
-          why: `长度 ${l} 的那条（结尾 ${l ? tails[l - 1] : '空'}）后面接上 ${x}，得到一条更长的：${seqs[l].join(' → ')}`,
-          msg: `${x} 接在最后：最长长度变成 ${tails.length}` });
-      } else {
-        const old = tails[l];
-        tails[l] = x; seqs[l] = [...(l ? seqs[l - 1] : []), x];
-        snap({ i, line: 8, pos: l, old,
-          f: [`tails[${l}] = ${K('d', old)} → ${K('c', x)}`],
-          why: `长度 ${l + 1} 的子序列现在有一条以 ${x} 结尾的（${seqs[l].join(' → ')}），比原来以 ${old} 结尾的更好：结尾更小，以后更容易接上别的数。长度没变`,
-          msg: `${x} 替换 tails[${l}] = ${old}：长度 ${l + 1} 的结尾变小了` });
+    const n = nums.length, dp = Array(n).fill(1), pre = Array(n).fill(-1), s = [];
+    let ans = 1, best = 0;
+    const snap = o => s.push({ nums, dp: dp.slice(), pre: pre.slice(), ans, best, ...o });
+    snap({ i: 0, line: 2, f: [`${HD('初始化')}dp = [${dp.join(', ')}]`],
+      why: '每个数自己单独拿出来，就是一条长度为 1 的递增子序列，所以 dp 全部先填 1。dp[0] 左边没有数，它就是 1，已经算好了',
+      msg: 'dp 全部填 1：每个数自己就是长度 1' });
+    for (let i = 1; i < n; i++) {
+      const x = nums[i];
+      snap({ i, line: 3, f: [`${HD('开始')}算 dp[${i}]：nums[${i}] = ${K('c', x)}，先是 1`],
+        why: `接下来从左往右看 j = 0 ~ ${i - 1}：nums[j] 比 ${x} 小，${x} 就能接在「以 nums[j] 结尾的最长那条」后面，长度是 dp[j] + 1`,
+        msg: `算 dp[${i}]：看 ${x} 能接在左边哪些数后面` });
+      for (let j = 0; j < i; j++) {
+        const y = nums[j];
+        if (y < x) {
+          const old = dp[i], cand = dp[j] + 1, up = cand > old;
+          if (up) { dp[i] = cand; pre[i] = j; }
+          snap({ i, j, ok: true, line: 6, arcs: [[j, i, '+1', '']],
+            f: [`nums[${j}] = ${K('d', y)} &lt; ${K('c', x)} ✓`,
+                `dp[${i}] = max(dp[${i}], dp[${j}] + 1) = max(${old}, ${dp[j]} + 1) = ${K('c', dp[i])}`],
+            why: `以 ${y} 结尾的最长那条长 ${dp[j]}，${x} 接在它后面就是 ${cand}。${up ? `比现在的 ${old} 长，更新` : `不比现在的 ${old} 长，不变`}`,
+            msg: `${x} 能接在 ${y} 后面：${dp[j]} + 1 = ${cand}${up ? '，更新' : '，不更长'}` });
+        } else {
+          snap({ i, j, ok: false, line: 5, arcs: [[j, i, '', 'alt']],
+            f: [`nums[${j}] = ${K('m', y)} ${y === x ? '=' : '&gt;'} ${K('c', x)} ✗`],
+            why: y === x ? `递增要求<b>严格变大</b>，相等也不能接：${y} → ${x} 不算递增` : `${y} 比 ${x} 大，${x} 接在它后面就不是递增了`,
+            msg: `${x} 不能接在 ${y} 后面，跳过` });
+        }
       }
-    });
-    snap({ i: nums.length, line: 10, kind: 'ok', done: true,
-      f: [`return t.size() = ${K('g', tails.length)}`],
-      why: `注意 tails 本身不一定是答案序列：它只保证「长度」对。一条真正的最长递增子序列：${seqs[tails.length - 1].join(' → ')}`,
-      msg: `✓ 最长递增子序列长度是 ${tails.length}` });
+      const oldAns = ans;
+      if (dp[i] > ans) { ans = dp[i]; best = i; }
+      snap({ i, line: 7, fin: true, arcs: pre[i] >= 0 ? [[pre[i], i, '+1', 'g']] : [],
+        f: [`dp[${i}] = ${K('g', dp[i])}`, `ans = max(ans, dp[${i}]) = max(${oldAns}, ${dp[i]}) = ${K('g', ans)}`],
+        why: pre[i] >= 0 ? `以 ${x} 结尾最长是 ${dp[i]}：接在 ${nums[pre[i]]} 后面最好` : `左边没有比 ${x} 小的数，${x} 只能自己开头，长度 1`,
+        msg: `dp[${i}] = ${dp[i]}，ans = ${ans}` });
+    }
+    snap({ i: n, line: 9, kind: 'ok', done: true,
+      f: [`return ans = ${K('g', ans)}`],
+      why: `最长的那条以 nums[${best}] = ${nums[best]} 结尾` + (best !== n - 1 ? `，不是最后一个数（dp[${n - 1}] = ${dp[n - 1]}），所以答案要取所有 dp[i] 里最大的` : ''),
+      msg: `✓ 最长递增子序列长度是 ${ans}` });
     return s;
   }
 
   function render(st) {
-    drawRow('nums', st.nums.map((v, k) => ({ v, ix: k, cls: k === st.i ? 'cur' : k < st.i ? '' : 'todo' })), { W: 56, G: 8 });
-    const T = st.tails, n = st.nums.length;
-    const probes = new Map((st.probes || []).map(([m, lt]) => [m, lt]));
-    const cs = Array.from({ length: Math.max(T.length, 1) + (st.pos === T.length && !st.push && st.i >= 0 && st.i < n ? 1 : 0) }, (_, k) => {
-      if (k >= T.length) return { v: k === st.pos ? '+' : '·', ix: k, cls: k === st.pos ? 'sen cur' : 'sen' };
-      let cls = probes.has(k) ? (probes.get(k) ? 'alt' : 'dep') : '';
-      if (k === st.pos && (st.push || st.old != null)) cls = 'cur new';
-      if (st.done) cls = 'ok';
-      return { v: T[k], ix: k, cls };
-    });
-    if (!T.length && !(st.pos === 0 && st.i >= 0)) cs[0] = { v: '空', ix: '', cls: 'sen' };
-    drawRow('tails', cs, { W: 56, G: 8 });
-    $('bs').innerHTML = st.probes ? (st.probes.length ? `二分看过：${st.probes.map(([m, lt]) => `tails[${m}]${lt ? ' < x 往右' : ' ≥ x 往左'}`).join(' → ')}` : '') : st.old != null ? `${st.old} 被换成更小的 ${st.nums[st.i]}` : '';
-    $('seqs').innerHTML = st.seqs.map((q, k) => `<div class="row ${k === st.pos && !st.probes ? 'on' : ''}"><span class="len">长度 ${k + 1}</span><span class="seq">${q.map(v => `<span>${v}</span>`).join('')}</span></div>`).join('');
+    const { nums, dp, pre } = st, n = nums.length, i = st.i, opt = { W: 56, G: 8 };
+    const line = new Set(st.done ? (() => { const q = []; for (let k = st.best; k >= 0; k = pre[k]) q.push(k); return q; })() : []);
+    drawRow('nums', nums.map((v, k) => ({ v, ix: k,
+      cls: st.done ? (line.has(k) ? 'ok' : '') : k === i ? 'cur' : k === st.j ? (st.ok ? 'dep' : 'alt') : k > i ? 'todo' : '' })), opt);
+    drawRow('dp', dp.map((v, k) => ({ v, ix: k,
+      cls: st.done ? (line.has(k) ? 'ok' : '') : k === i ? (st.fin ? 'ok' : 'cur') : k === st.j ? (st.ok ? 'dep' : 'alt') : k > i ? 'todo' : '' })),
+      { ...opt, arcs: st.arcs || [], reserve: true });
+    $('chainJ').innerHTML = st.j != null && st.ok ? `<span class="lb">以 nums[${st.j}] = ${nums[st.j]} 结尾的最长：</span>${show(chainOf(nums, pre, st.j))}<span class="len">长 ${dp[st.j]}</span>` : '';
+    const ci = st.done ? st.best : i;
+    $('chainI').className = 'chain ' + (st.done ? 'ok' : 'cur');
+    $('chainI').innerHTML = ci < n ? `<span class="lb">${st.done ? '一条最长递增子序列：' : `以 nums[${ci}] = ${nums[ci]} 结尾，目前最长：`}</span>${show(chainOf(nums, pre, ci))}<span class="len">长 ${dp[ci]}</span>` : '';
     $('fm').innerHTML = fm(st.f, st.why);
+    $('ans').innerHTML = `<span>ans = <b>${st.ans}</b></span>`;
   }
 
   const fill = v => { $('nIn').value = v.join(', '); };
-  const parse = () => parseNums('nIn', 1, 10, 999);
+  const parse = () => parseNums('nIn', 1, 9, 999);
 
 
   const $ = id => document.getElementById(id);
