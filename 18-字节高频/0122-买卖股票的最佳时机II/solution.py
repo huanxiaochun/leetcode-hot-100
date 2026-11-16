@@ -7,11 +7,14 @@ from typing import List
 
 class Solution:
     def maxProfit(self, prices: List[int]) -> int:
-        ans = 0
-        for i in range(1, len(prices)):
-            if prices[i] > prices[i - 1]:          # 涨就吃下
-                ans += prices[i] - prices[i - 1]
-        return ans
+        n = len(prices)
+        dp = [[0, 0] for _ in range(n)]            # dp[i][0] 不持有，dp[i][1] 持有
+        dp[0][1] = -prices[0]                      # 第 0 天买入
+        for i in range(1, n):
+            p = prices[i]
+            dp[i][0] = max(dp[i - 1][0], dp[i - 1][1] + p)   # 不动 / 今天卖
+            dp[i][1] = max(dp[i - 1][1], dp[i - 1][0] - p)   # 不动 / 今天买
+        return dp[n - 1][0]                        # 最后手里没股票
 
 
 # ============================================================

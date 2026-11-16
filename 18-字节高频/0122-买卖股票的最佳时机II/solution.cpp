@@ -2,6 +2,7 @@
  * 编译运行：
  *   g++ -std=c++17 -O2 solution.cpp -o /tmp/solution && /tmp/solution
  */
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -10,10 +11,16 @@ using namespace std;
 class Solution {
 public:
     int maxProfit(vector<int>& prices) {
-        int ans = 0;
-        for (size_t i = 1; i < prices.size(); ++i)
-            if (prices[i] > prices[i - 1]) ans += prices[i] - prices[i - 1];   // 涨就吃下
-        return ans;
+        int n = prices.size();
+        vector<vector<int>> dp(n, vector<int>(2));  // dp[i][0] 不持有，dp[i][1] 持有
+        dp[0][0] = 0;                               // 第 0 天什么都不做
+        dp[0][1] = -prices[0];                      // 第 0 天买入
+        for (int i = 1; i < n; ++i) {
+            int p = prices[i];
+            dp[i][0] = max(dp[i - 1][0], dp[i - 1][1] + p);   // 不动 / 今天卖
+            dp[i][1] = max(dp[i - 1][1], dp[i - 1][0] - p);   // 不动 / 今天买
+        }
+        return dp[n - 1][0];                        // 最后手里没股票
     }
 };
 

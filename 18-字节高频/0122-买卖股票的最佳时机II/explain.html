@@ -243,27 +243,83 @@
   .chip2.g { border-color: var(--green); background: var(--green-soft); color: var(--green); }
   .chips .empty { color: var(--muted); font-size: 18px; padding: 8px 4px; }
 
-  .bars { display: flex; align-items: flex-end; gap: 10px; height: 250px; padding-top: 36px; }
-  .bars .col { position: relative; width: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-  .bars .bar { width: 100%; border-radius: 10px 10px 4px 4px; background: #d5dbe6; transition: all .35s cubic-bezier(.2,.8,.2,1); min-height: 6px; }
-  .bars .v { font: 700 20px "JetBrains Mono", "SF Mono", Menlo, monospace; margin-bottom: 6px; color: var(--muted); }
-  .bars .tags { position: absolute; top: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 4px; }
-  .bars .tags span { font: 700 15px "JetBrains Mono", "SF Mono", Menlo, monospace; padding: 1px 7px; border-radius: 8px; color: #fff; }
-  .bars .tags .ta { background: var(--amber); }
-  .bars .tags .tb { background: var(--blue); }
-  .bars .tags .tg { background: var(--green); }
-  .bars .col.past .bar { opacity: .4; }
-  .bars .col.cur .bar { background: var(--blue); }
-  .bars .col.cur .v { color: var(--blue); }
-  .bars .col.lo .bar { background: var(--amber); }
-  .bars .col.lo .v { color: var(--amber); }
-  .bars .col.best .bar { box-shadow: inset 0 0 0 3px var(--green); }
-  .bars .col.up .bar { background: var(--green-soft); box-shadow: inset 0 0 0 2px var(--green); }
-  .bars .col.down .bar { background: #d5dbe6; }
-  .idxrow { display: flex; gap: 10px; margin-top: 6px; }
-  .idxrow span { width: 60px; text-align: center; font: 15px "JetBrains Mono", Menlo, monospace; color: var(--muted); }
-  .idxrow span.g { color: var(--green); font-weight: 700; }
-  .idxrow span.r { color: var(--amber); font-weight: 700; }
+  .dpwrap { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .dpcol { min-width: 0; }
+  .dpcol .sl { font-size: 15px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .dpcol .sl b { color: var(--text); }
+  .dpt { position: relative; }
+  .dpt .hd { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center;
+             font: 700 18px "JetBrains Mono", "SF Mono", Menlo, monospace; color: var(--text); border-radius: 8px; }
+  .dpt .hd small { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .dpt .hd.row { flex-direction: row; gap: 6px; }
+  .dpt .hd.cur { background: var(--blue-soft); color: var(--blue); }
+  .dpt .hd.cur small { color: var(--blue); }
+  .dpt .hd.ok { background: var(--green-soft); color: var(--green); }
+  .dpt .hd.no { background: var(--amber-soft); color: var(--amber); }
+  .dpt .hd.mt { background: var(--green); color: #fff; }
+  .dpt .hd.mt small { color: #fff; }
+  .dpt .hd.dim { color: var(--muted); }
+  .dpt .c { position: absolute; display: grid; place-items: center; border-radius: 9px; background: var(--inset);
+            font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-weight: 700; color: var(--text);
+            border: 2.5px solid transparent; transition: background .2s, border-color .2s; }
+  .dpt .c.done { background: var(--card); border-color: #e1e4ea; }
+  .dpt .c.base { background: #eceef2; color: var(--muted); }
+  .dpt .c.na { background: repeating-linear-gradient(45deg, transparent 0 5px, #e9ebef 5px 7px); }
+  .dpt .c.yes { background: var(--green-soft); color: var(--green); border-color: transparent; }
+  .dpt .c.no { color: #b5b9c2; }
+  .dpt .c.dep { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+  .dpt .c.dep2 { border-color: var(--amber); border-style: dashed; }
+  .dpt .c.cur { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); border-width: 3.5px; z-index: 1; }
+  .dpt .c.best { box-shadow: 0 0 0 3px var(--green) inset; }
+  .dpt .c.path { background: #c8f0d6; color: #15803d; border-color: transparent; }
+  .dpt .c.mt { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c.ans { background: var(--green); color: #fff; border-color: var(--green); }
+  .dpt .c .ic { position: absolute; font-size: 15px; line-height: 1; }
+  .dpt .c .ic.tl { left: -4px; top: -8px; } .dpt .c .ic.br { right: -5px; bottom: -6px; }
+  .dpt .c s { font-size: .62em; color: var(--muted); margin-right: 2px; font-weight: 600; }
+  .dpt svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 2; }
+  .dpt svg .ar { stroke: var(--amber); stroke-width: 3; fill: none; }
+  .dpt svg .ar.off { stroke-width: 2; stroke-dasharray: 4 4; opacity: .75; }
+  .dpt svg .pth { stroke: var(--green); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: .45; }
+  .dpt .tg { position: absolute; z-index: 3; transform: translate(-50%, -50%); padding: 0 6px; border-radius: 6px; white-space: nowrap;
+             font: 700 12px/18px -apple-system, "PingFang SC", sans-serif; background: var(--amber); color: #fff; }
+  .dpt .tg.off { background: #fff; color: var(--amber); box-shadow: inset 0 0 0 1.5px var(--amber); }
+  .dpt .tg.blue { background: var(--blue); }
+
+  /* 一条字符串：i..j 区间、两头、中间 */
+  .strip { display: flex; gap: 6px; padding-top: 26px; flex-wrap: wrap; }
+  .strip .ch { position: relative; width: 46px; text-align: center; }
+  .strip .ch b { display: grid; place-items: center; height: 46px; border-radius: 10px; background: var(--inset);
+                 font: 700 21px "JetBrains Mono", "SF Mono", Menlo, monospace; border: 2.5px solid transparent; }
+  .strip .ch small { display: block; font: 12px "JetBrains Mono", Menlo, monospace; color: var(--muted); margin-top: 3px; }
+  .strip .ch i { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font: 700 13px "JetBrains Mono", Menlo, monospace;
+                 font-style: normal; padding: 0 7px; border-radius: 6px; color: #fff; background: var(--blue); white-space: nowrap; }
+  .strip .ch.in b { background: var(--blue-soft); }
+  .strip .ch.end b { border-color: var(--blue); color: var(--blue); }
+  .strip .ch.endno b { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .strip .ch.mid b { box-shadow: inset 0 -4px 0 var(--amber); }
+  .strip .ch.best b { background: var(--green-soft); color: var(--green); }
+  .strip .ch.bestu b { box-shadow: inset 0 -4px 0 var(--green); }
+
+  .eqrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-height: 44px; font-size: 19px; }
+  .eqrow .v { padding: 3px 12px; border-radius: 10px; font-weight: 700; background: var(--inset); }
+  .eqrow .v.b { background: var(--blue-soft); color: var(--blue); }
+  .eqrow .v.a { background: var(--amber-soft); color: var(--amber); }
+  .eqrow .v.g { background: var(--green-soft); color: var(--green); }
+  .eqrow .v.m { color: var(--muted); }
+  .eqrow small { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 5px; vertical-align: -2px; }
+  .chipline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 40px; font-size: 17px; }
+  .chipline .w { padding: 5px 12px; border-radius: 10px; background: var(--inset); font: 700 18px "JetBrains Mono", Menlo, monospace; }
+  .chipline .w.g { background: var(--green-soft); color: var(--green); }
+  .chipline .op { font-size: 14px; font-weight: 700; color: var(--amber); }
+  .chipline .lbl { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+  .dpt .c.na2 { color: #b5b9c2; }
+  .trades { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 36px; font-size: 15px; }
+  .trades .w { padding: 3px 10px; border-radius: 8px; font: 700 16px "JetBrains Mono", Menlo, monospace; background: var(--green-soft); color: var(--green); }
+  .trades .lb { color: var(--muted); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -274,7 +330,7 @@
     <span class="pill cat">字节高频</span>
     <a href="https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/" target="_blank" rel="noopener">LeetCode ↗</a>
   </header>
-  <p class="idea">贪心：把所有<b>上涨的那一天</b>都吃下来。任意一段买卖的利润，都等于中间每天涨跌之和；跌的那天不持有就不亏，所以答案 = 所有正的 prices[i] − prices[i−1] 之和。</p>
+  <p class="idea">每天结束时只有两种状态：<b>手里没股票</b>、<b>手里有股票</b>。<b>dp[i][0] / dp[i][1]</b> = 第 i 天结束时处于这个状态的最大收益。今天的状态要么是昨天原样保持，要么是昨天另一个状态今天<b>买 / 卖</b>了一次，两者取大。</p>
 
   <div class="layout">
   <div class="main-col">
@@ -288,12 +344,10 @@
     </div>
 
     <div class="stage">
-      <div>
-        <div class="label">prices &nbsp;（<span style="color:var(--green)">绿色</span>是比前一天涨的日子，下面一行是涨跌）</div>
-        <div class="bars" id="bars"></div>
-        <div class="idxrow mono" id="idx"></div>
-        <div class="pillrow mono" id="eq"></div>
-      </div>
+      <div class="dpcol"><div class="sl">dp 表：<b>一列是一天</b>（表头是当天股价），<b>一行是一个状态</b>。代码里写作 dp[i][j]，i 是天、j 是状态</div><div class="dpt" id="tbl"></div></div>
+      <div class="eqrow mono" id="eq"></div>
+      <div class="trades" id="trades"></div>
+      <div class="legend"><span><i style="background:var(--amber-soft)"></i>取到 max 的来源</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px var(--amber)"></i>没取到的来源</span><span><i style="background:#c8f0d6"></i>最优方案走过的格子</span></div>
     </div>
   </section>
   </div>
@@ -324,28 +378,28 @@
     <div class="cx-row time">
       <div class="cx-head"><span class="tag">时间</span><span class="val">O(n)</span></div>
       <div>
-        <div class="eq"><span class="term">相邻两天比 <b>n−1</b> 次</span><span class="op">=</span><span class="term"><b>O(n)</b></span></div>
-        <p class="why">第 a 天买、第 b 天卖的利润 prices[b] − prices[a]，拆开就是中间<b>每天涨跌之和</b>。只收正的那些项，不会比任何一种买卖方案少。</p>
+        <div class="eq"><span class="term"><b>n</b> 天</span><span class="op">×</span><span class="term">每天 <b>2</b> 个状态</span></div>
+        <p class="why">每一格只看<b>前一天</b>的两格。不持有 = max(昨天不持有, 昨天持有 + 今天卖)；持有 = max(昨天持有, 昨天不持有 − 今天买)。交易次数不限，所以买入时直接从「不持有」走过来。</p>
       </div>
-      <div class="fig"><div class="cells"><span class="c ">1</span><span class="ar">→</span><span class="c g">5</span><span class="gap"></span><span class="c ">3</span><span class="ar">→</span><span class="c g">6</span></div><span class="cap">+4 和 +3 两段上涨，合计 7</span></div>
+      <div class="fig"><div class="cells"><span class="c ">0</span><span class="c ">0</span><span class="c g">4</span></div><div class="cells"><span class="c a">−7</span><span class="c ">−1</span><span class="c ">−1</span></div><span class="cap">[7, 1, 5]：第 1 天买、第 2 天卖，赚 4</span></div>
     </div>
     <div class="cx-row space nofig">
-      <div class="cx-head"><span class="tag">空间</span><span class="val">O(1)</span></div>
+      <div class="cx-head"><span class="tag">空间</span><span class="val">O(n)</span></div>
       <div>
-        <div class="eq"><span class="term">只有一个 <b>ans</b></span></div>
-        <p class="why">同一天可以先卖再买，所以连续上涨（1→2→3）拆成每天一买一卖，和一口气持有到底利润相同。</p>
+        <div class="eq"><span class="term">dp 表 <b>n × 2</b></span></div>
+        <p class="why">第 i 天只用到第 i − 1 天，可以压成两个变量 hold、free，空间 O(1)。</p>
       </div>
     </div>
     <div class="cx-row cmp nofig">
-      <div class="cx-head"><span class="tag">对比</span><span class="val">DP</span></div>
+      <div class="cx-head"><span class="tag">对比</span><span class="val">贪心</span></div>
       <div>
-        <p class="why">动态规划写法：<b>hold</b> = 手里有股票时的最大收益，<b>free</b> = 手里没股票时的最大收益。每天 hold = max(hold, free − p)，free = max(free, hold + p)，最后返回 free。时间 O(n)、空间 O(1)，结果和贪心一样。</p>
+        <p class="why">这题还能贪心：把所有<b>上涨的那一天</b>都吃下，答案 = 所有正的 prices[i] − prices[i − 1] 之和。DP 写法的好处是能直接改成 123（最多 2 次）、188（最多 k 次）、含冷冻期、含手续费这些变体。</p>
       </div>
     </div>
     <div class="cx-row cmp nofig">
-      <div class="cx-head"><span class="tag">易错</span><span class="val">不是真实交易</span></div>
+      <div class="cx-head"><span class="tag">易错</span><span class="val">返回哪格</span></div>
       <div>
-        <p class="why">贪心算出的是<b>利润</b>，不代表真的在每个上涨日都交易了一次（连续上涨其实一次买卖就够）。面试被追问「具体怎么买卖」或换成含手续费、冷冻期的变体时，讲 DP 版本。</p>
+        <p class="why">答案是最后一天<b>不持有</b>的 dp[n − 1][0]：手里还拿着股票，收益一定更少。第 0 天持有要初始化成 <b>−prices[0]</b>，不能是 0。</p>
       </div>
     </div>
   </section>
@@ -355,75 +409,150 @@
 (() => {
   const CODE = [
       "<span class=\"t\">int</span> maxProfit(<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&amp; prices) {",
-      "    <span class=\"t\">int</span> ans = 0;",
-      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 1; i &lt; prices.size(); ++i)",
-      "        <span class=\"k\">if</span> (prices[i] &gt; prices[i - 1])",
-      "            ans += prices[i] - prices[i - 1];  <span class=\"c\">// 涨就吃下</span>",
-      "    <span class=\"k\">return</span> ans;",
+      "    <span class=\"t\">int</span> n = prices.size();",
+      "    <span class=\"t\">vector</span>&lt;<span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;&gt; dp(n, <span class=\"t\">vector</span>&lt;<span class=\"t\">int</span>&gt;(2));",
+      "    dp[0][1] = -prices[0];  <span class=\"c\">// 第 0 天买入</span>",
+      "    <span class=\"k\">for</span> (<span class=\"t\">int</span> i = 1; i &lt; n; ++i) {",
+      "        <span class=\"t\">int</span> p = prices[i];",
+      "        dp[i][0] = <span class=\"t\">max</span>(dp[i - 1][0], dp[i - 1][1] + p);",
+      "        dp[i][1] = <span class=\"t\">max</span>(dp[i - 1][1], dp[i - 1][0] - p);",
+      "    }",
+      "    <span class=\"k\">return</span> dp[n - 1][0];  <span class=\"c\">// 最后手里没股票</span>",
       "}"
   ];
   const PY = [
       "<span class=\"k\">def</span> maxProfit(<span class=\"t\">self</span>, prices):",
-      "    ans = 0",
-      "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(1, <span class=\"t\">len</span>(prices)):",
-      "        <span class=\"k\">if</span> prices[i] &gt; prices[i - 1]:",
-      "            ans += prices[i] - prices[i - 1]  <span class=\"c\"># 涨就吃下</span>",
-      "    <span class=\"k\">return</span> ans"
+      "    n = <span class=\"t\">len</span>(prices)",
+      "    dp = [[0, 0] <span class=\"k\">for</span> _ <span class=\"k\">in</span> <span class=\"t\">range</span>(n)]",
+      "    dp[0][1] = -prices[0]  <span class=\"c\"># 第 0 天买入</span>",
+      "    <span class=\"k\">for</span> i <span class=\"k\">in</span> <span class=\"t\">range</span>(1, n):",
+      "        p = prices[i]",
+      "        dp[i][0] = <span class=\"t\">max</span>(dp[i - 1][0], dp[i - 1][1] + p)",
+      "        dp[i][1] = <span class=\"t\">max</span>(dp[i - 1][1], dp[i - 1][0] - p)",
+      "    <span class=\"k\">return</span> dp[n - 1][0]  <span class=\"c\"># 最后手里没股票</span>"
   ];
   // C++ 第 i 行 -> Python 第 PYMAP[i] 行（-1 表示不高亮）
-  const PYMAP = [0, 1, 2, 3, 4, 5, 5];
+  const PYMAP = [0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 8];
 
-  const EXAMPLES = [[7, 1, 5, 3, 6, 4], [1, 2, 3, 4, 5], [7, 6, 4, 3, 1], [2, 1, 2, 0, 1]];
+  const E = (c, t) => `<span class="v ${c}">${t}</span>`;
+  // o: { rows:[{t,s}], cols:[{t,s}], vals:二维, cls:{'i,j':类}, cur:[i,j], deps:[{i,j,lab,on,pos}], path:[[i,j]],
+  //      rowHl:{i:类}, colHl:{j:类}, icons:{'i,j':[字符, 'tl'|'br']}, fmt(v,i,j), maxW, hw, noColHead, noRowHead }
+  function drawTable(id, o) {
+    const el = $(id), R = o.vals.length, C = o.vals[0].length;
+    const HW = o.noRowHead ? 0 : (o.hw || 44), HH = o.noColHead ? 0 : 46;
+    const avail = (o.avail || (el.parentElement.clientWidth || 600)) - HW - 4;
+    const W = Math.max(34, Math.min(o.maxW || 56, Math.floor(avail / C)));
+    const fs = Math.round(W * .37);
+    const X = j => HW + j * W + W / 2, Y = i => HH + i * W + W / 2;
+    let h = '';
+    if (!o.noColHead) o.cols.forEach((c, j) => {
+      h += `<div class="hd ${(o.colHl || {})[j] || ''}" style="left:${HW + j * W + 2}px;top:0;width:${W - 4}px;height:${HH - 4}px">`
+        + `${c.s != null ? `<small>${c.s}</small>` : ''}<span>${c.t}</span></div>`;
+    });
+    if (!o.noRowHead) o.rows.forEach((r, i) => {
+      h += `<div class="hd row ${(o.rowHl || {})[i] || ''}" style="left:0;top:${HH + i * W + 2}px;width:${HW - 4}px;height:${W - 4}px">`
+        + `<span>${r.t}</span>${r.s != null ? `<small>${r.s}</small>` : ''}</div>`;
+    });
+    const cur = o.cur ? o.cur.join() : '';
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+      const k = i + ',' + j, v = o.vals[i][j];
+      let c = (o.cls || {})[k] || '';
+      if (k === cur) c += ' cur';
+      const ic = (o.icons || {})[k];
+      const txt = v == null ? '' : o.fmt ? o.fmt(v, i, j) : v;
+      h += `<div class="c ${c}" style="left:${HW + j * W + 2}px;top:${HH + i * W + 2}px;width:${W - 4}px;height:${W - 4}px;font-size:${fs}px">`
+        + `${txt}${ic ? `<span class="ic ${ic[1]}">${ic[0]}</span>` : ''}</div>`;
+    }
+    let s = '', tags = '';
+    if (o.cur) (o.deps || []).forEach(d => {
+      const x1 = X(d.j), y1 = Y(d.i), x2 = X(o.cur[1]), y2 = Y(o.cur[0]);
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const a = W * .2, b = W * .3;
+      s += `<line class="ar ${d.on === false ? 'off' : ''}" x1="${x1 + ux * a}" y1="${y1 + uy * a}" x2="${x2 - ux * b}" y2="${y2 - uy * b}" marker-end="url(#ah-${id})"/>`;
+      if (d.lab) {
+        const p = d.pos || 'top';
+        const tx = p === 'left' ? HW + d.j * W + 2 : X(d.j), ty = p === 'bottom' ? HH + (d.i + 1) * W - 2 : p === 'left' ? Y(d.i) : HH + d.i * W + 2;
+        tags += `<span class="tg ${d.on === false ? 'off' : ''}" style="left:${tx}px;top:${ty}px">${d.lab}</span>`;
+      }
+    });
+    (o.tags || []).forEach(t => { tags += `<span class="tg ${t.cls || ''}" style="left:${X(t.j)}px;top:${HH + t.i * W + 2}px">${t.t}</span>`; });
+    const Wt = HW + C * W, Ht = HH + R * W;
+    el.style.width = Wt + 'px'; el.style.height = Ht + 'px';
+    el.innerHTML = h + `<svg width="${Wt}" height="${Ht}" viewBox="0 0 ${Wt} ${Ht}" aria-hidden="true"><defs><marker id="ah-${id}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#d97706"/></marker></defs>${s}</svg>` + tags;
+  }
+  // 一条字符串：o.cls {k:类}，o.tags {k:'i'}
+  function drawStrip(id, str, o = {}) {
+    $(id).innerHTML = [...str].map((ch, k) => `<div class="ch ${(o.cls || {})[k] || ''}">${(o.tags || {})[k] ? `<i>${o.tags[k]}</i>` : ''}<b>${ch}</b><small>${k}</small></div>`).join('');
+  }
+  const grid2 = (R, C, v = null) => Array.from({ length: R }, () => Array(C).fill(v));
+  const clone2 = a => a.map(r => r.slice());
 
-  const H = 190;
-  const bars = (p, cls, tags) => {
-    const mx = Math.max(...p, 1);
-    return p.map((v, j) => `<div class="col ${cls(j)}"><div class="tags">${tags(j)}</div><div class="v">${v}</div>`
-      + `<div class="bar" style="height:${Math.round(v / mx * H)}px"></div></div>`).join('');
-  };
-
-  function build(p) {
-    const s = [], gains = [];
-    let ans = 0;
-    const snap = (o) => s.push({ p, ans, gains: gains.slice(), ...o });
-    snap({ i: -1, line: 1, msg: 'ans = 0，从第 1 天开始和前一天比' });
-    for (let i = 1; i < p.length; i++) {
-      const d = p[i] - p[i - 1];
-      if (d > 0) {
-        snap({ i, line: 3, msg: `第 ${i} 天 ${p[i]} > 前一天 ${p[i - 1]}，涨了 ${d}` });
-        ans += d; gains.push(d);
-        snap({ i, line: 4, kind: 'ok', msg: `吃下这 ${d}，ans = ${ans}` });
-      } else {
-        snap({ i, line: 3, kind: 'miss', msg: `第 ${i} 天 ${p[i]} ≤ 前一天 ${p[i - 1]}，${d === 0 ? '没涨' : `跌了 ${-d}`}，这天不持有` });
+  function buildStock(p, rows, tr, init, L, ans, head) {
+    const n = p.length, R = rows.length, dp = grid2(R, n), s = [];
+    const snap = o => s.push({ p, rows, dp: clone2(dp), ...o });
+    const N = v => v < 0 ? '−' + (-v) : v;
+    init.forEach((v, j) => dp[j][0] = v);
+    snap({ line: L.init, col: 0, msg: head,
+      eq: rows.map((r, j) => `dp[0][${j}] = ${E(init[j] < 0 ? 'a' : 'm', N(init[j]))}`).join('&nbsp; ') });
+    for (let i = 1; i < n; i++) {
+      for (let j = 0; j < R; j++) {
+        if (!tr[j]) { dp[j][i] = dp[j][i - 1]; continue; }
+        const { from, buy, line } = tr[j], a = dp[j][i - 1], x = dp[from][i - 1];
+        const b = buy ? x - p[i] : x + p[i], v = Math.max(a, b), take = b > a;
+        dp[j][i] = v;
+        const act = buy ? `今天以 ${p[i]} 买入` : `今天以 ${p[i]} 卖出`, op = `${N(x)} ${buy ? '−' : '+'} ${p[i]}`;
+        snap({ line, col: i, cur: [j, i],
+          deps: [{ i: j, j: i - 1, lab: '不动', on: !take }, { i: from, j: i - 1, lab: (buy ? '买 −' : '卖 +') + p[i], on: take }],
+          kind: take ? 'ok' : '',
+          msg: `第 ${i} 天「${rows[j].name}」：昨天就是这样，还是 ${N(a)}；或者昨天「${rows[from].name}」，${act}，${op} = ${N(b)}。`
+            + (a === b ? `一样大，${N(v)}` : take ? `${act}更好，${N(v)}` : `不动更好，${N(v)}`),
+          eq: `dp[${i}][${j}] = max(${E(take ? 'm' : 'a', N(a))}, ${E(take ? 'a' : 'm', op)}) = ${E('b', N(v))}` });
       }
     }
-    snap({ i: -1, done: true, line: 5, kind: 'ok',
-      msg: gains.length ? `✓ 最大利润 ${ans} = ${gains.join(' + ')}` : '✓ 没有上涨的日子，返回 0' });
+    // 倒着找一条最优路线：这一格和左边不同，说明是今天走过来的
+    const path = [], acts = [];
+    let j = ans;
+    for (let i = n - 1; i >= 0; i--) {
+      path.push([j, i]);
+      if (i > 0 && tr[j] && dp[j][i] !== dp[j][i - 1]) { acts.push({ d: i, buy: tr[j].buy }); j = tr[j].from; }
+      else if (i === 0 && init[j] < 0) acts.push({ d: 0, buy: true });
+    }
+    acts.reverse();
+    const pairs = [];
+    for (let k = 0; k + 1 < acts.length; k += 2) pairs.push([acts[k].d, acts[k + 1].d]);
+    const v = dp[ans][n - 1];
+    snap({ line: L.ret, done: true, path, kind: 'ok',
+      msg: v > 0 ? `✓ 最大利润 ${v}，交易 ${pairs.length} 次` : '✓ 一直不涨，不交易，最大利润 0',
+      eq: `return dp[${n - 1}][${ans}] = ${E('g', v)}`,
+      trades: pairs.length ? `<span class="lb">一种最优方案：</span>` + pairs.map(([a, b]) => `<span class="w">第 ${a} 天 ${p[a]} 买 → 第 ${b} 天 ${p[b]} 卖 (+${p[b] - p[a]})</span>`).join('') : '' });
     return s;
   }
 
   function render(st) {
-    const seen = j => st.done || (j <= st.i && st.i >= 0);
-    $('bars').innerHTML = bars(st.p, j => {
-      let c = st.i >= 0 && j > st.i ? 'past' : '';
-      if (j === st.i) c += ' cur';
-      else if (j > 0 && seen(j)) c += st.p[j] > st.p[j - 1] ? ' up' : ' down';
-      return c;
-    }, j => (j === st.i ? '<span class="tb">i</span>' : '') + (j === st.i - 1 ? '<span class="ta">i−1</span>' : ''));
-    $('idx').innerHTML = st.p.map((v, j) => {
-      if (j === 0 || !seen(j)) return `<span>${j === 0 ? '—' : ''}</span>`;
-      const d = v - st.p[j - 1];
-      return `<span class="${d > 0 ? 'g' : 'r'}">${d > 0 ? '+' + d : d}</span>`;
-    }).join('');
-    $('eq').innerHTML = `吃下的上涨：<span class="v g">${st.gains.length ? st.gains.join(' + ') : '无'}</span>`
-      + `<span class="v b right">ans = ${st.ans}</span>`;
+    const R = st.rows.length, n = st.p.length, cls = {}, colHl = {};
+    for (let j = 0; j < R; j++) for (let i = 0; i < n; i++) if (st.dp[j][i] != null) cls[j + ',' + i] = 'done';
+    (st.deps || []).forEach(d => cls[d.i + ',' + d.j] = d.on === false ? 'done dep2' : 'dep');
+    (st.path || []).forEach(([j, i]) => cls[j + ',' + i] = 'path');
+    if (st.done) cls[st.path[0].join()] = 'ans';
+    if (st.col != null && !st.done) colHl[st.col] = 'cur';
+    drawTable('tbl', { rows: st.rows.map(r => ({ t: r.t, s: r.s })), cols: st.p.map((v, i) => ({ t: v, s: '第 ' + i + ' 天' })),
+      vals: st.dp, cls, colHl, cur: st.cur, deps: st.deps, maxW: 60, hw: 92, avail: 760, fmt: v => v < 0 ? '−' + (-v) : v });
+    $('eq').innerHTML = st.eq || '';
+    $('trades').innerHTML = st.trades || '';
   }
 
-  const fill = p => { $('pIn').value = p.join(', '); };
-  const parse = () => {
-    const n = $('pIn').value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
-    return n.length >= 1 && n.length <= 10 && n.every(x => Number.isInteger(x) && x >= 0 && x <= 20) ? n : null;
+  const parsePrices = id => {
+    const n = $(id).value.replace(/[\[\]]/g, '').split(/[,，\s]+/).filter(Boolean).map(Number);
+    return n.length >= 1 && n.length <= 9 && n.every(x => Number.isInteger(x) && x >= 0 && x <= 50) ? n : null;
   };
+
+  const EXAMPLES = [[7, 1, 5, 3, 6, 4], [1, 2, 3, 4, 5], [7, 6, 4, 3, 1], [2, 1, 2, 0, 1]];
+  const ROWS = [{ t: '不持有', s: '空仓', name: '不持有' }, { t: '持有', s: '有股', name: '持有' }];
+  const TR = [{ from: 1, buy: false, line: 6 }, { from: 0, buy: true, line: 7 }];
+  const build = p => buildStock(p, ROWS, TR, [0, -p[0]], { init: 3, ret: 9 }, 0,
+    `第 0 天：不持有收益是 0；持有就是今天买入，花掉 ${p[0]}，收益 −${p[0]}`);
+  const fill = p => { $('pIn').value = p.join(', '); };
+  const parse = () => parsePrices('pIn');
 
 
   const $ = id => document.getElementById(id);
