@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字节火山方舟 Agent · 一面 · 2026-11-16</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --text: #1d2129;
+    --text2: #4e5969;
+    --muted: #86909c;
+    --line: #e5e6eb;
+    --accent: #c73a74;
+    --deep: #253d2c;
+    --mint: #82c2a4;
+    --mint-soft: #e8f4ee;
+    --accent-soft: #fbe9f1;
+    --accent-ink: #a52c5e;
+    --note: var(--mint-soft);
+    --note-ink: var(--deep);
+    --mine: #f2f3f5;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 17px/1.75 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 侧边栏 ---------- */
+  aside {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 280px; overflow-y: auto;
+    background: var(--card); border-right: 1px solid var(--line); padding: 32px 20px 40px;
+  }
+  .brand { padding: 0 12px 22px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  .brand .co { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: .5px; }
+  .brand h1 { font-size: 22px; line-height: 1.4; margin: 6px 0 10px; }
+  .brand .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .brand .meta span { font-size: 13px; color: var(--text2); background: var(--mine); padding: 2px 10px; border-radius: 6px; }
+  .toggle-all {
+    margin: 0 12px 18px; width: calc(100% - 24px); padding: 8px 0; font: inherit; font-size: 14px;
+    color: var(--text2); background: var(--card); border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  }
+  .toggle-all:hover { color: var(--accent); border-color: var(--accent); }
+  nav .grp { margin-bottom: 18px; }
+  nav .grp > a {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 8px;
+    font-size: 15px; font-weight: 700; color: var(--text); text-decoration: none;
+  }
+  nav .grp > a .n {
+    width: 22px; height: 22px; border-radius: 6px; flex: none; font-size: 12px;
+    display: inline-flex; align-items: center; justify-content: center; background: var(--mine); color: var(--text2);
+  }
+  nav .grp.on > a .n { background: var(--deep); color: #fff; }
+  nav .items { margin: 4px 0 0 23px; border-left: 1px solid var(--line); }
+  nav .items a {
+    display: block; padding: 5px 12px 5px 16px; margin-left: -1px; font-size: 14px; line-height: 1.5;
+    color: var(--text2); text-decoration: none; border-left: 2px solid transparent;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  nav .items a:hover { color: var(--text); }
+  nav .items a.on { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+
+  /* ---------- 正文 ---------- */
+  main { margin-left: 280px; padding: 48px 56px 120px; }
+  .inner { max-width: 880px; margin: 0 auto; }
+  section + section { margin-top: 56px; }
+  h2 { font-size: 26px; margin: 0 0 20px; display: flex; align-items: center; gap: 12px; }
+  h2 .num {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--deep); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 17px;
+  }
+
+  .q {
+    background: var(--card); border-radius: 14px; padding: 26px 30px; margin-bottom: 16px;
+    border: 1px solid var(--line); transition: border-color .2s;
+  }
+  .q:target { border-color: var(--mint); }
+  .q-title { font-size: 22px; font-weight: 700; line-height: 1.5; display: flex; gap: 12px; align-items: baseline; }
+  .q-title .idx {
+    flex: none; font-size: 13px; font-weight: 700; color: var(--deep); background: var(--mint-soft);
+    padding: 1px 8px; border-radius: 6px; transform: translateY(-2px);
+  }
+  .q-sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .mine {
+    margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--mine);
+    font-size: 15px; color: var(--text2); display: flex; gap: 10px; align-items: baseline;
+  }
+  .mine .lab { flex: none; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+  details { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; }
+  summary {
+    cursor: pointer; list-style: none; user-select: none; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 600; color: var(--accent);
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg); transition: transform .2s; margin-right: 2px;
+  }
+  details[open] summary::before { transform: rotate(45deg) translate(-2px, -2px); }
+  summary:hover { color: var(--accent-ink); }
+
+  /* 答案区：一级要点 = 标签单独一行 + 左侧竖线，二级要点 = 小圆点 */
+  details > ul { margin: 14px 0 0; padding: 18px 22px; list-style: none; background: #fafafb; border-radius: 12px; }
+  details > ul > li { position: relative; padding: 2px 0 2px 16px; margin: 0; color: var(--text2); font-size: 16px; line-height: 1.8; }
+  details > ul > li + li { margin-top: 16px; }
+  details > ul > li::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--accent); }
+  details > ul > li > b:first-child { display: block; color: var(--accent); font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 2px; }
+  li ul { margin: 6px 0 0; padding: 0; list-style: none; }
+  li li { position: relative; padding-left: 16px; margin: 4px 0; font-size: 16px; line-height: 1.8; color: var(--text2); }
+  li li::before { content: ""; position: absolute; left: 2px; top: .78em; width: 5px; height: 5px; border-radius: 50%; background: #c9cdd4; }
+  li li > b:first-child { color: #4e5969; font-weight: 600; }
+  b { color: var(--text); font-weight: 600; }
+  mark {
+    color: var(--text); font-weight: inherit; padding: 0 2px; border-radius: 3px;
+    background: linear-gradient(transparent 58%, rgba(199, 58, 116, .28) 58%);
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: "SF Mono", Menlo, monospace; background: var(--mine); padding: 1px 6px; border-radius: 5px; font-size: .88em; color: var(--text); }
+  .tip {
+    margin-top: 14px; padding: 12px 16px; border-radius: 10px; background: var(--note); color: var(--note-ink);
+    font-size: 15px; line-height: 1.7; border-left: 3px solid var(--mint);
+  }
+
+  @media (max-width: 960px) {
+    aside { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+    main { margin-left: 0; padding: 32px 20px 80px; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <div class="co">字节跳动 · 火山方舟</div>
+    <h1>Agent 开发 · 一面</h1>
+    <div class="meta"><span>2026-11-16</span><span>面试复盘</span></div>
+  </div>
+  <button class="toggle-all" id="toggleAll" type="button">全部展开</button>
+  <nav id="nav"></nav>
+</aside>
+<main><div class="inner">
+  <!-- ==================== 第一部分 ==================== -->
+  <section id="p1">
+    <h2><span class="num">1</span>花生 MG 项目深挖</h2>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>花生是一个什么产品？</div>
+      <div class="q-sub">一句话定位、给谁用、完整流程</div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>一句话</b>：给 B 站 UP 主用的 AI 视频 Agent，输入口播文稿（或上传录音），自动做出带配音、素材、MG 动画、BGM 的完整视频</li>
+          <li><b>用户输入怎么处理</b>：先判断输入类型，原则是<mark>能不改就不改</mark>
+            <ul>
+              <li><b>完整口播稿</b>：一字不改</li>
+              <li><b>太短</b>：问要不要扩写，保留原句</li>
+              <li><b>大纲 / 要点</b>：整理成口播稿，不编造</li>
+              <li><b>夹着制作指令</b>：删指令，正文不动</li>
+              <li><b>只有题目</b>：联网查资料后写新稿</li>
+            </ul>
+          </li>
+          <li><b>规划书里有什么</b>：
+            <ul>
+              <li><b>头部</b>：标题、品类、画幅、音色、BGM、风格</li>
+              <li><b>正文</b>：场景 → 分镜（口播句）→ 动画（版式 + 要点）</li>
+            </ul>
+          </li>
+          <li><b>制作链路</b>：建分镜 → 批量 TTS → 检索视频素材 → 生成 MG → 配 BGM → 每个分镜 GPU 渲染合成</li>
+          <li><b>成片后</b>：用自然语言继续改，比如「第 3 镜换个动画」「整片换音色」，<mark>Agent 只改受影响的分镜</mark></li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>什么是 MG 动画？</div>
+      <div class="q-sub">和 AI 生视频的区别是关键</div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>MG = Motion Graphics</b>：用文字、图形、图标、数据图表加动效讲内容，常见于知识科普、产品讲解、数据可视化</li>
+          <li><b>和 AI 生视频的区别</b>：AI 生视频输出像素，没法精确改一个字；<mark>MG 由结构化元素组成</mark>，文字准确、可以逐元素修改，适合信息类内容</li>
+          <li><b>生成方式</b>：MG <mark>产物是 HTML 动画</mark>
+            <ul>
+              <li>LLM 先提取每段文稿的语义（要点、数据、对比关系）</li>
+              <li>从模板库召回候选（模板按 26 个文稿分类组织），精排后填充内容组装</li>
+              <li>按配音时长对齐动效节奏，套用全局风格（内置 14 套）</li>
+            </ul>
+          </li>
+          <li><b>为什么用模板 + LLM，不让模型从零写动画</b>：<mark>模板保住设计下限和稳定性</mark>，LLM 负责理解和选择，兼顾质量和速度</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>你在项目里做了哪些工作？遇到过哪些问题？</div>
+      <div class="mine"><span class="lab">我的回答</span><span>问题：不按预期加载 skill（插 reminder）；调错工具、工具参数有问题（校验，错误信息加到 loop 里重试）</span></div>
+      <details>
+        <summary>做了哪些工作</summary>
+        <ul>
+          <li><b>MG 动画的实现</b>：
+            <ul>
+              <li><b>生成流程</b>：LLM 提取每段口播的语义（要点、数据、对比关系）→ 从模板库召回 → 精排 → 填充组装成 HTML 动画</li>
+              <li><b>风格统一</b>：模板按 26 个文稿分类组织，整片套用一套全局风格（内置 14 套）</li>
+              <li><b>音画对齐</b>：按配音时长对齐动效节奏，流式返回每一段的结果</li>
+            </ul>
+          </li>
+          <li><b>MG 工具接入 Agent</b>：
+            <ul>
+              <li><b>两个工具</b>：<mark>produce_mg 从头生成</mark>（新加、换版式、改范围），<mark>revise_mg 局部改</mark>（改字、改颜色、换图）。局部改更便宜，也不会动到用户满意的部分</li>
+              <li><b>版本记录</b>：每次生成都留版本，想换回旧版免费</li>
+              <li><b>花钱先问</b>：一轮超过 3 个动画或用户没点名的重做，先问用户</li>
+            </ul>
+          </li>
+        </ul>
+      </details>
+      <details>
+        <summary>遇到过哪些问题</summary>
+        <ul>
+          <li><b>不按预期加载 skill</b>：
+            <ul>
+              <li><b>现象</b>：成片后用户要改视频，模型不先读修改规划的 skill，直接动手改</li>
+              <li><b>解决</b>：每轮开始前<mark>按状态插 system-reminder</mark>，提示「已成片，要改先读 skill」</li>
+              <li><b>踩坑</b>：一开始每轮都插，会话只追加，同一条提醒被复制很多份，曾把输入顶到上限。改成读过 skill 或提醒过一次就不再插</li>
+            </ul>
+          </li>
+          <li><b>调错工具、参数不对</b>：
+            <ul>
+              <li><b>现象</b>：该局部改的调了重做；范围跨场景；配音没好就做动画</li>
+              <li><b>解决</b>：执行前校验，不通过就<mark>返回原因，不执行、不扣费</mark>；错误信息回到 loop，模型自己改参数重试</li>
+              <li><b>错误要写清怎么改</b>：比如「写『分镜15』或『分镜5-分镜7』」，不只说「参数错误」</li>
+              <li><b>限制重试</b>：同参数不许重试，最多 2～3 次，还不行就告诉用户</li>
+            </ul>
+          </li>
+          <li><b>改了配音，动画对不上</b>：
+            <ul>
+              <li><b>现象</b>：用户改口播或换音色后，配音时长变了，动画的节奏还是旧的</li>
+              <li><b>解决</b>：记录每个动画生成时的配音，变了就标记「配音已变」，告诉用户哪些动画需要重做，由用户决定</li>
+            </ul>
+          </li>
+          <li><b>模型过度调用</b>：
+            <ul>
+              <li><b>现象</b>：整片做完后，模型又把 360 个分镜全部重做了一遍，又慢又费钱</li>
+              <li><b>解决</b>：工具描述写清「整片制作已包含所有步骤，不要逐镜重做」，再加评测用例防止回退</li>
+            </ul>
+          </li>
+        </ul>
+        <div class="tip">讲问题时按「现象 → 原因 → 解决」说，挑一个讲细，另外几个一句带过</div>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>相比直接让 Opus 这类通用大模型做视频，花生的优势在哪？</div>
+      <div class="q-sub">面试官本质在问：壁垒是什么</div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>完整链路</b>：Opus 能写一段动画代码，但配音、素材检索、BGM、音画对齐、GPU 渲染、导出都没有；花生<mark>一句文稿出成片</mark></li>
+          <li><b>质量下限稳</b>：模板库、14 套风格、设计规范兜底，<mark>不靠模型每次即兴发挥</mark></li>
+          <li><b>可编辑</b>：产物是结构化工程，<mark>可以改单个分镜</mark>、单个动画，不用整片重来</li>
+          <li><b>成本和速度</b>：确定性步骤交给工程，<mark>子任务交给便宜模型</mark>，只在需要理解的地方调大模型</li>
+          <li><b>领域积累</b>：素材库、模板、B 站内容品类、用户的历史偏好，通用模型没有</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>花生的用户画像是什么样的？</div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>核心用户</b>：B 站知识区、科普、财经、科技类 UP 主，以口播加信息图为主</li>
+          <li><b>痛点</b>：有内容，但剪辑和做动画太耗时，<mark>不会 AE</mark>，请人做成本高</li>
+          <li><b>两种入口</b>：只有文稿的（花生配音），已经录好口播的（上传音频，转写后对齐）</li>
+          <li><b>扩展人群</b>：运营、市场、教育从业者，做讲解和宣传视频</li>
+        </ul>
+        <div class="tip">有真实数据（人群分布、留存、复购）的话一定要带上</div>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q6</span>花生目前有哪些局限？</div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>内容形态窄</b>：<mark>适合口播加信息图</mark>，剧情、Vlog 这类偏画面叙事的内容做不好；只支持中英文</li>
+          <li><b>效果上限受模板约束</b>：风格多样性有限，高要求用户觉得像模板</li>
+          <li><b>耗时和成本</b>：长视频链路长，MG 生成、渲染都要排队等待</li>
+          <li><b>隔离不彻底</b>：CLI 子进程还没用 bwrap 包住，<mark>沙箱实例能访问内网</mark>，出站网络还没收紧</li>
+          <li><b>精细修改难</b>：自然语言描述「往左挪一点」这类细节，Agent 理解不稳定</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q7</span>针对这些局限，你会怎么改进？</div>
+      <div class="q-sub">重点讲两条：沙箱化、Pro 版本</div>
+      <details open>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>沙箱化</b>：
+            <ul>
+              <li><b>现状</b>：一个项目一个阿里云 FC 实例，空闲 10 分钟回收；run 结束把会话和项目文件打快照存 S3，下次恢复</li>
+              <li><b>进程隔离</b>：<mark>用 bwrap 把 Agent 进程包起来</mark>，只能看到本项目目录</li>
+              <li><b>网络隔离</b>：<mark>出站改白名单</mark>，只放行网关和素材服务，禁止访问其他内网地址</li>
+              <li><b>冷启动</b>：迁到兼容 E2B 的 Agent Sandbox，用模板预构建和<mark>预热池</mark>，缩短首次响应时间</li>
+              <li><b>开放平台</b>：隔离做好后，开发者可以用 Claude Code plugin 格式写自己的视频工作流，跑在同一套沙箱里</li>
+            </ul>
+          </li>
+          <li><b>Pro 版本</b>：
+            <ul>
+              <li><b>更强的模型</b>：Pro 用户的规划和动效设计走更强的模型，普通版继续用 flash 类模型控成本</li>
+              <li><b>更高的效果上限</b>：<mark>允许 LLM 在模板基础上直接改写 HTML 动画</mark>，不局限于填充模板；支持品牌色、字体、片头片尾等自定义风格</li>
+              <li><b>更长、更高规格</b>：长视频、高分辨率导出，AI 生视频额度更多</li>
+              <li><b>精细编辑</b>：在画布上<mark>点选元素再用自然语言改</mark>，减少表达歧义</li>
+              <li><b>体验</b>：渲染优先队列，多分镜并行生成</li>
+            </ul>
+          </li>
+          <li><b>效果衡量</b>：扩充评测集，按<mark>成片率、阻断错误率</mark>、平均耗时、单片成本、用户修改轮数来跟踪</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- ==================== 第二部分 ==================== -->
+  <section id="p2">
+    <h2><span class="num">2</span>开放问题：Agent 产品体验</h2>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>你用过最好的 Agent 产品是什么？</div>
+      <div class="mine"><span class="lab">我的回答</span><span>Claude（Claude Code）</span></div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>先给结论再给理由</b>：Claude Code，日常写代码、排查线上问题、整理文档都在用</li>
+          <li><b>说具体场景</b>：比如用它查 SLS 日志做错误聚类、本地起服务验证改动，这类<mark>多步骤任务它能自己跑完</mark></li>
+          <li><b>落到自己的工作</b>：它的工具设计、上下文管理，哪些借鉴到了花生 Agent 里</li>
+        </ul>
+      </details>
+      <details>
+        <summary>值得研究的 Agent 产品</summary>
+        <ul>
+          <li><b>编码类</b>：Claude Code、OpenAI Codex、Cursor（Agent 模式）、Trae（字节）、Gemini CLI、开源的 OpenCode / Aider</li>
+          <li><b>通用任务类</b>：Manus、ChatGPT Agent，看它们怎么用浏览器和虚拟机沙箱完成长任务</li>
+          <li><b>深度研究类</b>：OpenAI / Gemini 的 Deep Research，看多轮检索和长报告怎么规划</li>
+          <li><b>生成应用类</b>：v0、Lovable、Bolt，看「一句话生成可编辑产物」的交互，和花生最像</li>
+          <li><b>Agent 平台</b>：扣子 Coze、火山方舟（面字节必看）、Dify，看工作流、插件、知识库怎么组织</li>
+        </ul>
+        <div class="tip">面火山方舟前，至少把方舟和扣子上手做一个小 Agent，面试能聊具体体验</div>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>作为用户，Claude 相比 Codex、DeepSeek 等，好在哪里？</div>
+      <div class="mine"><span class="lab">我的回答</span><span>想得更全面，不会像 Codex 那样写一堆测试文件、过度设计</span></div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>模型层</b>：理解意图准，改动范围克制，代码风格贴近已有项目</li>
+          <li><b>Harness 层</b>：
+            <ul>
+              <li>工具设计细：<mark>Edit 按原文精确替换</mark>，不整文件重写，改动小、出错容易发现</li>
+              <li>上下文工程：CLAUDE.md 项目规则、自动压缩、<mark>子 Agent 隔离上下文</mark>、工具按需加载</li>
+              <li>可扩展：Skills、Hooks、MCP、斜杠命令，团队能把经验沉淀成可复用流程</li>
+              <li>可控：权限模式、<mark>Plan 模式先出方案再动手</mark>，危险操作先确认</li>
+            </ul>
+          </li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>追问：写多余测试、过度设计，是模型的问题还是 Agent 的问题？</div>
+      <div class="mine"><span class="lab">面试官观点</span><span>是 GPT 模型的问题</span></div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>主要是模型</b>：这类倾向来自后训练。如果 <mark>RL 的奖励是「测试通过」</mark>，模型就学会了多写测试、多做防御</li>
+          <li><b>Harness 能放大，也能缓解</b>：系统提示里写「不做没要求的功能」「完成就停」，能压住一部分；反过来，鼓励「每次都要写测试验证」的提示会放大它</li>
+          <li><b>怎么证明</b>：<mark>控制变量</mark>。同一个 Harness 换模型（如 OpenCode 分别接 Claude 和 GPT），或同一个模型换 Harness，看行为跟着谁变</li>
+          <li><b>结论</b>：同意主要是模型问题，但做 Agent 的人<mark>不能只怪模型</mark>，要用提示、工具和评测把行为约束住</li>
+        </ul>
+        <div class="tip">这题的加分点是给出「怎么验证」，而不是只站队</div>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>Claude 有哪些不好的设计？</div>
+      <div class="mine"><span class="lab">我的回答</span><span>很多临时诉求被记进了 memory</span></div>
+      <details>
+        <summary>参考答案</summary>
+        <ul>
+          <li><b>记忆写入不分轻重</b>：<mark>一次性的要求被当成长期偏好</mark>，之后每次会话都会受影响；记忆也会过时，和代码现状不符</li>
+          <li><b>压缩丢细节</b>：长会话自动压缩后，前面的报错原文、约定的细节可能丢失</li>
+          <li><b>权限确认疲劳</b>：确认弹窗太多，<mark>用户干脆开全部放行</mark>，反而更不安全</li>
+          <li><b>子 Agent 是黑盒</b>：主 Agent 只拿到摘要，子 Agent 的错误会以<mark>同样自信的口吻</mark>带回来；并行开多个时 token 消耗突增</li>
+          <li><b>系统提示膨胀</b>：Skills、MCP 工具一多，描述列表占掉大量上下文（后来改为工具按需加载，缓解了这一点）</li>
+          <li><b><mark>过早报完成</mark></b>：没真正验证就说「已完成」，需要用户再检查</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>临时诉求被记进 memory，怎么解决？</div>
+      <div class="mine"><span class="lab">我的回答</span><span>压缩时统一判断会话里的诉求是临时还是永久</span></div>
+      <details>
+        <summary>我的回答对吗</summary>
+        <ul>
+          <li><b>方向对</b>：压缩时能看到整段会话，比听到一句话就判断准。比如先说「这次别写测试」，后面又说「以后都别写」，放在一起看才分得清</li>
+          <li><b>可以主动说的加分点</b>：当前会话里，用户的要求本来就在上下文中，不需要马上写进记忆。<mark>推迟到压缩时统一判断</mark>，本次会话的效果不受影响</li>
+          <li><b>不足一：时机不全</b>：短会话还没触发压缩就结束了，会漏判，所以<mark>会话结束时也要判断一次</mark></li>
+          <li><b>不足二：单次会话判断不了「永久」</b>：一个要求是不是长期偏好，最可靠的信号是它<mark>在别的会话里再次出现</mark>。只看一次会话，本质上还是在猜</li>
+          <li><b>不足三：不只有临时和永久两种</b>：有的只对当前项目有效，有的对所有项目有效</li>
+          <li><b>不足四：只管写入，不管存量</b>：代码改了、偏好变了，旧记忆会过时</li>
+          <li><b>不足五：判断靠模型，会出错</b>：要有纠错入口和衡量指标</li>
+        </ul>
+      </details>
+      <details>
+        <summary>完整方案</summary>
+        <ul>
+          <li><b>判断时机</b>：压缩时和会话结束时，两处都统一判断</li>
+          <li><b>分层存储</b>：先写成<mark>带有效期的「候选记忆」</mark>；同类诉求跨会话再次出现，或用户明确说「以后都这样」，才升级为长期记忆</li>
+          <li><b>标明作用范围</b>：<mark>本次会话 / 本项目 / 全局三档</mark>，召回时按范围过滤</li>
+          <li><b>召回时校验</b>：记忆里提到的文件、函数先确认还存在；<mark>和当前指令冲突时以当前指令为准</mark></li>
+          <li><b>用户可见可改</b>：写入长期记忆时告诉用户一声，提供查看和删除入口</li>
+          <li><b>可衡量</b>：统计记忆被召回后用户纠正的比例，作为<mark>误记率</mark></li>
+        </ul>
+      </details>
+      <details>
+        <summary>面试这样答</summary>
+        <div class="tip">我会在压缩和会话结束时统一判断。这时能看到完整上下文，而且当前会话的要求本来就在上下文里，推迟写入不影响效果。但单次会话很难判断一个要求是不是长期偏好，所以先存为带有效期的候选记忆，并标明作用范围；跨会话再次出现，或者用户明确说「以后都这样」，才升级为长期记忆。召回时先校验内容是否还成立，用户也能查看和删除。最后用误记率衡量效果。</div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ==================== 第三部分 ==================== -->
+  <section id="p3">
+    <h2><span class="num">3</span>手撕代码</h2>
+
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>726. 原子的数量（困难）</div>
+      <div class="q-sub">给一个化学式，如 <code>K4(ON(SO3)2)2</code>，按字典序输出每种原子的个数：<code>K4N2O14S4</code></div>
+      <details open>
+        <summary>思路</summary>
+        <ul>
+          <li><b>题目</b>：<a href="https://leetcode.cn/problems/number-of-atoms/" target="_blank" rel="noopener">leetcode.cn/problems/number-of-atoms</a></li>
+          <li><b>题解</b>：<a href="../18-字节高频/0726-原子的数量/explain.html">18-字节高频/0726-原子的数量</a>（动画 + C++ / Python）</li>
+          <li><b>栈 + 哈希表</b>：<mark>每层括号一张表</mark>。遇 ( 压一张新表；读到原子把数量加进栈顶；遇 ) 读倍数 k，弹出栈顶，每个数量 ×k 加回上一层</li>
+          <li><b>易错</b>：) 后没数字时<mark>倍数是 1</mark>；原子名是大写加若干小写；输出按字典序，数量 1 不写</li>
+          <li><b>复杂度</b>：<mark>最坏 O(n²)</mark>（层层嵌套，每次出栈都重乘），空间 O(n)</li>
+          <li><b>同类题</b>：394 字符串解码、224 基本计算器</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- 后续部分接在这里 -->
+
+</div></main>
+<script>
+(() => {
+  // 一级要点的标签单独成行，去掉后面的冒号
+  document.querySelectorAll('main details > ul > li > b:first-child').forEach(b => {
+    const t = b.nextSibling;
+    if (t && t.nodeType === 3) t.textContent = t.textContent.replace(/^[：:]\s*/, '');
+  });
+
+  // 给每题加 id，生成侧边目录
+  const nav = document.getElementById('nav');
+  const links = [];
+  document.querySelectorAll('main section').forEach((sec, si) => {
+    const grp = document.createElement('div');
+    grp.className = 'grp';
+    const h = sec.querySelector('h2');
+    grp.innerHTML = `<a href="#${sec.id}"><span class="n">${si + 1}</span>${h.lastChild.textContent.trim()}</a><div class="items"></div>`;
+    const items = grp.querySelector('.items');
+    sec.querySelectorAll('.q').forEach((q, qi) => {
+      q.id = `${sec.id}-q${qi + 1}`;
+      const t = q.querySelector('.q-title');
+      const text = t.lastChild.textContent.trim();
+      const a = document.createElement('a');
+      a.href = '#' + q.id; a.textContent = text; a.title = text;
+      items.appendChild(a);
+      links.push({ a, el: q, grp });
+    });
+    nav.appendChild(grp);
+  });
+
+  // 滚动时高亮当前题
+  const spy = () => {
+    let cur = links[0];
+    for (const l of links) if (l.el.getBoundingClientRect().top < 140) cur = l;
+    links.forEach(l => l.a.classList.toggle('on', l === cur));
+    document.querySelectorAll('nav .grp').forEach(g => g.classList.toggle('on', g === cur.grp));
+  };
+  addEventListener('scroll', spy, { passive: true });
+  spy();
+
+  // 点目录跳到某题时自动展开答案
+  addEventListener('hashchange', () => {
+    const q = document.getElementById(location.hash.slice(1));
+    q && q.querySelectorAll('details').forEach(d => d.open = true);
+  });
+
+  // 全部展开 / 收起
+  const btn = document.getElementById('toggleAll');
+  btn.onclick = () => {
+    const ds = document.querySelectorAll('main details');
+    const open = [...ds].some(d => !d.open);
+    ds.forEach(d => d.open = open);
+    btn.textContent = open ? '全部收起' : '全部展开';
+  };
+})();
+</script>
+</body>
+</html>
