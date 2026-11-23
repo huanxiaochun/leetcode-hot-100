@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek Harness · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">CODING AGENT</div>
+    <h1>DeepSeek Harness</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">DeepSeek 开源的 Agent 运行时（命令叫 <code>dsh</code>）：<mark>开箱是一个 Coding Agent，拆开是一套「一切皆插件」的 Agent 底座</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">DeepSeek</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2026-08 开源，开发者预览版</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">本地 Web UI、一次性 CLI、TS / Python SDK、ACP、桌面版</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">默认 DeepSeek V4.1-Flash / V4-Pro，可接 Anthropic、OpenAI、Kimi、GLM</div></div>
+        <div class="fact"><div class="k">许可</div><div class="v">MIT</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：Claude Code 是一个<b>做好的产品</b>，DSH 是一套<b>拼产品的积木</b>。模型适配、工具、沙箱、会话存储，连 <b>agent loop 本身都是可替换的插件</b>，下一节用一个真实插件讲清楚。</div>
+    <div class="card mt">
+      <h3>先分清：什么是 harness</h3>
+      <p><b>Agent = 模型 + harness</b>。harness 是夹在模型和你电脑之间的那层程序：决定模型怎么调工具、怎么改文件、怎么跑命令、怎么记住做到哪了。</p>
+      <p>同一个模型换个 harness，表现能差很多。DeepSeek 自己做 harness，是为了把模型和运行时一起调优。</p>
+    </div>
+  </section>
+
+  <!-- ==================== 一切皆插件 ==================== -->
+  <section id="s-plugin">
+    <h2>插件系统</h2>
+    <div class="card">
+      <h3>先把「插件」落到实处：它就是一个 JS 文件，导出三样东西</h3>
+      <ul class="pts">
+        <li><b><code>name</code></b>：我叫什么</li>
+        <li><b><code>inject</code></b>：我要用到哪些服务，比如 <code>['tools']</code>。这些服务没准备好之前，我不启动</li>
+        <li><b><code>apply(ctx)</code></b>：启动时做什么。<code>ctx</code> 是一块所有插件共用的「公告板」，上面挂着各种服务</li>
+      </ul>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>和普通程序比，差在哪</h3>
+    <div class="grid">
+      <div class="card">
+        <h3>普通 Agent 程序</h3>
+        <p>主函数里把每个部件<b>写死</b>：</p>
+        <pre class="code">main():
+  llm   = DeepSeekClient()
+  tools = [Read(), Edit(), Bash()]
+  log   = JsonlLog()
+  run_loop(llm, tools, log)</pre>
+        <p>想换模型、加工具，得改 <code>main</code> 重新编译。</p>
+      </div>
+      <div class="card green">
+        <h3>DSH</h3>
+        <p>主程序只做一件事：<b>读一张配置表，按行加载插件</b>。</p>
+        <pre class="code">- id: <span class="s">llm-deepseek</span>     <span class="c"># 模型适配</span>
+- id: <span class="s">tool-bash</span>        <span class="c"># 一个工具</span>
+- id: <span class="s">session-jsonl</span>    <span class="c"># 会话存储</span>
+- id: <span class="s">agent-loop</span>       <span class="c"># 循环本身</span>
+<span class="c"># ……默认 Web 版近 300 行</span></pre>
+        <p>换一行、删一行、加一行，就是换部件。</p>
+      </div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>一个完整的插件：给模型加一个「统计字数」工具</h3>
+    <pre class="code"><span class="c">// word-stats.mjs（据第三方实测改写的简化版；原版 28 行，在 npm 安装版上跑通）</span>
+<span class="k">import</span> { readFile } <span class="k">from</span> <span class="s">'node:fs/promises'</span>
+<span class="k">import</span> { defineTool } <span class="k">from</span> <span class="s">'@deepseek-ai/dsh-tools'</span>
+
+<span class="k">export const</span> name   = <span class="s">'word-stats-tool'</span>
+<span class="k">export const</span> inject = [<span class="s">'tools'</span>]          <span class="c">// ① 我依赖 ctx.tools 这个服务</span>
+
+<span class="k">export function</span> apply(ctx) {               <span class="c">// ② 启动时被调用</span>
+  ctx.tools.register(defineTool({          <span class="c">// ③ 往工具服务里登记一个工具</span>
+    name: <span class="s">'word_stats'</span>,
+    description: <span class="s">'统计工作区里一个文本文件的行数、词数、字符数'</span>,
+    parameters: { path: { type: <span class="s">'string'</span>, required: <span class="k">true</span> } },
+    output: { schema: { type: <span class="s">'string'</span> } },
+    <span class="k">async</span> execute(args) {                  <span class="c">// ④ 模型调用时真正执行的代码</span>
+      <span class="k">const</span> text = <span class="k">await</span> readFile(args.path, <span class="s">'utf8'</span>)
+      <span class="k">return</span> `lines=${text.split(<span class="s">'\n'</span>).length - 1} words=… chars=…`
+    },
+  }))
+}</pre>
+    <pre class="code"><span class="c"># patch.yml：把它插进配置表</span>
+- insert:
+    - id: <span class="s">word-stats</span>
+      name: <span class="s">'./word-stats.mjs'</span></pre>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">dsh 启动，读配置表</div><div class="d">基础层 + 你的 patch，拼出完整的插件列表，看到 <code>word-stats</code> 这一行</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">等依赖就绪</div><div class="d">它声明了 <code>inject: ['tools']</code>，框架等 <code>ctx.tools</code> 这个服务被别的插件提供出来，再启动它</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">调用 apply(ctx)</div><div class="d"><code>word_stats</code> 被登记进工具注册表</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">下一次请求，模型就能看到它</div><div class="d">拼提示词的插件从注册表读出所有工具 schema，<code>word_stats</code> 自动在里面</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">模型调用 → 走工具管道 → 执行 execute</div><div class="d">权限、沙箱、Hook 照常生效，插件作者不用管</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">↺</div>
+        <div class="body"><div class="h">删掉这行配置，工具自动消失</div><div class="d">登记是「可撤销的副作用」，插件卸载时框架把它撤掉，不用重启</div></div>
+      </div>
+    </div>
+    <div class="tip warn">实测踩坑：单独一个 .mjs 文件找不到 <code>@deepseek-ai/dsh-tools</code>，要给插件配自己的 <code>package.json</code>（或临时写绝对路径）。加载失败时 dsh 只打印 <code>1 entry did not activate</code>，然后<b>不带这个插件继续跑</b>。</div>
+
+    <h3 class="sub"><span class="no">3</span>插件和工具有什么区别</h3>
+    <div class="card">
+      <h3>工具是给模型用的，插件是给程序用的</h3>
+      <p>工具是模型能看到、能主动调用的一项能力。插件是程序启动时加载的一段代码，它往系统里登记东西，登记的可以是工具，也可以是别的。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">🧩</div><h3>插件：<code>word-stats.mjs</code></h3><p>dsh 启动时读配置表，加载这个文件，调用它的 <code>apply(ctx)</code>。<b>模型完全不知道这个文件存在。</b></p></div>
+      <div class="card green"><div class="ico">🔧</div><h3>工具：<code>word_stats</code></h3><p>插件登记进去的东西。有名字、描述、参数 schema，出现在发给模型的工具列表里，<b>由模型决定什么时候调用</b>。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>工具</th><th>插件</th></tr>
+      <tr><td>谁用它</td><td>模型</td><td>程序（dsh 启动时加载）</td></tr>
+      <tr><td>模型看得到吗</td><td>看得到，schema 在提示词里</td><td>看不到</td></tr>
+      <tr><td>什么时候起作用</td><td>模型决定调用时</td><td>启动时加载，之后一直在</td></tr>
+      <tr><td>由什么组成</td><td>名字 + 描述 + 参数 + 执行函数</td><td><code>name</code> + <code>inject</code> + <code>apply(ctx)</code></td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>一个插件可以登记多个工具</b>：MCP 插件连上一个 server，会把这个 server 的所有工具都登记进去</li>
+      <li><b>很多插件一个工具都不登记</b>：下面讲的拦截 <code>rm -rf</code> 的插件只监听事件；模型适配器、沙箱后端、会话存储、会话日志上传也都是这类。它们改变程序怎么运行，模型调不了它们</li>
+    </ul>
+    <div class="tip">在 dsh 里，<b>工具只是插件能提供的东西之一</b>。插件还能提供模型适配器、事件监听、沙箱、存储，甚至 agent loop 本身。<br>Claude Code 的说法不同，但层级一样：Plugin 是外层的安装包，里面的 MCP 配置最后给模型带来工具。</div>
+
+    <h3 class="sub"><span class="no">4</span>插件之间怎么配合：服务 + 事件</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">⬆</div><h3>提供服务</h3><p>「我就是工具注册表」：在 ctx 上占一个名字，比如 <code>ctx.tools</code>。别的插件按名字找它，不 import 具体实现。</p></div>
+      <div class="card"><div class="ico">⬇</div><h3>使用服务</h3><p>「我往注册表里加东西」：上面的 <code>word_stats</code> 就是这种，调用 <code>ctx.tools.register()</code>。</p></div>
+      <div class="card"><div class="ico">👂</div><h3>监听事件</h3><p>「有工具要执行时叫我一声」：监听 <code>tools/pre-execute</code>，可以放行、拦截或改参数。</p></div>
+    </div>
+    <pre class="code mt"><span class="c">// 示意代码（签名做了简化）：一个禁止 rm -rf 的插件，只靠监听事件</span>
+<span class="k">export const</span> inject = [<span class="s">'tools'</span>]
+<span class="k">export function</span> apply(ctx) {
+  ctx.on(<span class="s">'tools/pre-execute'</span>, <span class="k">async</span> (call, next) => {
+    <span class="k">if</span> (call.name === <span class="s">'bash'</span> && <span class="s">/rm\s+-rf/</span>.test(call.args.command))
+      <span class="k">return</span> { decision: <span class="s">'deny'</span>, reason: <span class="s">'不允许 rm -rf'</span> }  <span class="c">// 不调 next()：到此为止</span>
+    <span class="k">return</span> next()                                          <span class="c">// 交给下一个监听者</span>
+  })
+}</pre>
+    <table class="cmp mt">
+      <tr><th>派发方式</th><th>一句话</th><th>DSH 里的例子</th></tr>
+      <tr><td><code>emit</code></td><td>广播通知，不要返回值</td><td><code>tools/result</code>：工具结果出来了，记日志、算指标</td></tr>
+      <tr><td><code>waterfall</code></td><td>洋葱式中间件，一层包一层，调 <code>next()</code> 往里传</td><td><code>tools/pre-execute</code>、<code>tools/execute</code>、<code>llm/stream</code></td></tr>
+      <tr><td><code>serial</code></td><td>按顺序一个个等它做完</td><td><code>agent/turn-stopping</code>：一轮要结束了，谁还想让它继续</td></tr>
+    </table>
+
+    <div class="tip">Cordis 还有 <code>parallel</code>（同时通知、等全部完成）和 <code>bail</code>（依次问、谁先给答案就停）两种派发方式，写插件时按需要选。</div>
+
+    <h3 class="sub"><span class="no">5</span>「一切」到底包括什么</h3>
+    <p>默认 Web 版启动的近 300 个配置行里，下面这些全是插件，都能换或关：</p>
+    <div class="grid mt">
+      <div class="card"><h3>模型</h3><p>DeepSeek 适配器、多家模型适配器、默认用哪个模型</p></div>
+      <div class="card"><h3>工具</h3><p>读写文件、bash、搜索、联网、子代理、待办、目标</p></div>
+      <div class="card"><h3>循环与状态</h3><p>agent loop、会话日志、会话存储、压缩</p></div>
+      <div class="card"><h3>安全</h3><p>权限预设、沙箱后端、审批</p></div>
+      <div class="card"><h3>上下文</h3><p>AGENTS.md / CLAUDE.md 加载器、系统提示各段</p></div>
+      <div class="card"><h3>周边</h3><p>会话标题生成、遥测、会话日志上传</p></div>
+    </div>
+    <div class="tip">所以「关掉会话日志上传」不是改某个开关的代码，而是在配置表里把 <code>session-log-deepseek</code> 这一行关掉。</div>
+
+    <h3 class="sub"><span class="no">6</span>和 Claude Code 的「插件」不是一回事</h3>
+    <table class="cmp">
+      <tr><th></th><th>Claude Code 的 Plugin</th><th>DSH 的插件</th></tr>
+      <tr><td>是什么</td><td>一个安装包，里面装 Skills、子代理、Hooks、MCP 配置、命令</td><td>程序本身的组成单元，一段在进程里运行的代码</td></tr>
+      <tr><td>能改什么</td><td>在产品留好的扩展点上加东西</td><td>任何一层，包括模型适配和 agent loop</td></tr>
+      <tr><td>核心能不能换</td><td>不能，主循环是产品的</td><td>能，没有特权内核</td></tr>
+      <tr><td>类比</td><td>手机上装 App</td><td>乐高，整台机器都是积木拼的</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">7</span>Profile 和 patch：配置表怎么拼出来</h3>
+    <p>一个 profile 就是一份拼装方案。内置 5 个模板，共用 <code>dsh-base</code> 这一层（模型、工具、存储、沙箱和审批）：</p>
+    <table class="cmp mt">
+      <tr><th>Profile</th><th>用途</th></tr>
+      <tr><td><code>web</code></td><td>本地浏览器界面，默认 <code>127.0.0.1:3080</code></td></tr>
+      <tr><td><code>headless</code></td><td>跑一次任务、打印结果后退出，适合 CI</td></tr>
+      <tr><td><code>sdk</code></td><td>通过 JSON-RPC 给 TS / Python SDK 调用</td></tr>
+      <tr><td><code>sdk-minimal</code></td><td>最小插件树，不用 <code>dsh-base</code></td></tr>
+      <tr><td><code>acp</code></td><td>Agent Client Protocol，给编辑器等自动化客户端接入</td></tr>
+    </table>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">各 bundle 的补丁，按顺序叠</div><div class="d">bundle 是「配置行 + 对应代码」的分发包</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">profile 自己的 <code>cordis.patch.yml</code></div><div class="d">用户在这里改默认值</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">全局补丁 <code>$DSH_HOME/cordis.patch.yml</code></div><div class="d">对所有 profile 生效</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">命令行 <code>--patch</code></div><div class="d">本次运行临时覆盖。后面的层按 id 整行替换前面的，要写全想保留的配置</div></div>
+      </div>
+    </div>
+    <pre class="code"><span class="c"># 看自己机器上实际启动的插件树，任何一行都能被补丁替换</span>
+dsh --profile web --dump-config</pre>
+  </section>
+
+  <!-- ==================== 一轮的流程 ==================== -->
+  <section id="s-turn">
+    <h2>一轮怎么跑</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">1</div><h3>step</h3><p>一次模型请求，加上它调用的工具。</p></div>
+      <div class="card"><div class="ico">n</div><h3>turn</h3><p>零到多个 step。领到第一条输入时开始，没有欠着的工作时结束。</p></div>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">领取输入</div><div class="d">下一步的输入，加一条排队中的用户消息</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">拼提示词和工具</div><div class="d">记下这一步用哪个模型；只放这一步被允许的工具 schema</div></div>
+        <div class="branches">
+          <div class="br ok">agent/pre-step：放行或改写消息</div>
+          <div class="br no">拒绝 → 这一轮不发请求直接结束</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">发请求，流式接收</div><div class="d">按会话日志推出给模型的历史，发出后冻结；失败重试沿用同一份拼装</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">执行工具</div><div class="d">每个调用走一遍工具管道（下一节）</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">要不要再来一步</div><div class="d">工具结果要交回模型，或者又来了新输入</div></div>
+        <div class="branches">
+          <div class="br ok">是 → 回到第 1 步</div>
+          <div class="br ask">否 → agent/turn-stopping，插件还能让它再跑一步</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">turn/end</div><div class="d">turn、step、消息、工具调用都作为事件写进会话日志</div></div>
+      </div>
+    </div>
+    <div class="tip">运行中的用户输入分两种：<code>followup()</code> 排到后面，<code>steer()</code> 插进当前这轮改方向。</div>
+  </section>
+
+  <!-- ==================== 会话日志 ==================== -->
+  <section id="s-log">
+    <h2>会话日志是唯一事实来源</h2>
+    <div class="card">
+      <h3>规则：模型看到的，必须都在日志里</h3>
+      <p>只追加不修改的事件日志。每一次发给模型的请求，都能<mark>从日志完整重建</mark>。插件想给模型加新输入，必须先定义成会话事件。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">↻</div><h3>恢复</h3><p>进程重启后从日志接着跑。</p></div>
+      <div class="card green"><div class="ico">⑂</div><h3>分叉</h3><p>在某一轮的边界复制前缀，开一个新会话。</p></div>
+      <div class="card green"><div class="ico">▤</div><h3>界面</h3><p>UI 渲染、导出记录都读日志。</p></div>
+      <div class="card green"><div class="ico">◎</div><h3>遥测和回放</h3><p>日志转成 JSONL 就是可回放的 trace。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>失败也记</b>：失败、重试、取消的模型输出记成 <code>assistant/attempt</code>，留痕但不进模型历史</li>
+      <li><b>格式有版本</b>：JSONL 文件按版本命名，旧版本打开时逐级迁移，原文件不改不删</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 工具管道 ==================== -->
+  <section id="s-tool">
+    <h2>工具管道</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">记录 tool/call</div><div class="d">执行前先写进日志，UI 显示待执行卡片</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">tools/pre-execute</div><div class="d">Hook、权限、沙箱都挂在这里，按顺序过</div></div>
+        <div class="branches">
+          <div class="br ok">allow → 继续</div>
+          <div class="br ask">ask → 弹一次审批，没人能答就拒绝</div>
+          <div class="br no">deny → 跳过工具，把拒绝原因交给模型</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">守卫（guard）</div><div class="d">只能拒绝或弃权，不能放行，前面的插件绕不过它</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">tools/execute 包住真正执行</div><div class="d">超时、重试、计时挂在这层；写文件还要过 <code>fs/write-intent</code> 检查</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">tools/post-execute</div><div class="d">接受、拦截、替换结果，或附加上下文</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">记录 tool/result</div><div class="d">一次调用只有一个结果交给模型；附加的上下文排在这批结果之后</div></div>
+      </div>
+    </div>
+    <div class="tip">2、4、5 是「瀑布」事件：每个监听者处理完要调用 <code>next()</code> 交给下一个，所以多个插件可以层层包裹同一次调用。</div>
+
+    <h3 class="sub"><span class="no">1</span>两种工具模式：Native 和 PTC</h3>
+    <table class="cmp">
+      <tr><th></th><th>Native</th><th>PTC（Programmatic Tool Calling）</th></tr>
+      <tr><td>模型看到什么</td><td>每个工具的 schema</td><td>只有一个 <code>run_code</code> 工具，加一份生成的 SDK</td></tr>
+      <tr><td>怎么调用</td><td>一次发一批工具调用</td><td>写一段代码，在代码里调用工具</td></tr>
+      <tr><td>好处</td><td>简单直观</td><td>能循环、并行、过滤结果，省掉多轮往返和 token</td></tr>
+      <tr><td>安全</td><td>每个调用过管道</td><td>代码里的每个子调用<b>也照样过管道</b>，有速率和并发上限</td></tr>
+    </table>
+    <div class="tip">思路和 Claude Code 的 Code Mode 一样：让模型写代码批量调工具。</div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>上下文与缓存</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">⇣</div><h3>动态内容往后放</h3><p>当前目录、文件变化这类会变的信息，作为一条<mark>用户角色的快照</mark>追加在历史后面，只在变化时才写新的，不改前缀。</p></div>
+      <div class="card"><div class="ico">▦</div><h3>系统提示分段</h3><p>每个插件贡献一段，有固定顺序。平时只追加更新；压缩之后才整体重建。</p></div>
+      <div class="card"><div class="ico">⇲</div><h3>两条压缩路径</h3><p>每步开始前检查上下文压力，自动压缩；请求因超长报错时走溢出恢复。手动压缩用同一个服务。</p></div>
+      <div class="card"><div class="ico">⌕</div><h3>工具按步放行</h3><p>每一步只放被允许的工具 schema。ToolSearch 式的渐进加载也是靠这个机制实现。</p></div>
+    </div>
+    <div class="tip">文档里专门写了插件对「KV Cache」的影响，说明设计时把<b>缓存前缀稳定</b>当成硬约束。DeepSeek API 从 2024 年起就有上下文缓存，命中部分按低价计费。</div>
+    <ul class="pts">
+      <li><b>项目说明</b>：自动加载 AGENTS.md，也认 CLAUDE.md；子目录里的说明在读到那个目录时才注入</li>
+      <li><b>长目标</b>：<code>/goal</code> 让会话一直朝一个目标做，跨重启也保留；<code>/loop</code> 每轮结束自动接下一轮</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 安全 ==================== -->
+  <section id="s-safe">
+    <h2>权限与沙箱</h2>
+    <div class="card">
+      <h3>两条独立的轴，拼成三个预设</h3>
+      <p><b>沙箱模式</b>管子进程能碰哪些文件，<b>审批策略</b>管工具调用要不要问人。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th>预设</th><th>沙箱</th><th>审批</th><th>说明</th></tr>
+      <tr><td><code>read-only</code></td><td>只读</td><td>ask</td><td>不让写文件</td></tr>
+      <tr class="me"><td><code>workspace-write</code></td><td>只能写工作区</td><td>ask</td><td>默认，危险操作先问</td></tr>
+      <tr><td><code>danger-full-access</code></td><td>不限制</td><td>never</td><td>不隔离也不问，只在一次性环境用</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>沙箱后端</b>：Linux 用 bubblewrap / Landlock，macOS 用 Seatbelt，Windows 用 ACL</li>
+      <li><b>只管文件</b>：官方文档说沙箱模式只约束文件效果，<mark>网络不在沙箱范围内</mark></li>
+      <li><b>执行程度会上报</b>：后端会报告是完全执行还是部分执行（比如旧内核），调用方可以据此拒绝</li>
+      <li><b>Auto review</b>：实验性插件，用模型代替人审批，它自己的文档也提醒可能放过不安全的操作</li>
+    </ul>
+    <div class="tip warn">官方 SAFETY.md：项目<b>没有做过安全审计</b>，不能当成安全或可上生产的软件。建议在虚拟机、容器或单独的系统用户下运行。</div>
+  </section>
+
+  <!-- ==================== 数据 ==================== -->
+  <section id="s-data">
+    <h2>默认会上传什么</h2>
+    <div class="card">
+      <h3>用 DeepSeek 官方 API 时，请求里默认多带两个字段</h3>
+    </div>
+    <table class="cmp mt">
+      <tr><th>插件</th><th>字段</th><th>内容</th><th>默认</th></tr>
+      <tr><td><code>session-log-deepseek</code></td><td><code>dsh_session_log</code></td><td>增量上传会话日志：你的消息、系统提示、工具调用和结果。每次请求最多 8 MiB</td><td>开</td></tr>
+      <tr><td><code>plugin-package-inventory-deepseek</code></td><td><code>dsh_plugin_packages</code></td><td>当前启用的插件包名和版本</td><td>开</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>只针对官方 API</b>：换成第三方模型或自定义接口，不会加这两个字段</li>
+      <li><b>怎么关</b>：设置 → 通用里关掉上传开关；要对所有会话生效，在补丁里把这两行设成 <code>enabled: false</code></li>
+      <li><b>重新打开会补传</b>：据第三方实测引用的插件文档，关闭期间的记录在重新打开后会一起上传</li>
+    </ul>
+    <div class="tip warn">在公司或客户的代码库里用之前，先决定要不要关。默认值都写在源码和文档里，但快速上手教程没提。</div>
+  </section>
+
+  <!-- ==================== 子代理与生态 ==================== -->
+  <section id="s-eco">
+    <h2>子代理与生态兼容</h2>
+    <h3 class="sub"><span class="no">1</span>子代理：同一个接口，后面可以是别家 Agent</h3>
+    <table class="cmp">
+      <tr><th>子代理后端</th><th>是什么</th></tr>
+      <tr><td>spawn</td><td>新开一个本地子 Agent</td></tr>
+      <tr><td>fork</td><td>继承父会话的历史再分出去</td></tr>
+      <tr class="me"><td>Claude Code / Codex</td><td>把别家的 Coding Agent 当子代理调用，默认用非交互的 <code>dontAsk</code> 权限模式</td></tr>
+      <tr><td>ACP / DSH SDK</td><td>接任何支持 ACP 的 Agent，或另一个 dsh 实例</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>调用方式</b>：<code>subagent</code> / <code>subagent_fork</code> 立刻返回子代理名字，用 <code>send_message</code> 继续指挥它</li>
+      <li><b>Agent Teams</b>：共享任务板的多 Agent 协作，默认关，按会话打开</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>Claude Code 有的功能，这里都是插件</h3>
+    <table class="cmp">
+      <tr><th>功能</th><th>DSH 里的实现</th></tr>
+      <tr><td>Hooks</td><td>监听 <code>tools/pre-execute</code> 等事件；还有桥接插件直接读 Claude Code / Codex 的 hook 配置</td></tr>
+      <tr><td>Plan 模式</td><td><code>dsh-plan-mode</code> 插件，用户审核后才退出</td></tr>
+      <tr><td>MCP</td><td>每个 server 一个插件，发现工具后注册到 <code>ctx.tools</code></td></tr>
+      <tr><td>Skills</td><td>提示词片段加工具，调用时再注入内容</td></tr>
+      <tr><td>Workflow</td><td>基于 PTC 的工作流引擎，用代码编排子 Agent</td></tr>
+      <tr><td>定时任务</td><td>插件提供调度工具，到点往会话里投递消息</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🧩</div><h3>没有特权内核</h3><p>连 agent loop 都能换。想做自己的 Agent 产品，可以<mark>改配置拼出来</mark>，不用 fork 代码。</p></div>
+      <div class="card amber"><div class="ico">📜</div><h3>日志优先</h3><p>一份只追加的日志同时供模型、恢复、分叉、UI、遥测使用，不会出现几份状态对不上。</p></div>
+      <div class="card amber"><div class="ico">🔌</div><h3>能力接口可整体替换</h3><p>文件系统和子进程共用一个执行环境。把后端指向远程沙箱，Bash、终端、LSP 一起搬过去。</p></div>
+      <div class="card amber"><div class="ico">🤝</div><h3>兼容别家生态</h3><p>读 CLAUDE.md、桥接 Claude Code 的 hook、把 Claude Code / Codex 当子代理，降低迁移成本。</p></div>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">⚠</div><h3>代价：重</h3><p>默认 Web profile 有近 300 个插件配置行，概念多，上手成本高。</p></div>
+      <div class="card"><div class="ico">⚠</div><h3>代价：早期</h3><p>开发者预览版，官方明说会有不兼容的改动，没做安全审计。</p></div>
+      <div class="card"><div class="ico">⚠</div><h3>代价：默认值要看</h3><p>默认上传会话日志，沙箱不管网络。都能改，但要自己去改。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>交互位置</th><th>开源</th><th>模型</th><th>扩展方式</th></tr>
+      <tr class="me"><td>DeepSeek Harness</td><td>本地 Web UI / CLI / SDK</td><td>MIT</td><td>默认 DeepSeek，可接多家</td><td>一切皆插件，补丁替换任意一层</td></tr>
+      <tr><td>Claude Code</td><td>终端 / IDE / 桌面 / 网页</td><td>否</td><td>Claude</td><td>MCP、Skills、Hooks、Plugins</td></tr>
+      <tr><td>Codex</td><td>CLI / 云端</td><td>CLI 开源</td><td>OpenAI 为主</td><td>MCP、AGENTS.md、配置</td></tr>
+      <tr><td>Cursor</td><td>IDE</td><td>否</td><td>多家</td><td>Rules、MCP</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>harness 是什么？为什么模型厂商要自己做？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>定义</b>：模型之外的运行时，管工具调用、文件编辑、命令执行、上下文和会话状态</li>
+        <li><b>影响大</b>：同一个模型换 harness，任务完成率差别明显，工具设计和上下文管理都在这层</li>
+        <li><b>厂商自己做</b>：模型和运行时一起调，比如按自家 KV cache 的特点设计提示词结构；也能收集真实的 Agent 轨迹改进模型</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>「一切皆插件」的好处和代价？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>好处</b>：没有特权内核，任何一层都能用补丁替换；插件注册是可撤销的副作用，能热重载</li>
+        <li><b>好处</b>：适合当底座，用配置拼出不同产品（Web、CLI、SDK、ACP）</li>
+        <li><b>代价</b>：概念多、插件数量多，排查问题要看拼出来的整棵树</li>
+        <li><b>代价</b>：顺序和依赖靠约定，所以要有「守卫」这种不能被绕过的机制兜底</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>为什么要求「模型看到的都在日志里」？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>可重建</b>：任意一次请求都能从日志还原，方便排查模型为什么这么做</li>
+        <li><b>单一来源</b>：恢复、分叉、UI、遥测都从同一份日志推出，不会状态不一致</li>
+        <li><b>可回放</b>：日志就是 trace，能拿来复现问题和做评测</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>PTC 模式比直接调工具好在哪？有什么风险？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>省</b>：只暴露一个 <code>run_code</code>，不用把所有 schema 放进上下文</li>
+        <li><b>快</b>：一段代码里循环、并行、过滤，少很多次模型往返</li>
+        <li><b>风险</b>：代码能组合出规则没预料到的调用；DSH 的做法是每个子调用照样过工具管道，并限制速率和并发</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>沙箱和审批为什么要拆成两条轴？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>管的东西不同</b>：沙箱是操作系统层面能碰到什么，审批是要不要先问人</li>
+        <li><b>组合更灵活</b>：只读加审批、可写工作区加审批、全放开不审批，按场景选</li>
+        <li><b>纵深防御</b>：审批漏了，沙箱还能挡住越界写入；但网络不在沙箱里，要另外控制</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>
