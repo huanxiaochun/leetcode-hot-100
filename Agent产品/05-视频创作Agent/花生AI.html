@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>花生 AI · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">VIDEO AGENT</div>
+    <h1>花生 AI</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">给 B 站 UP 主用的视频创作 Agent：<mark>输入一篇口播文稿或一段录音，出一条带配音、素材、MG 动画、BGM 的成片，之后用一句话接着改</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">哔哩哔哩</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页，另有命令行 hs 和 MCP</div></div>
+        <div class="fact"><div class="k">核心产物</div><div class="v">可编辑的视频工程</div></div>
+        <div class="fact"><div class="k">主要用户</div><div class="v">知识、科普、财经、科技区 UP 主</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：花生不是「生成一段视频」，而是<b>做出一个能逐镜修改的视频工程</b>。改一句字幕、换一个动画、换一种音色，只动受影响的分镜。</div>
+  </section>
+
+  <!-- ==================== 用户与输入 ==================== -->
+  <section id="s-user">
+    <h2>用户与输入</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">✍</div><h3>痛点</h3><p>有内容，但剪辑和做动画太耗时；不会 AE，请人做又贵。</p></div>
+      <div class="card"><div class="ico">📄</div><h3>入口一：只有文稿</h3><p>花生来配音，按配音时长排画面。</p></div>
+      <div class="card"><div class="ico">🎙</div><h3>入口二：已录好口播</h3><p>上传音频，先转写成文字，再逐字对齐时间轴。</p></div>
+    </div>
+    <h3 class="sub"><span class="no">1</span>输入怎么处理：能不改就不改</h3>
+    <table class="cmp">
+      <tr><th>用户给的是</th><th>花生怎么做</th></tr>
+      <tr><td>完整口播稿</td><td>一字不改</td></tr>
+      <tr><td>太短</td><td>先问要不要扩写，保留原句</td></tr>
+      <tr><td>大纲 / 要点</td><td>整理成口播稿，不编造</td></tr>
+      <tr><td>夹着制作指令</td><td>删掉指令，正文不动</td></tr>
+      <tr><td>只有题目</td><td>先问内容角度和时长，再联网查资料写新稿</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 制作链路 ==================== -->
+  <section id="s-flow">
+    <h2>制作链路</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">规划书</div><div class="d">头部：标题、品类、画幅、音色、BGM、风格。正文：场景 → 分镜（一句口播）→ 动画（版式 + 要点）</div></div>
+        <div class="branches">
+          <div class="br ask">用户确认或修改后再往下做</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">批量配音</div><div class="d">每个分镜的时长由配音决定</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">画面</div><div class="d">按分镜内容检索视频素材，或生成 MG 动画；用户上传的本地素材可以和云端素材混排</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">配 BGM，逐镜渲染合成</div><div class="d">每个分镜单独在 GPU 上渲染，最后拼成整片</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">↻</div>
+        <div class="body"><div class="h">成片后用一句话接着改</div><div class="d">「第 3 镜换个动画」「整片换音色」，Agent 只改受影响的分镜</div></div>
+      </div>
+    </div>
+    <h3 class="sub"><span class="no">1</span>Agent 层面的几条规矩</h3>
+    <ul class="pts">
+      <li><b>局部改优先</b>：MG 有「从头生成」和「局部改」两个工具。改字、改颜色、换图走局部改，更便宜，也不动用户满意的部分</li>
+      <li><b>花钱先问</b>：一轮要重做 3 个以上动画，或要重做用户没点名的，先问用户</li>
+      <li><b>每次生成都留版本</b>：想换回旧版不扣费</li>
+      <li><b>配音变了要提醒</b>：改口播或换音色后动画节奏对不上，标出哪些动画需要重做，由用户决定</li>
+    </ul>
+  </section>
+
+  <!-- ==================== MG ==================== -->
+  <section id="s-mg">
+    <h2>MG 动画</h2>
+    <div class="card">
+      <h3>MG = Motion Graphics：用文字、图形、图标、图表加动效讲内容</h3>
+      <p>常见于知识科普、产品讲解、数据可视化。花生的 MG 产物是 <b>HTML 动画</b>，最后录成视频。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>AI 生视频</th><th>MG 动画</th></tr>
+      <tr><td>产物</td><td>一段像素</td><td>结构化元素：文字、图形、图表</td></tr>
+      <tr><td>文字准确</td><td>容易写错字</td><td>文字就是数据，一定准</td></tr>
+      <tr><td>能不能改一处</td><td>不能，只能重新生成</td><td>能，逐元素修改</td></tr>
+      <tr><td>适合</td><td>画面叙事、氛围镜头</td><td>信息类内容：要点、数据、对比</td></tr>
+    </table>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">理解</div><div class="d">LLM 提取每段口播的语义：要点、数据、对比关系</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">召回 + 精排</div><div class="d">从模板库找候选，模板按 26 个文稿品类组织</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">填充组装</div><div class="d">把内容填进模板，整片套一套全局风格（内置 14 套）</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">音画对齐</div><div class="d">按配音时长对齐动效节奏，生成一段流式返回一段</div></div>
+      </div>
+    </div>
+    <div class="tip">为什么用「模板 + LLM」，不让模型从零写动画：<b>模板保住设计下限和稳定性</b>，LLM 负责理解和选择，兼顾质量和速度。</div>
+  </section>
+
+  <!-- ==================== Opus 5.5 ==================== -->
+  <section id="s-why">
+    <h2>「Opus 5.5 也能做视频」，花生的优势在哪</h2>
+    <div class="card">
+      <h3>先承认：通用大模型确实能写出一段不错的动画代码</h3>
+      <p>Opus 5.5 这类模型能写 HTML 动画、能写剪辑脚本。但<mark>「写出一段动画」和「交付一条能发的视频」之间，差的是一整条生产线</mark>。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th>环节</th><th>只用通用大模型</th><th>花生</th></tr>
+      <tr><td>配音</td><td>没有，要自己接 TTS</td><td>多种音色、声音克隆，按配音排时间轴</td></tr>
+      <tr><td>素材</td><td>没有素材库，也没有版权素材</td><td>按分镜内容检索视频素材，能混排用户自己的素材</td></tr>
+      <tr><td>BGM</td><td>没有</td><td>按风格推荐，能按用户反馈重选</td></tr>
+      <tr><td>渲染导出</td><td>自己搭渲染环境</td><td>逐镜 GPU 渲染，直接导出成片</td></tr>
+      <tr><td>质量下限</td><td>每次即兴发挥，好坏不稳</td><td>模板库 + 14 套风格兜底</td></tr>
+      <tr><td>修改</td><td>说一句改动，往往整段重写</td><td>结构化工程，只改受影响的分镜</td></tr>
+      <tr><td>成本</td><td>每一步都调大模型</td><td>确定性步骤交给工程，主 Agent 用便宜的 flash 类模型</td></tr>
+    </table>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">⛓</div><h3>完整链路</h3><p>一篇文稿到成片，配音、素材、动画、BGM、渲染一条龙。</p></div>
+      <div class="card green"><div class="ico">✎</div><h3>可编辑</h3><p>产物是工程不是像素，可以改单个分镜、单个动画。</p></div>
+      <div class="card green"><div class="ico">📚</div><h3>领域积累</h3><p>素材库、模板、B 站内容品类、用户的历史偏好，通用模型没有。</p></div>
+    </div>
+    <div class="tip"><b>更进一步的回答</b>：模型越强，对花生不一定是威胁。下面两次改版的方向，就是让花生变成<mark>任何强模型都能接进来干活的平台</mark>：沙箱给模型一台带工具的「电脑」，技能市场让别人按标准格式往上加玩法。模型负责想，平台负责配音、素材、渲染、编辑器和计费。</div>
+  </section>
+
+  <!-- ==================== 沙箱改版 ==================== -->
+  <section id="s-sandbox">
+    <h2>改版一：沙箱化</h2>
+    <div class="card">
+      <h3>一句话：每个用户项目一台独立的云端「电脑」，Agent 在里面读写项目文件、调用工具</h3>
+      <p>沙箱里跑的是一个现成的 Coding Agent 内核，花生只提供视频业务的工具、技能和子 Agent。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>先说好处</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">🧱</div><h3>用户之间互不影响</h3><p>一个项目一台独立的机器，一个项目出问题，不会拖垮别人。</p></div>
+      <div class="card green"><div class="ico">💬</div><h3>对话不会丢</h3><p>机器回收前把会话和项目文件存下来。用户隔几天回来，Agent 还记得聊过什么。</p></div>
+      <div class="card green"><div class="ico">⚙</div><h3>不用自己维护 Agent 内核</h3><p>上下文压缩、权限、技能、子 Agent、会话恢复都是现成的，团队只做视频业务。</p></div>
+      <div class="card green"><div class="ico">⚡</div><h3>打开就能用</h3><p>新建沙箱约 0.5 秒，去掉了「正在唤醒」的等待。</p></div>
+      <div class="card green"><div class="ico">¥</div><h3>按实际使用付费</h3><p>空闲一段时间自动回收，不为闲着的机器买单。</p></div>
+      <div class="card green"><div class="ico">🧩</div><h3>给技能市场打底</h3><p>有了隔离的运行环境，第三方写的插件才能放心跑在平台上。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>演进过程</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">0</div>
+        <div class="body"><div class="h">共享服务里自研 Agent</div><div class="d">Python 服务里自己写 agent loop，文稿等状态存在 KV 里</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">一个项目一个沙箱实例</div><div class="d">沙箱里跑开源 Coding Agent 内核（Pi）。空闲一段时间回收；会话和项目文件打快照存对象存储，下次打开时恢复</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">内核换成 Claude Code（2026-08）</div><div class="d">用 Claude Agent SDK 拉起 CLI 子进程。主 Agent 仍用原来的 flash 类模型，换内核不增加模型成本</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">迁到 MicroVM 云沙箱（2026-11）</div><div class="d">兼容 E2B 接口。新建沙箱约 0.5 秒，去掉了「正在唤醒」的等待</div></div>
+      </div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>每个问题怎么解决</h3>
+    <table class="cmp">
+      <tr><th>以前的问题</th><th>沙箱怎么解决</th></tr>
+      <tr><td>Agent 没地方放东西</td><td>项目文件、技能文档、会话记录都放在沙箱的文件系统里，模型按需读，不用全塞进提示词</td></tr>
+      <tr><td>不同用户互相影响</td><td>一个项目一个实例，用完回收</td></tr>
+      <tr><td>自研 loop 维护成本高</td><td>复用成熟的 Coding Agent 内核</td></tr>
+      <tr><td>实例回收后对话丢了</td><td>回收前把会话和项目文件打快照存起来，下次打开时恢复</td></tr>
+      <tr><td>冷启动慢，要等唤醒</td><td>MicroVM 模板：启动后连内存一起做快照，新建沙箱就是恢复快照；唤醒改成同步，跟着请求走</td></tr>
+      <tr><td>空闲实例白白计费</td><td>空闲超时回收，定期对账，杀掉泄漏的实例</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">4</span>安全边界怎么画</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">∅</div><h3>内置工具面清空</h3><p>换 Claude Code 内核时，<b>Bash、通用读写文件等内置工具全部摘掉</b>。模型只能调花生的业务工具，外加加载技能和派子 Agent。</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>业务工具自带守卫</h3><p>业务工具跑在 sidecar 进程里，路径守卫写在工具实现里。读技能文档只开一个只读、锁死在技能目录的工具。</p></div>
+      <div class="card amber"><div class="ico">…</div><h3>还在做的</h3><p>出站网络还没收紧。方向是白名单：只放行干活必需的服务，其余内网一律拒。</p></div>
+    </div>
+    <div class="tip">思路是<b>先缩工具面，再补隔离</b>：模型手里没有 Bash，最大的攻击面就没了；进程隔离和网络白名单是纵深防御。</div>
+  </section>
+
+  <!-- ==================== 技能市场 ==================== -->
+  <section id="s-market">
+    <h2>改版二：技能市场</h2>
+    <div class="card">
+      <h3>一句话：一个「技能」就是一个标准的 Claude Code 插件，代表一种做视频的玩法</h3>
+      <p>作者把它打包上传到技能社区；用户在花生 Pro 里选一个技能建项目，平台在这个项目的沙箱里运行它。内部叫 Flow 插件平台，目前在预发阶段，只在花生 Pro 开放。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>先说好处</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">🎬</div><h3>对用户：玩法变多</h3><p>选一个技能就能做一类视频，不再局限于口播加信息图。</p></div>
+      <div class="card green"><div class="ico">✍</div><h3>对作者：门槛低</h3><p>用熟悉的 Claude Code 插件格式写，本地和线上效果一致，一条命令发布。</p></div>
+      <div class="card green"><div class="ico">🏗</div><h3>对平台：越用越值钱</h3><p>新玩法不占核心团队排期；配音、素材、渲染、编辑器被每个技能反复复用。</p></div>
+      <div class="card green"><div class="ico">🚀</div><h3>对模型升级：自动受益</h3><p>插件按标准写，换上更强的模型，技能效果跟着变好，平台不用改。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>解决什么问题</h3>
+    <table class="cmp">
+      <tr><th>以前</th><th>技能市场之后</th></tr>
+      <tr><td>每加一种剪辑流程，平台、前端、后端都要改</td><td><b>写一个插件就行</b>，平台和前端不用动</td></tr>
+      <tr><td>只擅长口播 + 信息图，内容形态窄</td><td>内部团队和外部作者都能按需加玩法，比如需要歌词对齐、镜头编排的视频</td></tr>
+      <tr><td>花生的能力只能在花生里用</td><td>插件按 Claude 标准写，在 Claude Code、Codex 里能用的写法，平台上不改就能跑</td></tr>
+      <tr><td>第三方代码不敢跑</td><td>插件代码一律进隔离外壳，拿不到平台凭据，也看不到别的项目</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">3</span>一个技能里有什么</h3>
+    <table class="cmp">
+      <tr><th>插件内容</th><th>平台怎么用</th></tr>
+      <tr><td>skills / agents / commands</td><td>交给 Claude Code 原生加载，语义不变</td></tr>
+      <tr><td><code>.mcp.json</code> 里的 server</td><td>插件的代码。由平台拉起、放进隔离外壳；平台是它们<b>唯一的调用方</b></td></tr>
+      <tr><td>项目数据 server（最多一个）</td><td>对外提供标准格式的「项目快照」，前端编辑器、播放器、导出都读它</td></tr>
+      <tr><td>hooks</td><td>只支持命令和 MCP 工具两种，平台在外壳里执行</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">4</span>一个技能从开发到出片</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">作者本地开发</div><div class="d">用 hs 命令行起本地调试。本地跑在 Linux 容器里，和线上沙箱是同一个运行时</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">打包上传技能社区</div><div class="d">打成压缩包直传对象存储，记录版本</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">用户选技能建项目</div><div class="d">沙箱初始化时下载插件包、校验、解压；一个实例绑定一个技能，之后不能换</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">模型干活，插件出力</div><div class="d">模型调插件的工具；插件需要配音、转写、素材检索、网页录制、ffmpeg 时，经平台调官方工具网关</div></div>
+        <div class="branches">
+          <div class="br ask">插件中途要问用户 → 平台发问卷，回答后重发同一次调用</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">逐镜可见</div><div class="d">插件每填好一个分镜就通知平台，前端拿到递增的版本号，用户看着画面一镜一镜出来</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">导出</div><div class="d">按项目快照交给渲染服务出成片</div></div>
+      </div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>关键设计</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">🧱</div><h3>插件代码必须独立进程 + OS 隔离</h3><p>实测同进程的隔离手段（Worker、vm 等）都能逃逸。插件进外壳：只读系统目录，只能写工作区，清空环境变量，丢掉全部权限。</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>平台是唯一的调用方</h3><p>模型、编辑器、hooks 调插件都经过平台，权限、计费、trace 只在一处做。</p></div>
+      <div class="card"><div class="ico">🔌</div><h3>平台能力走官方网关</h3><p>配音、素材、录制统一调官方工具，插件不自己拼请求、不碰凭据，计费和身份由网关注入。</p></div>
+      <div class="card"><div class="ico">📐</div><h3>项目快照是标准数据</h3><p>不管插件内部怎么存，对外都交同一种格式。前端编辑器和导出不用为每个技能单独适配。</p></div>
+    </div>
+
+  </section>
+
+  <!-- ==================== 局限 ==================== -->
+  <section id="s-limit">
+    <h2>局限与下一步</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">▭</div><h3>内容形态窄</h3><p>擅长口播加信息图，剧情、Vlog 这类画面叙事做不好。技能市场是主要的解法。</p></div>
+      <div class="card amber"><div class="ico">▦</div><h3>效果上限受模板约束</h3><p>高要求用户觉得像模板。方向是 Pro 版用更强的模型，允许在模板基础上改写动画。</p></div>
+      <div class="card amber"><div class="ico">⏳</div><h3>长视频慢</h3><p>链路长，MG 生成和渲染要排队。方向是多分镜并行、渲染优先队列。</p></div>
+      <div class="card amber"><div class="ico">↔</div><h3>精细修改难</h3><p>「往左挪一点」这类描述理解不稳。方向是在画布上点选元素再用自然语言改。</p></div>
+    </div>
+    <div class="tip">怎么衡量改进：成片率、阻断错误率、平均耗时、单片成本、用户修改轮数。</div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Opus 5.5 也能做视频，为什么还要花生？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>差一条生产线</b>：模型能写动画代码，但配音、素材、BGM、音画对齐、渲染导出都没有</li>
+        <li><b>质量下限稳</b>：模板和风格兜底，不靠模型每次即兴发挥</li>
+        <li><b>可编辑、成本低</b>：结构化工程只改受影响的分镜；确定性步骤交给工程，主 Agent 用便宜模型</li>
+        <li><b>模型变强是利好</b>：沙箱和技能市场让任何强模型都能接进来，模型负责想，平台负责做</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>为什么要做沙箱？直接在服务里跑 Agent 不行吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>Agent 需要文件系统</b>：项目文件、技能文档、会话记录都要有地方放，按需读</li>
+        <li><b>隔离</b>：一个项目一个实例，用户之间互不影响</li>
+        <li><b>复用成熟内核</b>：压缩、权限、技能、子 Agent、会话恢复都是现成的，不用自己维护 loop</li>
+        <li><b>代价</b>：冷启动和实例成本，用 MicroVM 内存快照和空闲回收压下来</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>换 Claude Code 内核，为什么主模型还用 flash 类模型？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>内核和模型是两回事</b>：换的是 harness（循环、压缩、权限、技能机制），模型可以不变</li>
+        <li><b>成本不变</b>：内部模型网关支持 Anthropic 协议，flash 类模型照样能用</li>
+        <li><b>按需升级</b>：Pro 版或关键步骤再换更强的模型</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>技能市场让第三方代码跑在你的平台上，怎么保证安全？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>独立进程 + OS 隔离</b>：插件代码进外壳，只能写工作区，清空环境变量，丢掉全部权限</li>
+        <li><b>拿不到凭据</b>：要用平台能力就调官方网关，身份和计费由网关注入</li>
+        <li><b>平台是唯一调用方</b>：所有调用都过平台，能统一做权限、日志和 trace</li>
+        <li><b>还要补的</b>：出站网络白名单</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>为什么技能要用 Claude Code 插件格式，不自定义一套？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>作者零学习成本</b>：skills、agents、hooks、MCP server 都是现成概念</li>
+        <li><b>可移植</b>：在 Claude Code、Codex 里能用的写法，平台上不改就能跑</li>
+        <li><b>扩展字段可选</b>：花生专属的设置放在扩展字段里，别的工具不认识也不影响运行</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

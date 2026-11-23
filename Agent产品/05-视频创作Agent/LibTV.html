@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LibTV · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">VIDEO AGENT</div>
+    <h1>LibTV</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">LiblibAI 做的 AI 视频创作平台：<mark>一块无限画布串起剧本、分镜、出图、出视频，人和 AI Agent 用的是同一条生产线</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">演语科技 Evoken（LiblibAI 母公司）</div></div>
+        <div class="fact"><div class="k">上线</div><div class="v">2026 年初</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页画布、桌面客户端、Chrome 扩展、OpenAPI / MCP</div></div>
+        <div class="fact"><div class="k">主要用户</div><div class="v">短剧和漫剧团队、影视、广告、品牌</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：LibTV 卖的不是「某个视频模型」，而是<b>交付成片的整条工作流</b>。模型都是外部的，它负责把模型编排进剧本 → 分镜 → 成片的流程里。</div>
+  </section>
+
+  <!-- ==================== 背景 ==================== -->
+  <section id="s-bg">
+    <h2>公司与背景</h2>
+    <div class="card">
+      <h3>同一家公司，三波技术各押了一个产品</h3>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">2023 · LiblibAI（哩布哩布）</div><div class="d">AI 生图的模型社区：用户上传、下载、在线用 Stable Diffusion 类模型和 LoRA。累计用户超 3000 万</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">2025-07 · 星流 Agent（海外叫 Lovart）</div><div class="d">AI 设计 Agent，对话加画布，一句话出一套设计</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">2026 年初 · LibTV</div><div class="d">视频模型（Seedance 2.0、可灵 3 系列）变强，加上短剧、漫剧需求爆发，切入视频成片</div></div>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>数字</th><th>说明</th></tr>
+      <tr><td>上线首月</td><td>单日收入超过 100 万美元，服务近千家短剧、影视、广告团队</td></tr>
+      <tr><td>B+ 轮</td><td>约 3 亿美元，投后估值超 20 亿美元</td></tr>
+      <tr><td>年化收入（ARR）</td><td>2026 年 5 月约 3 亿美元</td></tr>
+    </table>
+    <div class="tip">以上数字来自 36氪 报道，属于公司披露的口径。</div>
+  </section>
+
+  <!-- ==================== 画布 ==================== -->
+  <section id="s-canvas">
+    <h2>核心：无限画布</h2>
+    <div class="card">
+      <h3>不用时间轴，用节点图</h3>
+      <p>每个节点是一种产物，节点之间连线表示「拿上一步的结果做下一步」。整条流程可以存成模板复用。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">T</div><h3>文本 / 剧本</h3><p>故事、剧本、分镜脚本。</p></div>
+      <div class="card"><div class="ico">▣</div><h3>图片</h3><p>角色三视图、场景、分镜画面。</p></div>
+      <div class="card"><div class="ico">▶</div><h3>视频</h3><p>图生视频、文生视频，每个镜头一个节点。</p></div>
+      <div class="card"><div class="ico">♪</div><h3>音频</h3><p>配音、配乐。</p></div>
+    </div>
+    <h3 class="sub"><span class="no">1</span>一条典型的成片流程</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">写剧本</div><div class="d">自己写，或让 Agent 根据一句话扩写</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">剧本 → 分镜</div><div class="d">拆成分镜脚本，批量出分镜图；支持 9 宫格、25 宫格拆分</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">定角色和场景</div><div class="d">三视图、360° 展示，后面每个镜头都参考它，保持人设不崩</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">逐镜生成视频</div><div class="d">每个镜头单独选模型、调灯光和运镜</div></div>
+        <div class="branches">
+          <div class="br ask">不满意 → 只重做这一个节点</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">配音配乐，拼成片</div><div class="d">据第三方评测，最后的完整剪辑还要靠外部工具</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 给 Agent 用 ==================== -->
+  <section id="s-agent">
+    <h2>给 AI Agent 用</h2>
+    <div class="card">
+      <h3>LibTV 的卖点：人和 Agent 是「平等的用户」</h3>
+      <p>人在画布上点，Agent 通过接口调用，<mark>走的是同一条生成管线，产物落在同一块画布上</mark>。Agent 做完，人可以打开画布接着改。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th>接入方式</th><th>怎么用</th><th>适合谁</th></tr>
+      <tr><td>libtv-skills</td><td>开源技能包，<code>npx skills add libtv-labs/libtv-skills</code> 装进项目，配一个 Access Key</td><td>OpenClaw 等支持 Skills 规范的 Agent</td></tr>
+      <tr><td>Remote MCP</td><td>官方 Codex 插件目录，装上后走 OAuth 登录，每人用自己的账号授权</td><td>Codex 等支持远程 MCP 的客户端</td></tr>
+      <tr><td>Chrome 扩展 + 桌面端</td><td>侧边栏连上画布用 Agent 对话；右键把网页上的图片、视频、音频收进素材库</td><td>人自己用</td></tr>
+    </table>
+    <h3 class="sub"><span class="no">1</span>Agent 调用的一次往返</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">创建会话，发一句指令</div><div class="d">例如「生一个动漫视频」；返回会话 id 和画布链接</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">轮询进展</div><div class="d">按序号增量拉新消息，生成是异步的</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">上传参考、追加指令</div><div class="d">同一个会话里继续改</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">下载结果，或打开画布人工接手</div><div class="d">所有产物都在那块画布上</div></div>
+      </div>
+    </div>
+    <h3 class="sub"><span class="no">2</span>官方插件里随包带的 Skills</h3>
+    <table class="cmp">
+      <tr><th>Skill</th><th>做什么</th></tr>
+      <tr><td>导演提案</td><td>把画布里的图、视频、剧本、分镜整理成可翻页的导演提案</td></tr>
+      <tr><td>Blender 联动</td><td>出图 → Blender 白模运镜 → Seedance 实拍化</td></tr>
+      <tr><td>编曲成片</td><td>配乐驱动的一镜到底产品广告</td></tr>
+    </table>
+    <div class="tip">思路和花生的技能市场很像：<b>把一种做视频的套路写成 Skill</b>，让 Agent 照着走，平台出生成能力。</div>
+  </section>
+
+  <!-- ==================== 优劣 ==================== -->
+  <section id="s-pro">
+    <h2>优势与不足</h2>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>工作流完整</h3><p>剧本、分镜、角色、镜头、配音在一块画布上，不用在多个工具之间来回倒。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>每一步都能单独改</h3><p>节点之间相互独立，改一个镜头不影响别的。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>模型一站式</h3><p>Seedance、可灵等视频模型，加上语言、图片、音频模型，一个账号都能用。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>Agent 友好</h3><p>开源 Skills、远程 MCP，外部 Agent 能直接调。</p></div>
+    </div>
+    <div class="grid mt">
+      <div class="card amber"><div class="ico">!</div><h3>Agent 控制粒度粗</h3><p>据第三方评测，接口没法精细操作单个画布节点，也不能重命名、删除项目。</p></div>
+      <div class="card amber"><div class="ico">!</div><h3>成片剪辑弱</h3><p>内置编辑做不完最终剪辑，要导出到别的工具。</p></div>
+      <div class="card amber"><div class="ico">!</div><h3>被质疑是「Token 中转站」</h3><p>不做底座模型，能力主要来自聚合主流模型。原厂降价或别家更好用，用户可能就走了。</p></div>
+      <div class="card amber"><div class="ico">!</div><h3>内容审核压力</h3><p>2026 年，同公司的 LiblibAI 平台被央视曝光：有用户用复杂提示词绕过审核，生成了违规视频。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>主打内容</th><th>画面怎么来</th><th>交互方式</th><th>给 Agent 用</th></tr>
+      <tr class="me"><td>LibTV</td><td>短剧、漫剧、广告</td><td>聚合多家视频模型</td><td>节点画布，人主导每一步</td><td>Skills + 远程 MCP</td></tr>
+      <tr><td><a href="OiiOii.html">OiiOii</a></td><td>动画短片、MV</td><td>聚合 25+ 模型，每镜自动选</td><td>对话为主，Agent 团队自动跑</td><td>未见公开接口</td></tr>
+      <tr><td><a href="花生AI.html">花生 AI</a></td><td>口播、知识科普</td><td>素材检索 + MG 动画</td><td>对话 + 规划书 + 编辑器</td><td>命令行 hs、MCP、技能市场</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>为什么用画布，不用剪辑软件那种时间轴？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>AI 生产是一张依赖图</b>：剧本 → 分镜 → 角色 → 镜头，每一步都依赖上一步的产物，节点图能直接画出这种关系</li>
+        <li><b>好改</b>：改一个节点只影响下游，不用整片重来</li>
+        <li><b>能复用</b>：整条流程存成模板，换个剧本再跑一遍</li>
+        <li><b>代价</b>：最终的节奏和剪辑还是时间轴擅长，所以成片阶段要导出</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>「人和 Agent 共用一条管线」有什么好处？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>能接力</b>：Agent 先批量出初稿，人打开同一块画布精修，不用来回导入导出</li>
+        <li><b>多一个入口</b>：用户在自己的 Agent 里也能用 LibTV，平台不只靠自家网页拉用户</li>
+        <li><b>一套计费和权限</b>：两种入口走同样的账号和额度</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>不做模型的视频应用，壁垒在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>工作流</b>：客户缺的不是单镜头生成，而是从剧本到成片的完整生产能力</li>
+        <li><b>时机</b>：比别人早一步判断模型下一代会解决什么问题，提前做好产品形态</li>
+        <li><b>用户和内容沉淀</b>：模型社区、素材、模板、团队客户</li>
+        <li><b>风险</b>：模型厂商自己做工作流，或者降价，护城河会被重新估值</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OiiOii · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">VIDEO AGENT</div>
+    <h1>OiiOii</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">AI 动画 Agent 团队：<mark>7 个分工明确的 Agent 像一个动画工作室，从一句话做到一部带配乐的动画短片</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">HOGI.AI（香港）</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-11 内测，2026-07 在美国正式上线</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页，对话 + 画布</div></div>
+        <div class="fact"><div class="k">主要用户</div><div class="v">内容创作者、游戏工作室、品牌营销、教育</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：Runway、可灵这类工具一次出一段 4~10 秒的镜头；OiiOii 让<b>多个 Agent 共享一张「场景图」</b>，所以角色、场景、画风在整部片子里保持一致。</div>
+  </section>
+
+  <!-- ==================== 7 个 Agent ==================== -->
+  <section id="s-team">
+    <h2>7 个 Agent 怎么分工</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">美术总监</div><div class="d">定整体视觉：画风、色板、光影、画幅。<b>还负责给每个镜头挑底层模型</b></div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">编剧</div><div class="d">把一句话扩成剧本：场景列表、角色节拍、台词、旁白。用户自带剧本时，解析成同一种内部结构</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">角色设计师</div><div class="d">锁定角色的脸型、服装、比例、发型，出多角度、多表情的角色表</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">场景设计师</div><div class="d">做可复用的场景：森林、教室、飞船内部，带时间、天气、氛围、关键道具</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">动画师</div><div class="d">把分镜变成视频：调用选好的模型，传入角色、场景和动作描述；保证镜头间动作连贯</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">6</div>
+        <div class="body"><div class="h">剪辑师</div><div class="d">排时间线、转场、按剧本控制节奏；剪辑不破坏原素材</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">7</div>
+        <div class="body"><div class="h">音效师</div><div class="d">按情绪起伏配乐，按画面配音效；混音、台词出现时压低音乐</div></div>
+      </div>
+    </div>
+    <div class="tip">所有 Agent 读写<b>同一份场景图</b>（剧本、角色、场景、分镜的结构化数据），这是它保持一致的关键。改剧本时，场景图更新，下游 Agent 跟着重排。</div>
+  </section>
+
+  <!-- ==================== 关键机制 ==================== -->
+  <section id="s-mech">
+    <h2>关键机制</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">👤</div><h3>角色一致性</h3><p>AI 视频最常见的问题是「换个镜头脸就变了」。角色一旦锁定，特征作为约束传给每一个有这个角色的镜头。</p></div>
+      <div class="card"><div class="ico">🎛</div><h3>每镜选模型</h3><p>底层接了 25 个以上模型（Sora 2、Veo 3.1、Seedance、可灵、海螺、Vidu、Midjourney 等）。不同镜头按画风和动作类型选最合适的。</p></div>
+      <div class="card"><div class="ico">🖌</div><h3>画布单镜重做</h3><p>不满意某个镜头，在画布上只重新生成这一个，角色、场景和故事线不动，剪辑师自动重排时间线。</p></div>
+      <div class="card"><div class="ico">♫</div><h3>音乐驱动的 MV</h3><p>听整首歌，分析结构、情绪、节奏和歌词，再按段落生成画面，切镜对齐节拍。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>能力</th><th>说明</th></tr>
+      <tr><td>时长</td><td>15 秒的短片到 60 秒以上的叙事片</td></tr>
+      <tr><td>画风</td><td>150 种以上：日漫、3D、电影感、水彩、水墨、像素等</td></tr>
+      <tr><td>输入</td><td>一句话就能开始；也能带剧本、角色参考图、场景参考、配音、音乐</td></tr>
+      <tr><td>输出</td><td>MP4 成片；角色表、场景图可以单独导出</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 优劣 ==================== -->
+  <section id="s-pro">
+    <h2>优势与不足</h2>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>门槛最低</h3><p>不需要会分镜和动画，用户像导演一样在对话里提要求，Agent 团队自己跑完。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>多镜头一致</h3><p>共享场景图 + 角色锁定，解决单模型工具每次重新决定画风、脸型的问题。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>不绑定模型</h3><p>新模型出来就能接，比如 Seedance 2.5 发布后很快上线。</p></div>
+    </div>
+    <div class="grid mt">
+      <div class="card amber"><div class="ico">!</div><h3>控制力弱于画布工具</h3><p>自动化程度高，专业团队想精确控制每一步时，不如 LibTV 这种人主导的画布。</p></div>
+      <div class="card amber"><div class="ico">!</div><h3>成本和等待</h3><p>多镜头、带配乐的项目要调很多次视频模型，耗时和额度消耗都明显高于单个镜头。</p></div>
+      <div class="card amber"><div class="ico">!</div><h3>同样依赖外部模型</h3><p>效果上限由底层模型决定，自己的价值在编排和一致性。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>谁来编排流程</th><th>一致性怎么保证</th><th>改一个镜头</th></tr>
+      <tr class="me"><td>OiiOii</td><td>7 个 Agent 按固定分工</td><td>共享场景图 + 角色锁定</td><td>画布上单镜重做，自动重排</td></tr>
+      <tr><td><a href="LibTV.html">LibTV</a></td><td>人在画布上连节点，Agent 辅助</td><td>角色三视图作为参考</td><td>重做那一个节点</td></tr>
+      <tr><td><a href="花生AI.html">花生 AI</a></td><td>一个主 Agent + 子 Agent + 技能</td><td>全局风格 + 模板库</td><td>一句话，只改受影响的分镜</td></tr>
+      <tr><td>Runway / 可灵</td><td>没有编排，用户自己拼</td><td>靠参考图和提示词</td><td>重新生成那一段</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>为什么要拆成 7 个 Agent，一个 Agent 不行吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>对应真实工种</b>：动画工作室本来就这样分工，每个 Agent 的提示词和工具更专，出错范围也小</li>
+        <li><b>上下文隔离</b>：角色设计不需要看到配乐细节，各自只拿需要的部分</li>
+        <li><b>关键是共享状态</b>：拆开之后靠同一份场景图协作，否则就会各说各话</li>
+        <li><b>代价</b>：协调成本和 token 开销更高，流程也更固定</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>多镜头的角色一致性怎么做？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>先定角色</b>：出多角度、多表情的角色表，把脸型、服装、比例存成固定特征</li>
+        <li><b>每镜都带上</b>：生成有这个角色的镜头时，把角色表作为参考传给视频模型</li>
+        <li><b>场景同理</b>：场景也存成资产，换机位重拍时光影、道具不漂移</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>OiiOii 和 LibTV 的路线差在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>OiiOii 偏自动</b>：Agent 团队替你跑完，适合不会做动画的个人创作者</li>
+        <li><b>LibTV 偏可控</b>：人在画布上主导每一步，适合要精确控制的专业团队</li>
+        <li><b>共同点</b>：都不做底座模型，都在多家视频模型之上做编排</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>
