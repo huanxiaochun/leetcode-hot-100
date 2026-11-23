@@ -115,12 +115,14 @@ ul.pts li b { color: var(--text); }
 .tip.warn { background: var(--amber-soft); color: #8a4a17; border-left-color: var(--amber); }
 
 /* 对比表 */
-table.cmp { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; font-size: 16px; }
-table.cmp th, table.cmp td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
-table.cmp tr:last-child td { border-bottom: 0; }
-table.cmp th { background: var(--soft); font-size: 14px; color: var(--text2); }
+/* 对比表：白底圆角卡片 + 隔行浅灰，表头用深一档的灰底突出 */
+table.cmp { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); font-size: 17px; }
+table.cmp th, table.cmp td { padding: 14px 18px; text-align: left; vertical-align: top; line-height: 1.65; }
+table.cmp th { background: #e5e8ef; color: var(--text); font-size: 16px; font-weight: 700; }
+table.cmp tr:nth-child(odd) td { background: #f7f8fa; }
 table.cmp td:first-child { font-weight: 600; white-space: nowrap; }
-table.cmp tr.me td { background: var(--accent-soft); }
+table.cmp tr.me td { background: var(--green-soft); }
+table.cmp tr.me td:first-child { color: #0b6b53; }
 
 /* 代码块 */
 pre.code {
