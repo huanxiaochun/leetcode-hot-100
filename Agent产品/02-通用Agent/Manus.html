@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manus · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">GENERAL AGENT</div>
+    <h1>Manus</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">给每个任务一台云端电脑：<mark>你说目标，它自己上网、写代码、出文件，做完交付结果</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Butterfly Effect（Monica 团队），后迁新加坡</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-03 邀请制内测</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页 / App，任务异步跑在云端</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">不自研基座，调用第三方大模型</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>模型不是自己的，护城河在上下文工程</b>。云端虚拟机 + 文件系统当记忆 + KV-cache 友好的提示设计。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">拆计划</div><div class="d">写出 todo.md，列好步骤</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">选一个动作</div><div class="d">每轮只调一个工具</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">沙箱执行</div><div class="d">浏览器 / Shell / 文件 / 代码</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">观察 + 更新</div><div class="d">结果追加进上下文，勾掉 todo</div></div>
+    </div>
+    <div class="loop-note">↻ 一直循环到 todo 全部完成，最后把文件、网页、报告交给用户</div>
+    <pre class="code"><span class="c"># 上下文只追加，不回改，保住 KV-cache 前缀</span>
+ctx = [system, tools_all, user_goal]       <span class="c"># 工具定义固定在前面</span>
+<span class="k">while</span> <span class="k">not</span> done:
+    allowed = state_machine(ctx)           <span class="c"># 按状态决定能用哪些工具</span>
+    act = llm(ctx, mask=allowed)           <span class="c"># 解码时屏蔽，而不是删工具</span>
+    obs = sandbox.run(act)                 <span class="c"># 大结果写文件，只回路径</span>
+    ctx += [act, obs]                      <span class="c"># 错误也保留</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">☁</div><h3>云端虚拟机</h3><p>每个任务一个 Linux 沙箱，有浏览器、Shell、文件系统。关掉网页也照样跑。</p></div>
+      <div class="card"><div class="ico">🧰</div><h3>工具集</h3><p>浏览器操作、Shell 命令、读写文件、跑 Python、部署网页、搜索。</p></div>
+      <div class="card"><div class="ico">📝</div><h3>todo.md</h3><p>开工先写计划，每完成一步就重写一遍，把目标反复放到上下文末尾。</p></div>
+      <div class="card green"><div class="ico">🗂</div><h3>文件系统</h3><p>当外部记忆用：网页正文、中间数据存成文件，要用时再读。</p></div>
+      <div class="card green"><div class="ico">👀</div><h3>可回放</h3><p>用户能看到它的电脑屏幕和每一步，任务可以回放和分享。</p></div>
+      <div class="card green"><div class="ico">🙋</div><h3>随时接管</h3><p>登录、验证码这类卡点，用户可以接手操作再交还。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>上下文工程</h2>
+    <div class="card">
+      <h3>输入输出比约 100:1，省钱靠缓存</h3>
+      <ul class="pts">
+        <li><b>KV-cache 命中率</b>：官方说是生产 Agent 最重要的指标</li>
+        <li><b>前缀稳定</b>：系统提示不放精确到秒的时间戳，JSON 序列化顺序固定</li>
+        <li><b>只追加</b>：不修改历史动作和观察，改一个字后面缓存全失效</li>
+        <li><b>文件当记忆</b>：网页内容可以丢，只要留着 URL / 路径就能恢复，压缩可还原</li>
+        <li><b>复述目标</b>：反复重写 todo.md，对抗长上下文里的“中间遗忘”</li>
+        <li><b>保留错误</b>：失败的动作和报错留在上下文，模型会少犯同样的错</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🎭</div><h3>工具 mask 而非删除</h3><p>动态增删工具会打破缓存，还会让历史里出现“未定义工具”。<mark>工具全留着，解码时屏蔽 logits</mark>，工具名用统一前缀（如 browser_、shell_）方便成组屏蔽。</p></div>
+      <div class="card amber"><div class="ico">🐍</div><h3>CodeAct</h3><p>动作可以是一段 Python 代码，一次组合多个操作、带循环和判断，比单个 JSON 调用更灵活。</p></div>
+      <div class="card amber"><div class="ico">🔀</div><h3>防止照抄模式</h3><p>上下文里动作太整齐，模型会机械重复。序列化时加一点结构化的变化打破惯性。</p></div>
+      <div class="card amber"><div class="ico">⏳</div><h3>异步交付</h3><p>任务可以跑很久，做完通知。用户关注结果，不用盯着对话。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>执行环境</th><th>操作方式</th><th>交付物</th></tr>
+      <tr class="me"><td>Manus</td><td>云端虚拟机</td><td>浏览器 + Shell + 代码</td><td>文件 / 网页 / 报告</td></tr>
+      <tr><td>ChatGPT Agent</td><td>OpenAI 云端虚拟机</td><td>可视浏览器 + 文本浏览器 + 终端</td><td>报告 / 表格 / PPT</td></tr>
+      <tr><td>Claude Computer Use</td><td>开发者自己的环境</td><td>截图 + 鼠标键盘</td><td>API 能力，自己做产品</td></tr>
+      <tr><td>Deep Research</td><td>云端</td><td>只搜索和阅读</td><td>带引用的报告</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>为什么说 KV-cache 命中率是 Agent 最重要的指标？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>输入远大于输出</b>：每轮都带完整历史，输出只是一次工具调用</li>
+        <li><b>缓存便宜</b>：命中缓存的 token 价格和首字延迟都低一个量级</li>
+        <li><b>做法</b>：前缀稳定、只追加、序列化确定、需要时手动设缓存断点</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>工具很多时，为什么不按需动态加载？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>破坏缓存</b>：工具定义在上下文前部，一变后面全失效</li>
+        <li><b>引用断裂</b>：历史里调用过的工具突然没了，模型会困惑或幻觉</li>
+        <li><b>替代</b>：状态机 + logits mask，只限制当前能选哪些工具</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>上下文太长时怎么压缩，又不丢信息？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>可还原压缩</b>：丢掉网页正文，保留 URL；丢掉文件内容，保留路径</li>
+        <li><b>文件系统</b>：当无限大的外部记忆，模型自己读写</li>
+        <li><b>不可逆压缩要谨慎</b>：无法预知哪条观察在十步后有用</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>Agent 出错了，要不要把错误从上下文里清掉？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>不要</b>：错误和堆栈是证据，模型看到后会调整策略</li>
+        <li><b>错误恢复</b>：是真正 Agent 能力的标志，学术评测常忽略</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

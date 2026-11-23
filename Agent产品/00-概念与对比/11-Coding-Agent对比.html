@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coding Agent 对比 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>Coding Agent 对比</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 总览 ==================== -->
+  <section id="s-all">
+    <h2>总览</h2>
+    <div class="hero">
+      <div class="slogan">几家的模型差距在缩小，<mark>真正的区别在三件事：在哪跑、怎么找代码、人什么时候介入</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">终端派</div><div class="v">Claude Code、Codex CLI</div></div>
+        <div class="fact"><div class="k">IDE 派</div><div class="v">Cursor、Copilot、Devin Desktop</div></div>
+        <div class="fact"><div class="k">异步派</div><div class="v">Devin、Copilot cloud agent</div></div>
+        <div class="fact"><div class="k">共同趋势</div><div class="v">本机 + 云端两条路都有</div></div>
+      </div>
+    </div>
+    <div class="tip">截至 2026-11：Windsurf 已改名 Devin Desktop；Gemini CLI 的免费和个人订阅用户已迁到 Antigravity CLI；Cursor 已被 SpaceX 收购。下表按现状写。</div>
+
+    <h3 class="sub"><span class="no">1</span>在哪用、在哪跑、怎么找代码</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>形态</th><th>交互位置</th><th>执行环境</th><th>找代码</th></tr>
+      <tr><td><a href="../01-Coding-Agent/Claude-Code.html">Claude Code</a></td><td>CLI，另有 IDE 插件、桌面、网页</td><td>终端为主</td><td>本机；可开云端会话</td><td>grep / glob / 读文件</td></tr>
+      <tr><td><a href="../01-Coding-Agent/Cursor.html">Cursor</a></td><td>VS Code 分支 IDE，另有 CLI</td><td>编辑器</td><td>本机；Cloud Agents 跑云端 VM</td><td>向量索引 + grep</td></tr>
+      <tr><td><a href="../01-Coding-Agent/OpenAI-Codex.html">Codex</a></td><td>CLI、IDE 插件、桌面 app、Codex Cloud</td><td>终端 / 桌面 / 网页</td><td>本机沙箱；云端隔离环境</td><td>shell 命令现查</td></tr>
+      <tr><td><a href="../01-Coding-Agent/Devin.html">Devin</a></td><td>Devin Cloud + Devin Desktop</td><td>网页、Slack、工单、IDE</td><td>云端 VM；Desktop 在本机</td><td>预建索引 + DeepWiki</td></tr>
+      <tr><td>Copilot（参照）</td><td>IDE 插件、CLI、cloud agent</td><td>IDE / GitHub issue 和 PR</td><td>本机；cloud agent 跑在 Actions 环境</td><td>仓库语义索引 + 搜索</td></tr>
+      <tr><td>Devin Desktop（参照）</td><td>VS Code 分支 IDE</td><td>编辑器</td><td>本机</td><td>本地索引 + 搜索</td></tr>
+      <tr><td>Gemini CLI（参照）</td><td>开源 CLI</td><td>终端</td><td>本机</td><td>shell / 读文件，靠长上下文</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>上下文、安全、扩展、计费</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>项目知识</th><th>权限与安全</th><th>扩展方式</th><th>计费</th></tr>
+      <tr><td>Claude Code</td><td>CLAUDE.md + auto memory</td><td>权限模式 + 规则 + Bash 沙箱</td><td>MCP、Hooks、Skills、Plugins、子代理</td><td>Claude 订阅共用额度，或 API 按 token</td></tr>
+      <tr><td>Cursor</td><td>.cursor/rules</td><td>命令确认 + 云端 VM 隔离</td><td>MCP、Rules、Bugbot</td><td>订阅 + 按模型用量</td></tr>
+      <tr><td>Codex</td><td>AGENTS.md 逐层合并</td><td>OS 沙箱 + 审批策略，可开 auto-review</td><td>MCP、GitHub 里 @codex</td><td>含在 ChatGPT 套餐里，或 API key</td></tr>
+      <tr><td>Devin</td><td>Knowledge + Playbooks</td><td>每会话一台独立 VM</td><td>Slack / Linear / Jira / GitHub 集成、API</td><td>订阅配额，超出按 API 价</td></tr>
+      <tr><td>Copilot</td><td>仓库 / 组织级 instructions</td><td>防火墙 + 只推自己的分支 + 草稿 PR</td><td>MCP、自定义 agent、Skills、Hooks</td><td>AI Credits；cloud agent 另耗 Actions 分钟</td></tr>
+      <tr><td>Devin Desktop</td><td>Rules、Memories</td><td>命令确认</td><td>MCP</td><td>订阅额度</td></tr>
+      <tr><td>Gemini CLI</td><td>GEMINI.md</td><td>工具确认，可选沙箱</td><td>MCP、扩展</td><td>企业 Code Assist 授权或付费 API key</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 按维度对比 ==================== -->
+  <section id="s-dim">
+    <h2>按维度对比</h2>
+
+    <h3 class="sub"><span class="no">1</span>代码理解：索引 vs grep</h3>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🗂</div><h3>先建索引</h3>
+        <p>Cursor、Copilot、Devin。代码切块算向量，按语义找。</p>
+        <ul class="pts">
+          <li><b>好处</b>：不知道关键词也能找到，比如「登录逻辑在哪」</li>
+          <li><b>代价</b>：要同步、会滞后；向量存在服务端，要过隐私审查</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">🔍</div><h3>现查现读</h3>
+        <p>Claude Code、Codex、Gemini CLI。模型自己跑 rg、读文件。</p>
+        <ul class="pts">
+          <li><b>好处</b>：永远是最新代码，精确符号名找得准，不用额外服务</li>
+          <li><b>代价</b>：多花几轮工具调用和 token，大仓库第一次摸索慢</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tip">两派在靠拢：Cursor 的 Agent 也会 grep，建了索引的产品都保留精确搜索兜底。区别在<b>默认先走哪条</b>。</div>
+
+    <h3 class="sub"><span class="no">2</span>执行环境：本机 vs 云沙箱 vs 云 VM</h3>
+    <table class="cmp">
+      <tr><th></th><th>本机</th><th>云端沙箱 / 容器</th><th>云端整台 VM</th></tr>
+      <tr><td>代表</td><td>Claude Code、Codex CLI、Cursor、Gemini CLI</td><td>Codex Cloud、Claude Code 云端会话、Copilot cloud agent</td><td>Devin、Cursor Cloud Agents</td></tr>
+      <tr><td>能碰到什么</td><td>你的文件、凭据、内网</td><td>克隆下来的仓库 + 装好的依赖</td><td>仓库 + 桌面 + 浏览器</td></tr>
+      <tr><td>环境准备</td><td>现成，你装了什么它就有什么</td><td>要写安装脚本 / 环境配置</td><td>要配置，可存快照复用</td></tr>
+      <tr><td>风险</td><td>命令跑在你机器上，靠审批和沙箱兜底</td><td>默认限网，影响范围是一个容器</td><td>同左，但能开浏览器，攻击面更大</td></tr>
+      <tr><td>适合</td><td>边改边看、依赖本地服务的任务</td><td>边界清楚、能自动测试的任务</td><td>要点页面验证、端到端的任务</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">3</span>同步交互 vs 异步交付</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">⇄</div><h3>同步：人在回路里</h3><p>IDE / 终端里一轮轮对话，看着 diff 逐块接受。<b>走偏马上发现</b>，但人要一直在场。</p></div>
+      <div class="card amber"><div class="ico">⏳</div><h3>异步：交回一个 PR</h3><p>派完就走，做完通知。<b>能并行派很多个</b>，但需求写不清时，跑完才发现方向错了。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>交互单位</b>：同步是「一轮对话」，异步是「一个任务 / 一个 PR」</li>
+      <li><b>补救手段</b>：异步产品都加了中途介入，Devin 先出计划再干，Claude Code 能 <code>--teleport</code> 把云端会话拉回本地</li>
+      <li><b>现状</b>：Claude Code、Codex、Cursor 都已同时提供两种跑法，只有入口重心不同</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">4</span>安全：问人 vs 关起来</h3>
+    <table class="cmp">
+      <tr><th>手段</th><th>机制</th><th>谁在用</th></tr>
+      <tr><td>逐步审批</td><td>写文件、跑命令前弹窗</td><td>几家的默认档</td></tr>
+      <tr><td>规则白名单</td><td>预先放行 <code>npm test</code> 这类命令</td><td>Claude Code、Codex、Cursor</td></tr>
+      <tr><td>模型代审</td><td>另一个模型判断这步该不该做</td><td>Claude Code auto mode、Codex auto-review</td></tr>
+      <tr><td>OS 沙箱</td><td>Seatbelt / Landlock / bubblewrap 限制写路径和网络</td><td>Codex CLI 默认开，Claude Code 可开</td></tr>
+      <tr><td>换一台机器</td><td>在云端容器 / VM 里随便折腾</td><td>Devin、Codex Cloud、Copilot cloud agent</td></tr>
+      <tr><td>交付关卡</td><td>只推自己的分支，开草稿 PR，CI 要人批</td><td>Copilot cloud agent</td></tr>
+    </table>
+    <div class="tip warn">弹窗越多，人越容易无脑点同意。所以趋势是<b>沙箱兜底 + 少问</b>，而不是问得更勤。</div>
+
+    <h3 class="sub"><span class="no">5</span>项目知识：怎么告诉它「我们这里的规矩」</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>载体</th><th>特点</th></tr>
+      <tr><td>Claude Code</td><td>CLAUDE.md、auto memory</td><td>分层加载；Agent 自己也会记</td></tr>
+      <tr><td>Codex</td><td>AGENTS.md</td><td>多家工具共认的格式，越深的目录越优先</td></tr>
+      <tr><td>Cursor</td><td>.cursor/rules</td><td>按文件路径匹配才注入</td></tr>
+      <tr><td>Devin</td><td>Knowledge、Playbooks</td><td>组织级，按触发条件召回；流程模板可复用</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">6</span>计费：订阅额度 vs 按用量</h3>
+    <ul class="pts">
+      <li><b>订阅共用额度</b>：Claude Code 和 Claude 聊天共用一个池子；Codex 用 ChatGPT 套餐的额度</li>
+      <li><b>订阅 + 用量</b>：Cursor、Devin 有包月配额，超出按模型价格另付</li>
+      <li><b>纯用量</b>：Copilot 2026-06 起改成 AI Credits，按 token 计；cloud agent 还要算 Actions 分钟</li>
+      <li><b>API key</b>：Claude Code、Codex、Gemini CLI 都能直接用 API，按 token 付费，适合 CI</li>
+    </ul>
+    <div class="tip warn">Agent 一次任务可能跑几十轮，<b>同样的套餐价，重度用户的实际花费差几倍很常见</b>。比价看「额度怎么扣」，别只看月费。</div>
+  </section>
+
+  <!-- ==================== 各产品优劣 ==================== -->
+  <section id="s-pc">
+    <h2>各产品优劣</h2>
+
+    <h3 class="sub"><span class="no">1</span><a href="../01-Coding-Agent/Claude-Code.html">Claude Code</a></h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>可编程</b>：<code>claude -p</code> 无头模式，能塞进脚本和 CI</li>
+        <li><b>扩展点最全</b>：Hooks 做确定性拦截，Skills 按需加载，子代理隔离上下文</li>
+        <li><b>不依赖索引</b>：代码不用上传建库，改完立刻能搜到</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>没有图形 diff 主场</b>：看改动要靠 IDE 插件或 git</li>
+        <li><b>只用 Claude 模型</b>：不能在同一个会话里换别家模型</li>
+        <li><b>大仓库摸索费 token</b>：每次新会话都要重新 grep 一遍</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span><a href="../01-Coding-Agent/Cursor.html">Cursor</a></h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>补全最顺手</b>：自研 Tab 模型预测下一处改动，日常小改最快</li>
+        <li><b>渐进式自主</b>：Tab → Cmd+K → Agent → Cloud Agent，同一个产品里逐级放手</li>
+        <li><b>多家模型可选</b>：按任务挑模型，也有自研模型</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>绑定编辑器</b>：用 JetBrains、Vim 的人要换工具</li>
+        <li><b>索引上云</b>：向量和混淆路径存服务端，敏感仓库要评估</li>
+        <li><b>花费难预估</b>：前沿模型按用量扣，重度 Agent 使用成本上升快</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span><a href="../01-Coding-Agent/OpenAI-Codex.html">OpenAI Codex</a></h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>沙箱默认开</b>：OS 级限制写路径和网络，放手跑也出不了边界</li>
+        <li><b>CLI 开源</b>：能看源码、自己改</li>
+        <li><b>套餐里自带</b>：有 ChatGPT 订阅就能用，云端任务可并行</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>云端要配环境</b>：安装脚本写不好，Agent 就跑不了测试</li>
+        <li><b>云端默认断网</b>：要装包、调外部服务得逐个放开域名</li>
+        <li><b>只用 OpenAI 模型</b>：登录 ChatGPT 账号时没法换别家</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span><a href="../01-Coding-Agent/Devin.html">Devin</a></h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>像派活给同事</b>：Slack、Jira 里 @ 一下就开工，交回 PR</li>
+        <li><b>整台开发机</b>：有浏览器，能点页面验证前端</li>
+        <li><b>组织级记忆</b>：Knowledge、Playbooks 让经验在团队里复用</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>反馈慢</b>：VM 启动 + 异步执行，小改动不如本机快</li>
+        <li><b>需求要写清楚</b>：模糊任务跑完才发现偏了，浪费额度</li>
+        <li><b>代码和环境上云</b>：要接入仓库、配 VM，私有部署走企业版</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>参照产品</h3>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">🐙</div><h3>GitHub Copilot</h3>
+        <ul class="pts">
+          <li><b>优</b>：issue 指给它就开工，草稿 PR + 防火墙 + CI 审批，治理最贴近 GitHub</li>
+          <li><b>劣</b>：cloud agent 每次在 Actions 里冷启动；按 token 计费后成本难估</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">🏄</div><h3>Devin Desktop（原 Windsurf）</h3>
+        <ul class="pts">
+          <li><b>优</b>：本机 IDE + 云端 Devin 同一个账号，本地和异步能接力</li>
+          <li><b>劣</b>：一年内两次易主又改名，原 Cascade 已下线，插件和习惯要迁移</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">♊</div><h3>Gemini CLI</h3>
+        <ul class="pts">
+          <li><b>优</b>：Apache 2.0 开源，长上下文能一次读进很多文件</li>
+          <li><b>劣</b>：2026-06 起免费额度和个人订阅停服，Google 主推 Antigravity CLI，只剩企业授权和付费 API key</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 选型建议 ==================== -->
+  <section id="s-pick">
+    <h2>选型建议</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">代码能不能离开本机？</div><div class="d">先看合规，它会砍掉一半选项</div></div>
+        <div class="branches">
+          <div class="br no">不能 → 本机 CLI + 沙箱，关掉云端索引和云端任务</div>
+          <div class="br ok">能 → 继续往下</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">你想盯着它改，还是派完就走？</div><div class="d">同步看手感，异步看交付</div></div>
+        <div class="branches">
+          <div class="br ask">盯着改 → 看第 3 步</div>
+          <div class="br ask">派完就走 → 看第 4 步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">同步：你住在哪？</div><div class="d">选你本来就在用的界面，切换成本最低</div></div>
+        <div class="branches">
+          <div class="br ok">编辑器 → Cursor，或 VS Code + Copilot</div>
+          <div class="br ok">终端、要进脚本 → Claude Code / Codex CLI</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">异步：活从哪来？</div><div class="d">入口贴近工单的，派活成本最低</div></div>
+        <div class="branches">
+          <div class="br ok">GitHub issue → Copilot cloud agent</div>
+          <div class="br ok">Slack / Jira，要团队知识 → Devin</div>
+          <div class="br ok">已有 ChatGPT / Claude 订阅 → Codex Cloud / Claude Code 云端</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">常见组合：一个同步 + 一个异步</div><div class="d">IDE 里改手头的，云端并行跑边界清楚的小任务；项目规则写进 AGENTS.md 这类多家都认的文件</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Cursor 建索引、Claude Code 不建，谁对？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>索引赢在</b>：模糊问题、超大仓库、补全要毫秒级拿上下文</li>
+        <li><b>grep 赢在</b>：精确符号、永远最新、代码不出本机</li>
+        <li><b>实际</b>：都是混合检索，只是默认路径不同；模型越强，grep 多几轮的代价越小</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>异步 Agent 为什么交付的是 PR，而不是直接改主干？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>可审查</b>：diff + 测试日志，人看完再合</li>
+        <li><b>可回滚</b>：分支隔离，坏了直接关 PR</li>
+        <li><b>复用现有流程</b>：CI、代码评审、分支保护都不用新造</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>本机 Agent 和云端 Agent，安全上各怕什么？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>本机</b>：命令碰到你的凭据和内网，靠审批 + OS 沙箱 + deny 规则</li>
+        <li><b>云端</b>：仓库里藏的提示注入诱导它把代码外传，靠默认断网 + 域名白名单</li>
+        <li><b>共同</b>：给的权限越小越好，密钥别放进 Agent 能读到的地方</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>为什么几家都在补「另一半」？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>任务大小不一样</b>：小改动要同步快，大任务要异步并行</li>
+        <li><b>能接力</b>：Claude Code 的 <code>--teleport</code>、Devin Desktop + Devin Cloud，本地和云端互相移交</li>
+        <li><b>结果</b>：差异从「有没有」变成「默认入口在哪、额度怎么扣」</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

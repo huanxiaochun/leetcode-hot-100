@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Deep Research · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">DEEP RESEARCH</div>
+    <h1>OpenAI Deep Research</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">研究员 Agent：<mark>花几分钟到半小时，自己搜几十上百个网页，写出带引用的长报告</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">OpenAI</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-02，先给 Pro 用户</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">ChatGPT 里的模式；API 专用模型已于 2026-07 下线</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">发布时是微调过的 o3，2026-02 起改用 GPT-5.2</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>不是写死的流程</b>，而是用<b>端到端强化学习</b>训练模型自己决定搜什么、读哪篇、什么时候停。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">澄清</div><div class="d">先反问几个问题，确认范围</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">搜索</div><div class="d">生成查询，拿到结果列表</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">阅读推理</div><div class="d">打开网页 / PDF，必要时跑 Python</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">写报告</div><div class="d">结构化长文，每个论点带引用</div></div>
+    </div>
+    <div class="loop-note">↻ 2→3 反复循环：读到新线索就改方向再搜，信息够了才写报告</div>
+    <pre class="code"><span class="c"># 推理模型 + 浏览工具，循环由模型自己驱动</span>
+q = clarify(user_question)                 <span class="c"># 先问清楚</span>
+notes = []
+<span class="k">while</span> <span class="k">not</span> enough(notes):
+    act = model(q, notes)                  <span class="c"># 推理后决定下一步</span>
+    <span class="k">if</span> act.type == <span class="s">"search"</span>: notes += search(act.query)
+    <span class="k">if</span> act.type == <span class="s">"open"</span>:   notes += read(act.url)   <span class="c"># 记下来源</span>
+    <span class="k">if</span> act.type == <span class="s">"python"</span>: notes += run(act.code)
+report = model.write(q, notes)             <span class="c"># 正文里插引用</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🧠</div><h3>推理模型</h3><p>每步先想再动，能发现矛盾、调整方向。最早基于 o3，现在用 GPT-5.2。</p></div>
+      <div class="card"><div class="ico">🔎</div><h3>浏览工具</h3><p>搜索、打开网页、页内查找、读 PDF 和图片。</p></div>
+      <div class="card"><div class="ico">🐍</div><h3>Python</h3><p>算数、处理表格、画图，结果写进报告。</p></div>
+      <div class="card green"><div class="ico">❓</div><h3>澄清问题</h3><p>开跑前反问一轮，避免半小时后跑偏。</p></div>
+      <div class="card green"><div class="ico">📎</div><h3>引用</h3><p>报告每段都能点回原网页，方便核查。</p></div>
+      <div class="card green"><div class="ico">🔌</div><h3>私有数据</h3><p>可接文件、App 和 MCP 连接器，还能限定只搜指定网站。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 检索 ==================== -->
+  <section id="s-ctx">
+    <h2>检索与引用</h2>
+    <div class="card">
+      <h3>读得多，留得少</h3>
+      <ul class="pts">
+        <li><b>多轮迭代</b>：一次搜索不够，按读到的内容生成新查询</li>
+        <li><b>边读边记</b>：只把有用的片段和来源记下，不把整页塞进上下文</li>
+        <li><b>交叉验证</b>：同一事实找多个来源，冲突时说明</li>
+        <li><b>引用绑定</b>：论点和来源一一对应，减少编造</li>
+        <li><b>透明</b>：侧边栏显示思考过程和访问过的网页</li>
+      </ul>
+    </div>
+    <div class="tip warn">仍会出错：可能引用不权威的来源，或对不确定的结论过于自信。<b>引用是让人能核查，不是保证正确</b>。</div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🏋</div><h3>RL 训练，不靠编排</h3><p>没有手写的“规划→搜索→总结”流水线，<mark>策略是练出来的</mark>，能在新问题上灵活应变。</p></div>
+      <div class="card amber"><div class="ico">⏱</div><h3>用时间换质量</h3><p>允许跑 5~30 分钟，后台运行，做完通知。把“等”变成产品的一部分。</p></div>
+      <div class="card amber"><div class="ico">🎯</div><h3>先澄清再动手</h3><p>长任务开跑前问清楚，成本最低。自己用 API 搭时要自己做这一步。</p></div>
+      <div class="card amber"><div class="ico">📊</div><h3>评测</h3><p>发布时用 Humanity's Last Exam、GAIA 这类需要多步检索推理的基准。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>耗时</th><th>做法</th><th>产出</th></tr>
+      <tr class="me"><td>OpenAI Deep Research</td><td>分钟级</td><td>RL 训练的推理模型自主多轮搜读</td><td>长报告 + 引用</td></tr>
+      <tr><td>Gemini Deep Research</td><td>分钟级</td><td>先给研究计划，用户确认再跑</td><td>长报告 + 引用</td></tr>
+      <tr><td>Perplexity</td><td>秒级（快答）</td><td>检索 + 生成，一问一答</td><td>短答案 + 引用</td></tr>
+      <tr><td>ChatGPT 联网搜索</td><td>秒级</td><td>少量搜索后直接回答</td><td>短答案 + 引用</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Deep Research 和普通 RAG 有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>轮数</b>：RAG 一般检索一次；Deep Research 几十轮</li>
+        <li><b>主动性</b>：模型自己决定查什么、读什么、何时停</li>
+        <li><b>推理</b>：读完会分析、对比、算数，不只是拼接片段</li>
+        <li><b>代价</b>：慢、贵，适合复杂调研，不适合简单问答</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>为什么开跑前要问澄清问题？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>任务长</b>：跑偏了浪费几十分钟和大量 token</li>
+        <li><b>问题模糊</b>：用户一开始常说不清范围、深度、侧重点</li>
+        <li><b>成本最低</b>：在开头确认，比中途纠正便宜得多</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>自己做一个 Deep Research，怎么设计？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>拆问题</b>：规划子问题，可以并行派给子 Agent 搜</li>
+        <li><b>压缩</b>：每个子 Agent 只返回要点和来源</li>
+        <li><b>停止条件</b>：预算上限 + 模型判断信息是否够</li>
+        <li><b>写作</b>：最后一个模型统一成文，校验每条引用</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>怎么减少报告里的幻觉？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>引用绑定</b>：每个论点必须对应来源</li>
+        <li><b>多源验证</b>：关键事实至少两个来源</li>
+        <li><b>来源分级</b>：优先官方、论文，降低论坛权重</li>
+        <li><b>表达不确定</b>：证据不足时明说</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

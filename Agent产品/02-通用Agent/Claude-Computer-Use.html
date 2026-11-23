@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Computer Use · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">GENERAL AGENT</div>
+    <h1>Claude Computer Use</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">让模型像人一样用电脑：<mark>看截图，输出鼠标坐标和按键，任何桌面软件都能操作</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Anthropic</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2024-10 公开测试，随 Claude 3.5 Sonnet 新版</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">API 里的一个工具（computer tool）</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">Claude 系列</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>Anthropic 只给模型能力，不给电脑</b>。截图和执行动作都在开发者自己的环境里做，是第一个公开的“操作电脑”前沿模型 API。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">截图</div><div class="d">开发者把屏幕截图发给模型</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">看图推理</div><div class="d">找到目标元素在哪</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">输出动作</div><div class="d">left_click [x, y] / type / key</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">本地执行</div><div class="d">开发者代码真正点下去，再截图</div></div>
+    </div>
+    <div class="loop-note">↻ 标准的 tool use 循环，只是工具结果换成了截图</div>
+    <pre class="code"><span class="c"># 开发者实现“手”，Claude 只当“脑”</span>
+tools = [{<span class="s">"type"</span>: <span class="s">"computer_..."</span>, <span class="s">"display_width_px"</span>: 1024, <span class="s">"display_height_px"</span>: 768}]
+<span class="k">while</span> True:
+    resp = claude(messages, tools)
+    <span class="k">if</span> resp.stop_reason != <span class="s">"tool_use"</span>: <span class="k">break</span>
+    act = resp.tool_use.input              <span class="c"># {"action":"left_click","coordinate":[x,y]}</span>
+    xdotool(act)                           <span class="c"># 在虚拟机里执行</span>
+    messages += [resp, screenshot()]       <span class="c"># 新截图作为 tool_result</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🖥</div><h3>computer 工具</h3><p>截图、移动鼠标、点击、拖拽、输入文字、按快捷键、滚动。</p></div>
+      <div class="card"><div class="ico">⌨</div><h3>bash 工具</h3><p>能用命令解决的就不点界面，更快更稳。</p></div>
+      <div class="card"><div class="ico">✏</div><h3>文本编辑工具</h3><p>查看、创建、替换文件内容，常和 computer 工具一起给。</p></div>
+      <div class="card green"><div class="ico">🐳</div><h3>参考实现</h3><p>官方给了 Docker 示例：虚拟桌面 + 浏览器 + 执行动作的代码。</p></div>
+      <div class="card green"><div class="ico">📐</div><h3>坐标数数</h3><p>模型被训练成能数像素，从截图准确算出要点的位置。</p></div>
+      <div class="card green"><div class="ico">🌐</div><h3>延伸产品</h3><p>同一能力后来用到 Claude in Chrome 这类浏览器 Agent 上。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>截图与上下文</h2>
+    <div class="card">
+      <h3>截图很贵，坐标要对得上</h3>
+      <ul class="pts">
+        <li><b>分辨率</b>：建议 1024×768 这类 XGA 尺寸，高分屏先缩放再发</li>
+        <li><b>坐标换算</b>：缩放后模型给的坐标，要由开发者换算回真实屏幕</li>
+        <li><b>只留最近几张</b>：早期截图可以丢掉，省 token</li>
+        <li><b>每步验证</b>：提示模型动作后截图确认结果，而不是假设成功</li>
+        <li><b>快捷键优先</b>：下拉框、滚动条难点，用键盘更可靠</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🎯</div><h3>通用而非专用</h3><p>不为每个软件写插件，<mark>教模型用通用界面</mark>。人能用的软件，模型理论上都能用。</p></div>
+      <div class="card amber"><div class="ico">🧱</div><h3>环境交给开发者</h3><p>数据不出自己的机器，想用虚拟机还是容器都行。代价是要自己搭。</p></div>
+      <div class="card amber"><div class="ico">🛡</div><h3>安全靠隔离</h3><p>官方建议跑在权限最小的虚拟机里，别给敏感账号，关键操作让人确认。</p></div>
+      <div class="card amber"><div class="ico">📈</div><h3>评测：OSWorld</h3><p>在真实操作系统任务上打分，用来衡量各家 Computer Use 能力。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>谁提供电脑</th><th>操作范围</th><th>形态</th></tr>
+      <tr class="me"><td>Claude Computer Use</td><td>开发者</td><td>整个桌面</td><td>API 工具</td></tr>
+      <tr><td>Operator / CUA</td><td>OpenAI</td><td>云端浏览器</td><td>ChatGPT 产品，CUA 也开放 API</td></tr>
+      <tr><td>ChatGPT Agent</td><td>OpenAI</td><td>云端虚拟机</td><td>ChatGPT 产品</td></tr>
+      <tr><td>Manus</td><td>Manus</td><td>云端虚拟机</td><td>消费级产品</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Computer Use 的一轮循环是怎么跑的？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>请求</b>：带上 computer 工具定义和屏幕尺寸</li>
+        <li><b>模型</b>：返回 tool_use，如在某坐标点击</li>
+        <li><b>开发者</b>：执行动作，截图作为 tool_result 发回</li>
+        <li><b>结束</b>：模型不再调工具，返回文字</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>纯视觉方案和读 DOM / 无障碍树的方案比，优劣在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>视觉优点</b>：任何软件都能用，包括桌面程序、Canvas、远程桌面</li>
+        <li><b>视觉缺点</b>：截图 token 多、慢、坐标可能偏</li>
+        <li><b>DOM 优点</b>：精确、便宜，但只限网页且结构可能很乱</li>
+        <li><b>实践</b>：常常混用，能拿结构化信息就别截图</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>让模型操作电脑，怎么控制风险？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>隔离</b>：专用虚拟机 / 容器，最小权限</li>
+        <li><b>网络</b>：限制可访问的域名</li>
+        <li><b>人确认</b>：登录、付款、接受条款这类操作</li>
+        <li><b>提示注入</b>：截图里的文字可能是攻击，当数据处理</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

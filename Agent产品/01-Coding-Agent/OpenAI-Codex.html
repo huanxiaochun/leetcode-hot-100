@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenAI Codex · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">CODING AGENT</div>
+    <h1>OpenAI Codex</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">一个 Agent，两种跑法：<mark>本机终端里结对编程，云端沙箱里并行干活</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">OpenAI</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-04 开源 CLI，2025-05 云端版</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">CLI、IDE 插件、ChatGPT 里的云端任务</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">为编程调优的 GPT 系列（codex 系列模型）</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>默认关在沙箱里跑</b>，安全靠操作系统隔离而不只靠弹窗确认；云端可以<b>同时开多个任务</b>。</div>
+  </section>
+
+  <!-- ==================== 核心工作流 ==================== -->
+  <section id="s-loop">
+    <h2>核心工作流（云端任务）</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">派任务</div><div class="d">选仓库和分支，一句话描述</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">起容器</div><div class="d">克隆代码，跑环境安装脚本</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">Agent 循环</div><div class="d">读代码、改代码、跑测试</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">交付</div><div class="d">diff + 日志证据，一键开 PR</div></div>
+    </div>
+    <div class="loop-note">↻ 每个任务一个独立容器，可以同时派很多个，互不干扰</div>
+    <pre class="code"><span class="c"># CLI：沙箱和审批是两个独立旋钮</span>
+codex --sandbox read-only                  <span class="c"># 只能读，改动全部要批</span>
+codex --sandbox workspace-write \
+      --ask-for-approval on-request        <span class="c"># 工作区内随便改，越界才问</span>
+codex exec <span class="s">"修复失败的单测"</span>               <span class="c"># 非交互模式，给 CI 用</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">⌨</div><h3>Codex CLI</h3><p>开源，用 Rust 写，在本机终端跑，支持交互和 <code>exec</code> 无头模式。</p></div>
+      <div class="card"><div class="ico">☁</div><h3>云端任务</h3><p>每个任务一个隔离容器，后台跑完再看结果，可并行多个。</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>沙箱</h3><p>macOS 用 Seatbelt，Linux 用 Landlock + seccomp，限制写入路径和网络。</p></div>
+      <div class="card green"><div class="ico">📄</div><h3>AGENTS.md</h3><p>仓库里的说明文件：怎么装依赖、怎么跑测试、代码规范。按目录层级叠加。</p></div>
+      <div class="card green"><div class="ico">✅</div><h3>审批策略</h3><p>从「每步都问」到「从不问」多档可选，和沙箱权限组合使用。</p></div>
+      <div class="card green"><div class="ico">🧩</div><h3>扩展点</h3><p>支持 MCP；GitHub 里可以 @codex 做代码审查或接任务。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>上下文与环境</h2>
+    <div class="card">
+      <h3>上下文靠探索，环境靠配置</h3>
+      <ul class="pts">
+        <li><b>不建索引</b>：和 Claude Code 一样，用 shell 命令（rg、cat）现查现读</li>
+        <li><b>AGENTS.md</b>：根目录到当前目录逐层合并，越深越优先</li>
+        <li><b>环境脚本</b>：云端容器先跑安装脚本，Agent 才能真的跑测试</li>
+        <li><b>默认断网</b>：云端 Agent 阶段默认不能联网，可按域名放开</li>
+        <li><b>会话压缩</b>：长对话可以压缩成摘要继续</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🧱</div><h3>沙箱优先</h3><p>用 OS 级隔离代替逐条确认，<mark>放手让它跑，也跑不出边界</mark>。</p></div>
+      <div class="card amber"><div class="ico">🔀</div><h3>本地 + 云端</h3><p>小改动本地结对，大任务丢云端，同一个账号和模型。</p></div>
+      <div class="card amber"><div class="ico">⏩</div><h3>并行 + 多方案</h3><p>多个任务同时跑，同一任务也能生成多个版本挑最好的。</p></div>
+      <div class="card amber"><div class="ico">📜</div><h3>可验证的交付</h3><p>结果附上终端日志和测试输出，审查者能看到它做了什么。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>交互位置</th><th>找代码</th><th>执行环境</th></tr>
+      <tr><td>Claude Code</td><td>终端</td><td>grep / 读文件</td><td>本机</td></tr>
+      <tr><td>Cursor</td><td>IDE</td><td>向量索引 + 搜索</td><td>本机，可选云端</td></tr>
+      <tr class="me"><td>Codex</td><td>CLI / 云端</td><td>grep / 读文件</td><td>本机或云沙箱</td></tr>
+      <tr><td>Devin</td><td>网页 / Slack</td><td>自建索引</td><td>云端虚拟机</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>沙箱和审批为什么要拆成两个设置？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>沙箱</b>：技术上能做什么，由操作系统强制</li>
+        <li><b>审批</b>：什么时候停下来问人，是交互策略</li>
+        <li><b>组合</b>：沙箱兜底后可以少问，体验和安全不用二选一</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>云端并行任务要解决哪些工程问题？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>环境复现</b>：安装脚本 + 缓存，容器起得快、能跑测试</li>
+        <li><b>隔离</b>：每任务一个容器，互不污染</li>
+        <li><b>安全</b>：默认断网，防止提示注入把代码外传</li>
+        <li><b>交付</b>：diff + 日志，人审查后再合并</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>AGENTS.md 解决什么问题？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>项目知识</b>：测试命令、规范这些模型猜不到的东西写下来</li>
+        <li><b>通用格式</b>：多家 Agent 工具都认，不用每家一个文件</li>
+        <li><b>分层</b>：子目录可以覆盖父目录的约定</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 基础 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>Agent 基础</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 什么是 Agent ==================== -->
+  <section id="s-what">
+    <h2>什么是 Agent</h2>
+    <div class="hero">
+      <div class="slogan">Agent = 大模型 + 工具 + 循环：<mark>模型自己决定下一步调哪个工具，看到结果再决定下一步，直到做完</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">大脑</div><div class="v">LLM，负责决策</div></div>
+        <div class="fact"><div class="k">手脚</div><div class="v">工具：搜索、读写文件、调 API</div></div>
+        <div class="fact"><div class="k">记忆</div><div class="v">消息历史 + 外部文件</div></div>
+        <div class="fact"><div class="k">驱动</div><div class="v">一个 while 循环</div></div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">💬</div><h3>聊天机器人</h3><p>一问一答。模型只输出文字，不动手。</p></div>
+      <div class="card"><div class="ico">🔧</div><h3>带工具的 LLM</h3><p>能调一次工具，比如查天气再回答。下一步由程序写死。</p></div>
+      <div class="card green"><div class="ico">🤖</div><h3>Agent</h3><p>调几次、调哪个、什么时候停，<b>都由模型自己定</b>。</p></div>
+    </div>
+    <div class="tip">判断标准只有一条：<b>控制流在谁手里</b>。写在代码里是 Workflow，交给模型是 Agent。</div>
+  </section>
+
+  <!-- ==================== Workflow vs Agent ==================== -->
+  <section id="s-wf">
+    <h2>Workflow 和 Agent</h2>
+    <div class="card">
+      <h3>Anthropic《Building effective agents》的划分</h3>
+      <p><b>Workflow</b>：LLM 和工具按<b>预先写好的代码路径</b>编排。</p>
+      <p><b>Agent</b>：LLM <b>动态决定</b>自己的流程和工具使用。</p>
+      <p>两者都叫 agentic system，地基是同一个：<mark>带检索、工具、记忆的增强版 LLM</mark>。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>Workflow</th><th>Agent</th></tr>
+      <tr><td>谁定下一步</td><td>代码</td><td>模型</td></tr>
+      <tr><td>步骤数</td><td>固定，提前知道</td><td>不固定，做完才知道</td></tr>
+      <tr><td>可预测性</td><td>高，好测试</td><td>低，结果有波动</td></tr>
+      <tr><td>成本 / 延迟</td><td>可控</td><td>更高，轮数说不准</td></tr>
+      <tr><td>适合</td><td>任务能拆成固定步骤</td><td>开放问题，路径没法预先写</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">1</span>五种 Workflow 模式</h3>
+    <table class="cmp">
+      <tr><th>模式</th><th>怎么做</th><th>例子</th></tr>
+      <tr><td>Prompt chaining<br>提示链</td><td>上一步输出喂给下一步，中间可加检查点（gate）</td><td>先写大纲 → 检查大纲 → 再写正文</td></tr>
+      <tr><td>Routing<br>路由</td><td>先分类，再交给对应的专用提示或模型</td><td>客服：退款 / 技术问题 / 闲聊分开处理；简单问题走小模型</td></tr>
+      <tr><td>Parallelization<br>并行</td><td>分段（sectioning）各做一块；投票（voting）同一题做多次</td><td>一个模型答题、另一个审核安全；多次审代码取多数</td></tr>
+      <tr><td>Orchestrator-workers<br>编排者-工人</td><td>中心模型<b>运行时</b>拆子任务，分给工人，再汇总</td><td>改代码：要动哪些文件，看了需求才知道</td></tr>
+      <tr><td>Evaluator-optimizer<br>评估-优化</td><td>一个生成，一个打分给意见，循环到达标</td><td>翻译反复润色；搜索多轮补漏</td></tr>
+    </table>
+    <div class="tip">Orchestrator-workers 和并行的区别：并行的子任务是<b>写死的</b>，编排者的子任务是<b>模型临时拆的</b>。它已经很接近 Agent 了。</div>
+
+    <h3 class="sub"><span class="no">2</span>文章的核心建议</h3>
+    <ul class="pts">
+      <li><b>先用最简单的</b>：一次 LLM 调用 + 检索 + 好的示例，往往就够</li>
+      <li><b>按需加复杂度</b>：单次不够再上 Workflow，Workflow 不够再上 Agent</li>
+      <li><b>框架少用</b>：先直接调 API，很多模式几行代码就能写；用框架也要看懂它底层在做什么</li>
+      <li><b>工具要好好写</b>：工具的说明和参数设计（ACI）值得和提示词花一样多的功夫</li>
+    </ul>
+  </section>
+
+  <!-- ==================== Function calling ==================== -->
+  <section id="s-fc">
+    <h2>Function calling 原理</h2>
+    <div class="card">
+      <h3>模型自己从不执行任何东西</h3>
+      <p>它只输出一段结构化的<b>调用意图</b>：要调哪个函数、传什么参数。<mark>真正执行的是你的程序</mark>，执行完再把结果塞回对话。</p>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">程序声明工具</div><div class="d">请求里带上 tools：名字、用途说明、参数的 JSON Schema</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">模型决定要不要调</div><div class="d">看用户问题和工具说明，自己判断</div></div>
+        <div class="branches">
+          <div class="br ok">不需要 → 直接回答文字</div>
+          <div class="br ask">需要 → 输出 tool_use 块</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">程序解析并执行</div><div class="d">校验参数、检查权限，然后真的去调 API / 查库 / 跑命令</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">回填 tool_result</div><div class="d">用 id 对上是哪次调用；报错也照样回填，让模型自己改</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">↻</div>
+        <div class="body"><div class="h">带着结果再请求一次模型</div><div class="d">模型继续调工具，或者给出最终回答</div></div>
+      </div>
+    </div>
+    <pre class="code"><span class="c">// 1. 请求里声明工具</span>
+tools: [{ name: <span class="s">"get_weather"</span>, description: <span class="s">"查城市天气"</span>,
+          input_schema: { city: <span class="s">"string"</span> } }]
+
+<span class="c">// 2. 模型返回：只是意图，没有执行</span>
+{ type: <span class="s">"tool_use"</span>, id: <span class="s">"toolu_01"</span>, name: <span class="s">"get_weather"</span>, input: { city: <span class="s">"上海"</span> } }
+stop_reason: <span class="s">"tool_use"</span>
+
+<span class="c">// 3. 程序执行后，以 user 消息回填</span>
+{ type: <span class="s">"tool_result"</span>, tool_use_id: <span class="s">"toolu_01"</span>, content: <span class="s">"小雨 18℃"</span> }
+
+<span class="c">// 4. 模型再看一遍完整对话，回答：上海今天小雨，18℃，记得带伞</span></pre>
+    <div class="grid mt">
+      <div class="card"><div class="ico">📝</div><h3>工具说明 = 提示词</h3><p>模型只能看名字和 description 选工具。写不清就会选错、传错参数。</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>可以并行</h3><p>一轮里能发多个互不依赖的 tool_use，程序并发执行，一起回填。</p></div>
+      <div class="card amber"><div class="ico">🔒</div><h3>安全在程序这边</h3><p>模型输出的参数是不可信输入，执行前要校验、限权限。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 三种推理模式 ==================== -->
+  <section id="s-react">
+    <h2>ReAct / Plan-and-Execute / Reflection</h2>
+    <table class="cmp">
+      <tr><th>模式</th><th>一句话</th><th>优点</th><th>缺点</th></tr>
+      <tr class="me"><td>ReAct</td><td>想一步、做一步、看结果</td><td>灵活，随时根据结果调整</td><td>容易走一步看一步，绕远路</td></tr>
+      <tr><td>Plan-and-Execute</td><td>先列完整计划，再逐步执行</td><td>方向稳，计划可以给人审</td><td>计划赶不上变化，要重新规划</td></tr>
+      <tr><td>Reflection</td><td>做完先自查，再改</td><td>质量更高，少犯低级错</td><td>多花几轮 token 和时间</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">1</span>ReAct：Reason + Act 交替</h3>
+    <div class="flow">
+      <div class="step"><div class="t">Thought</div><div class="h">想</div><div class="d">还缺什么信息？</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">Action</div><div class="h">做</div><div class="d">调一个工具</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">Observation</div><div class="h">看</div><div class="d">读工具结果</div></div>
+    </div>
+    <div class="loop-note">↻ 循环到模型认为信息够了，输出最终答案</div>
+    <pre class="code"><span class="c">问：《三体》作者的籍贯是哪个省？</span>
+<span class="k">Thought</span>  先查作者是谁
+<span class="k">Action</span>   search(<span class="s">"三体 作者"</span>)
+<span class="k">Observe</span>  刘慈欣
+<span class="k">Thought</span>  再查刘慈欣的籍贯
+<span class="k">Action</span>   search(<span class="s">"刘慈欣 籍贯"</span>)
+<span class="k">Observe</span>  河南
+<span class="k">Answer</span>   河南</pre>
+    <div class="tip">今天主流 Agent（Claude Code、Codex 等）的主循环本质上就是 ReAct。区别只是 Thought 不一定写出来，Action 用原生 function calling 表达。</div>
+
+    <h3 class="sub"><span class="no">2</span>Plan-and-Execute：先规划，再执行</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">Planner 列计划</div><div class="d">例：① 找出所有调用旧接口的文件 ② 逐个替换 ③ 跑测试</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">Executor 逐步执行</div><div class="d">每步可以是一个小 ReAct 循环，也可以换便宜的模型</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">检查进度</div><div class="d">对照计划看这一步做成了没有</div></div>
+        <div class="branches">
+          <div class="br ok">顺利 → 下一步</div>
+          <div class="br no">出意外 → 回到 Planner 重新规划</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">全部完成，汇总结果</div></div>
+      </div>
+    </div>
+    <ul class="pts">
+      <li><b>实际例子</b>：Claude Code 的 plan 模式、待办清单；Deep Research 先出研究提纲</li>
+      <li><b>好处</b>：计划写在外面，长任务不容易忘了要干什么</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">3</span>Reflection：生成 → 批评 → 修改</h3>
+    <div class="flow">
+      <div class="step"><div class="t">生成</div><div class="h">写初稿</div><div class="d">代码、文章、方案</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">批评</div><div class="h">找问题</div><div class="d">自己审，或换一个模型审</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">修改</div><div class="h">按意见改</div><div class="d">达标就停</div></div>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">🧪</div><h3>有外部信号最好</h3><p>跑测试、编译、lint 的报错比「自己觉得哪里不对」靠谱得多。</p></div>
+      <div class="card"><div class="ico">👀</div><h3>换个审稿人</h3><p>同一个模型审自己容易放过错误，用独立的审核 Agent 或不同提示更有效。</p></div>
+      <div class="card green"><div class="ico">📓</div><h3>Reflexion</h3><p>把失败后的反思写成文字存下来，下次尝试时带上，算一种经验记忆。</p></div>
+    </div>
+    <div class="tip">三者能组合：先 Plan，每步用 ReAct 执行，关键产出再 Reflection。Anthropic 的 evaluator-optimizer 就是 Reflection 的 Workflow 版本。</div>
+  </section>
+
+  <!-- ==================== 停止条件 ==================== -->
+  <section id="s-stop">
+    <h2>Agent loop 的停止条件</h2>
+    <div class="card">
+      <h3>循环必须有出口，而且不能只靠模型说「我做完了」</h3>
+      <p>模型可能提前收工，也可能原地打转。生产环境要<b>正常出口 + 兜底出口</b>都有。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th>类型</th><th>条件</th><th>例子</th></tr>
+      <tr class="me"><td>正常完成</td><td>模型这轮没有调工具，只回文字</td><td><code>stop_reason == "end_turn"</code></td></tr>
+      <tr><td>外部判定</td><td>另一个模型或脚本检查目标是否达成</td><td>测试全绿才算完；Claude Code 的 Stop Hook、<code>/goal</code></td></tr>
+      <tr><td>预算上限</td><td>最大轮数、token、费用、时间</td><td><code>max_turns=50</code>，超时 10 分钟</td></tr>
+      <tr><td>需要人</td><td>要确认危险操作，或缺信息问用户</td><td>删库前暂停；调用「提问」工具</td></tr>
+      <tr><td>异常</td><td>不可恢复的错误，或检测到死循环</td><td>同一个工具同样参数连续调 3 次</td></tr>
+      <tr><td>用户中断</td><td>用户按 Esc / 取消</td><td>保留已做的部分，下次可续</td></tr>
+    </table>
+    <pre class="code"><span class="k">for</span> turn <span class="k">in</span> range(MAX_TURNS):              <span class="c"># 兜底：最多 N 轮</span>
+    resp = llm(messages, tools)
+    <span class="k">if</span> resp.stop_reason != <span class="s">"tool_use"</span>:     <span class="c"># 正常出口</span>
+        <span class="k">if</span> verify(resp): <span class="k">break</span>             <span class="c"># 外部再验一次</span>
+        messages += [resp, <span class="s">"还没达标：..."</span>]; <span class="k">continue</span>
+    <span class="k">if</span> over_budget() <span class="k">or</span> looping(): <span class="k">break</span>   <span class="c"># 费用 / 死循环</span>
+    messages += [resp, run_tools(resp)]</pre>
+  </section>
+
+  <!-- ==================== 什么时候不该用 ==================== -->
+  <section id="s-not">
+    <h2>什么时候不该用 Agent</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">📋</div><h3>步骤是固定的</h3><p>发票识别 → 入库 → 发通知。写成 Workflow 更快、更便宜、好测试。</p></div>
+      <div class="card amber"><div class="ico">⚡</div><h3>一次调用就够</h3><p>翻译、摘要、分类。加检索和示例就能解决，不需要循环。</p></div>
+      <div class="card amber"><div class="ico">⏱</div><h3>延迟和成本敏感</h3><p>搜索框联想、实时对话。Agent 动辄几十秒、几十轮。</p></div>
+      <div class="card amber"><div class="ico">💥</div><h3>错了无法回滚</h3><p>转账、发全员邮件、改生产库。要么不给权限，要么每步人审。</p></div>
+      <div class="card amber"><div class="ico">❓</div><h3>结果没法验证</h3><p>没有测试、没有标准答案，Agent 做错了你也不知道。</p></div>
+      <div class="card amber"><div class="ico">📜</div><h3>要求完全确定</h3><p>合规审计要求每次走同样的路径、结果可复现。</p></div>
+    </div>
+    <div class="tip">反过来，适合 Agent 的特征：<b>路径没法提前写、能自动验证结果、出错代价可控</b>。写代码正好三条都占，所以 Coding Agent 最先成熟。</div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Agent 和 Workflow 的本质区别是什么？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>控制流</b>：Workflow 的步骤写在代码里，Agent 的下一步由模型运行时决定</li>
+        <li><b>取舍</b>：Workflow 可预测、便宜；Agent 灵活，但成本和结果有波动</li>
+        <li><b>中间地带</b>：orchestrator-workers 由模型临时拆任务，已经接近 Agent</li>
+        <li><b>原则</b>：从最简单的方案开始，确实需要灵活性再升级</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>Function calling 时模型真的执行了函数吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>没有</b>：模型只输出 tool_use，包含函数名和参数 JSON</li>
+        <li><b>程序执行</b>：解析、校验、执行，再把结果作为 tool_result 回填</li>
+        <li><b>靠 id 对应</b>：一轮多个调用时，用 tool_use_id 区分</li>
+        <li><b>好处</b>：权限、沙箱、审计都在程序侧做，模型碰不到真实系统</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>ReAct 和 Plan-and-Execute 怎么选？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>ReAct</b>：环境多变、每步结果决定下一步，比如排查线上问题</li>
+        <li><b>Plan-and-Execute</b>：任务长、结构清楚、希望人先审计划，比如大范围重构</li>
+        <li><b>常见做法</b>：两者结合，先出计划，每步内部用 ReAct，出意外再重新规划</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>怎么防止 Agent 死循环或提前收工？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>兜底上限</b>：最大轮数、token、费用、时间</li>
+        <li><b>重复检测</b>：同样的工具和参数反复出现就打断</li>
+        <li><b>外部验证</b>：模型说完成后再跑测试或让独立模型判断，不达标就把原因塞回去继续</li>
+        <li><b>人在环中</b>：危险操作和信息不足时暂停问人</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

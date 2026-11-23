@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>经典 Agent 产品</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <div class="cat">AGENT 产品</div>
+    <h1>经典 Agent 产品拆解</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <section id="c0" class="cat-block">
+    <h2>概念与对比</h2>
+    <div class="grid">
+      <a class="card prod" href="00-概念与对比/01-Agent基础.html"><div class="name">Agent 基础</div><div class="by">概念</div><p>Workflow 和 Agent、Function calling、ReAct、停止条件</p></a>
+      <a class="card prod" href="00-概念与对比/02-工具与扩展.html"><div class="name">工具与扩展</div><div class="by">概念</div><p>Tool、MCP、Skills、CLI、Plugin、Subagent、Hook 的区别</p></a>
+      <a class="card prod" href="00-概念与对比/03-上下文与记忆.html"><div class="name">上下文与记忆</div><div class="by">概念</div><p>上下文工程、压缩、缓存、RAG 和 grep、长期记忆</p></a>
+      <a class="card prod" href="00-概念与对比/04-多Agent与编排.html"><div class="name">多 Agent 与编排</div><div class="by">概念</div><p>单 Agent 还是多 Agent，常见编排方式，A2A</p></a>
+      <a class="card prod" href="00-概念与对比/05-安全与评测.html"><div class="name">安全与评测</div><div class="by">概念</div><p>提示注入、沙箱与权限、基准和评测方法</p></a>
+      <a class="card prod" href="00-概念与对比/11-Coding-Agent对比.html"><div class="name">Coding Agent 对比</div><div class="by">对比</div><p>Claude Code、Cursor、Codex、Devin 等</p></a>
+      <a class="card prod" href="00-概念与对比/12-通用Agent对比.html"><div class="name">通用 Agent 对比</div><div class="by">对比</div><p>Manus、ChatGPT Agent、Computer Use 等</p></a>
+      <a class="card prod" href="00-概念与对比/13-深度研究对比.html"><div class="name">深度研究对比</div><div class="by">对比</div><p>OpenAI、Perplexity、Gemini、Claude</p></a>
+      <a class="card prod" href="00-概念与对比/14-框架与协议对比.html"><div class="name">框架与协议对比</div><div class="by">对比</div><p>LangGraph、各家 SDK、Coze、MCP 和 A2A</p></a>
+    </div>
+  </section>
+
+  <section id="c1" class="cat-block">
+    <h2>Coding Agent</h2>
+    <div class="grid">
+      <a class="card prod" href="01-Coding-Agent/Claude-Code.html"><div class="name">Claude Code</div><div class="by">Anthropic</div><p>终端里的编程 Agent，不建索引，靠 grep 找代码</p></a>
+      <a class="card prod" href="01-Coding-Agent/Cursor.html"><div class="name">Cursor</div><div class="by">Anysphere</div><p>AI 原生 IDE，代码库索引 + Tab 补全 + Agent 模式</p></a>
+      <a class="card prod" href="01-Coding-Agent/OpenAI-Codex.html"><div class="name">Codex</div><div class="by">OpenAI</div><p>CLI + 云端沙箱，多个任务并行跑</p></a>
+      <a class="card prod" href="01-Coding-Agent/Devin.html"><div class="name">Devin</div><div class="by">Cognition</div><p>「AI 软件工程师」，云端虚拟机里异步交付 PR</p></a>
+    </div>
+  </section>
+
+  <section id="c2" class="cat-block">
+    <h2>通用 Agent</h2>
+    <div class="grid">
+      <a class="card prod" href="02-通用Agent/Manus.html"><div class="name">Manus</div><div class="by">Manus</div><p>云端虚拟机里干活的通用 Agent，上下文工程的范本</p></a>
+      <a class="card prod" href="02-通用Agent/ChatGPT-Agent.html"><div class="name">ChatGPT Agent</div><div class="by">OpenAI</div><p>Operator + Deep Research 合体，自己操作浏览器</p></a>
+      <a class="card prod" href="02-通用Agent/Claude-Computer-Use.html"><div class="name">Computer Use</div><div class="by">Anthropic</div><p>看截图、点坐标，像人一样用电脑</p></a>
+    </div>
+  </section>
+
+  <section id="c3" class="cat-block">
+    <h2>深度研究</h2>
+    <div class="grid">
+      <a class="card prod" href="03-深度研究/OpenAI-Deep-Research.html"><div class="name">Deep Research</div><div class="by">OpenAI</div><p>多轮搜索、阅读、推理，产出带引用的报告</p></a>
+      <a class="card prod" href="03-深度研究/Perplexity.html"><div class="name">Perplexity</div><div class="by">Perplexity AI</div><p>答案引擎：检索增强 + 每句话带引用</p></a>
+    </div>
+  </section>
+
+  <section id="c4" class="cat-block">
+    <h2>开发框架与协议</h2>
+    <div class="grid">
+      <a class="card prod" href="04-开发框架与协议/LangGraph.html"><div class="name">LangGraph</div><div class="by">LangChain</div><p>用状态图编排 Agent，支持持久化和人工介入</p></a>
+      <a class="card prod" href="04-开发框架与协议/MCP.html"><div class="name">MCP</div><div class="by">Anthropic 发起</div><p>Agent 接工具和数据的通用协议</p></a>
+      <a class="card prod" href="04-开发框架与协议/OpenAI-Agents-SDK.html"><div class="name">Agents SDK</div><div class="by">OpenAI</div><p>Agent、Handoff、Guardrail 三件套</p></a>
+      <a class="card prod" href="04-开发框架与协议/Coze与火山方舟.html"><div class="name">Coze 与火山方舟</div><div class="by">字节跳动</div><p>低代码搭 Agent + 模型服务平台</p></a>
+    </div>
+  </section>
+
+</div></main>
+<script src="assets/page.js"></script>
+</body>
+</html>

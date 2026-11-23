@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上下文与记忆 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>上下文与记忆</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 是什么 ==================== -->
+  <section id="s-what">
+    <h2>Context engineering 是什么</h2>
+    <div class="hero">
+      <div class="slogan">模型每一轮只看得到窗口里的 token：<mark>决定每一轮往窗口里放什么、不放什么</mark>，就是 context engineering</div>
+      <div class="facts">
+        <div class="fact"><div class="k">目标</div><div class="v">用最少的高信号 token 换最好的结果</div></div>
+        <div class="fact"><div class="k">原因</div><div class="v">窗口有限，内容越多注意力越分散</div></div>
+        <div class="fact"><div class="k">来源</div><div class="v">Anthropic、Manus、Cognition 2025 年的工程文章</div></div>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>Prompt engineering</th><th>Context engineering</th></tr>
+      <tr><td>管什么</td><td>怎么写提示词，尤其是系统提示</td><td>窗口里的全部内容：提示、工具、记忆、检索结果、历史</td></tr>
+      <tr><td>什么时候做</td><td>写一次，上线前调好</td><td>每一轮都要重新挑选</td></tr>
+      <tr><td>典型场景</td><td>单次分类、改写、生成</td><td>跑几十上百轮的 Agent</td></tr>
+      <tr><td>关系</td><td colspan="2">后者包含前者。Anthropic 把它看作 prompt engineering 的自然延伸</td></tr>
+    </table>
+    <div class="tip">一句话：Agent 每调一次工具，窗口就多一截。<b>context engineering 管的是这一截要不要留、留多少、放在哪</b>。</div>
+  </section>
+
+  <!-- ==================== 放什么 ==================== -->
+  <section id="s-parts">
+    <h2>上下文里放什么</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">📜</div><h3>系统提示</h3><p>角色、规则、输出格式。写到「刚好够用」，别塞一堆 if-else。</p></div>
+      <div class="card"><div class="ico">🧰</div><h3>工具定义</h3><p>每个工具的名字、说明、JSON Schema。工具多了光定义就上万 token。</p></div>
+      <div class="card"><div class="ico">🧠</div><h3>记忆</h3><p>跨会话留下的偏好和经验，比如 CLAUDE.md、MEMORY.md。</p></div>
+      <div class="card green"><div class="ico">🔎</div><h3>检索结果</h3><p>RAG 召回的片段，或模型自己 grep / 搜索拿回的内容。</p></div>
+      <div class="card green"><div class="ico">💬</div><h3>对话历史</h3><p>用户消息、模型回复、每次工具调用和结果。增长最快的一块。</p></div>
+      <div class="card green"><div class="ico">📌</div><h3>少量示例</h3><p>挑几个典型例子，不要罗列所有边界情况。</p></div>
+    </div>
+    <div class="tip warn">Agent 的输入远大于输出。Manus 报告平均<b>输入:输出约 100:1</b>，所以成本和延迟主要花在「读上下文」上。</div>
+  </section>
+
+  <!-- ==================== 上下文腐化 ==================== -->
+  <section id="s-rot">
+    <h2>上下文腐化</h2>
+    <div class="card">
+      <h3>窗口装得下，不等于模型用得好</h3>
+      <p>token 越多，模型从中准确找回信息的能力越差。这叫 <b>context rot</b>。所有模型都有，只是下降快慢不同。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card amber"><div class="ico">n²</div><h3>注意力被摊薄</h3><p>每个 token 都要和其他 token 建立关系，长度翻倍，关系数翻四倍。</p></div>
+      <div class="card amber"><div class="ico">📉</div><h3>训练里长序列少</h3><p>模型见过的长文本比短文本少，处理远距离依赖的经验也少。</p></div>
+      <div class="card amber"><div class="ico">🌀</div><h3>中间容易丢</h3><p>放在长上下文中段的信息更容易被忽略（lost in the middle）。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>表现</b>：忘了最初的目标、重复已经做过的步骤、被早期的错误信息带偏</li>
+      <li><b>结论</b>：把上下文当成<mark>有限预算</mark>，不是越多越好。更大的窗口也解决不了</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 四种手段 ==================== -->
+  <section id="s-tech">
+    <h2>上下文变长怎么办</h2>
+
+    <h3 class="sub"><span class="no">1</span>压缩（compaction）</h3>
+    <div class="card">
+      <p>快满时，让模型把历史总结成一份摘要，用摘要开一个新窗口继续干。</p>
+      <p>Claude Code 的做法：保留架构决策、没解决的 bug、实现细节，丢掉冗余的工具输出，再带上最近读过的 5 个文件。</p>
+    </div>
+    <ul class="pts">
+      <li><b>难点</b>：删多了，后面才发现要用的细节已经没了</li>
+      <li><b>调法</b>：先保证不漏（召回），再慢慢删多余的（精度）</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>工具结果裁剪</h3>
+    <ul class="pts">
+      <li><b>清掉旧结果</b>：十几轮前的 <code>cat</code> 输出，模型不用再看原文。这是最轻、最安全的压缩</li>
+      <li><b>工具本身返回少</b>：分页、截断、只返回摘要，别一次吐 5 万行日志</li>
+      <li><b>可恢复</b>：网页正文可以丢，URL 要留；文件内容可以丢，路径要留（Manus 的做法）</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">3</span>把状态写到文件（外部化）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✅</div><h3>todo.md</h3><p>Manus 每做完一步就改一次待办，相当于把目标<mark>重新念到上下文末尾</mark>，模型不容易跑偏。</p></div>
+      <div class="card green"><div class="ico">📝</div><h3>NOTES.md</h3><p>Agent 自己记笔记：进度、踩过的坑、下一步。压缩或重启后读回来接着干。</p></div>
+      <div class="card green"><div class="ico">📂</div><h3>文件系统</h3><p>大小不限、天然持久，Agent 自己能读写。Manus 称之为「终极上下文」。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span>子代理隔离</h3>
+    <div class="flow">
+      <div class="step"><div class="t">主 Agent</div><div class="h">派任务</div><div class="d">只写清目标和输出格式</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">子代理</div><div class="h">在干净窗口里探索</div><div class="d">可能用掉几万 token</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">回收</div><div class="h">只交回摘要</div><div class="d">通常 1,000~2,000 token</div></div>
+    </div>
+
+    <table class="cmp mt">
+      <tr><th>手段</th><th>适合</th><th>代价</th></tr>
+      <tr><td>压缩</td><td>需要大量来回的长对话</td><td>可能丢细节；会让缓存失效</td></tr>
+      <tr><td>裁剪工具结果</td><td>工具输出很大的任务</td><td>几乎没有，丢掉的可以重新取</td></tr>
+      <tr><td>外部化</td><td>有明确里程碑的迭代开发</td><td>要教模型什么时候写、写什么</td></tr>
+      <tr><td>子代理</td><td>能并行探索的调研和搜索</td><td>token 更多；子代理看不到全局</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== Prompt caching ==================== -->
+  <section id="s-cache">
+    <h2>Prompt caching</h2>
+    <div class="card">
+      <h3>模型每轮都重读整个上下文，缓存让「重读」变便宜</h3>
+      <p>服务端把算过的前缀（KV cache）存起来。下一次请求的<b>开头一模一样</b>，这部分就直接复用，不再重算。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">$</div><h3>省钱</h3><p>Manus 文中举例：Claude Sonnet 缓存命中的输入 0.30 美元 / 百万 token，未命中 3 美元，<b>差 10 倍</b>。</p></div>
+      <div class="card green"><div class="ico">⚡</div><h3>省时间</h3><p>首 token 延迟（TTFT）明显下降。Manus 认为命中率是生产 Agent <mark>最重要的单一指标</mark>。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>原理：前缀精确匹配</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">系统提示 + 工具定义</div><div class="d">几乎不变，放最前</div></div>
+        <div class="branches"><div class="br ok">命中缓存</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">项目上下文 / 记忆</div><div class="d">会话开始时定下来</div></div>
+        <div class="branches"><div class="br ok">命中缓存</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">之前的对话</div><div class="d">只追加，不回头改</div></div>
+        <div class="branches"><div class="br ok">命中缓存</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">+</div>
+        <div class="body"><div class="h">本轮新增的消息</div><div class="d">只有这部分要重新计算</div></div>
+        <div class="branches"><div class="br ask">新算，下轮就进缓存</div></div>
+      </div>
+    </div>
+    <div class="tip warn">前缀里<b>任何一个 token 变了，它后面的全部作废</b>。没有「按段缓存」这回事。</div>
+
+    <h3 class="sub"><span class="no">2</span>Manus 的 KV-cache 经验</h3>
+    <table class="cmp">
+      <tr><th>做法</th><th>反例</th></tr>
+      <tr><td>前缀保持稳定</td><td>系统提示开头写精确到秒的时间戳，每轮都不命中</td></tr>
+      <tr><td>上下文只追加</td><td>回头修改之前的工具结果</td></tr>
+      <tr><td>序列化要确定</td><td>JSON 键顺序不固定，内容一样但字节不同</td></tr>
+      <tr><td>不中途增删工具</td><td>按需动态加载工具：工具定义在前面，一改全废；历史里还会引用已删的工具</td></tr>
+      <tr><td>用 logits 遮罩代替删工具</td><td>想限制某一步只能用浏览器工具，就在解码时屏蔽其他工具名，定义不动</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>工具名统一前缀</b>：<code>browser_*</code>、<code>shell_*</code>，方便按组遮罩</li>
+      <li><b>手动断点</b>：有的 API 要显式标缓存断点，至少把断点放在系统提示末尾</li>
+      <li><b>自部署</b>：vLLM 要开 prefix caching，同一会话的请求路由到同一台机器</li>
+    </ul>
+  </section>
+
+  <!-- ==================== RAG vs Agentic search ==================== -->
+  <section id="s-rag">
+    <h2>RAG vs Agentic search</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">📚</div><h3>RAG（向量检索）</h3>
+        <p>提前把文档切块、算向量、建索引。提问时按语义相似度召回 Top-K 片段，一次性塞进上下文。</p>
+      </div>
+      <div class="card green">
+        <div class="ico">🔍</div><h3>Agentic search</h3>
+        <p>不预处理。模型手里只有路径、链接这类「指针」，自己用 grep、glob、搜索工具一步步找，<b>用到才读</b>。</p>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>RAG</th><th>Agentic search</th></tr>
+      <tr><td>速度</td><td>快，一次检索</td><td>慢，要多轮工具调用</td></tr>
+      <tr><td>新鲜度</td><td>索引会过期，要重建</td><td>永远是当前状态</td></tr>
+      <tr><td>精确匹配</td><td>函数名、报错串容易召回不准</td><td>grep 一找一个准</td></tr>
+      <tr><td>模糊语义</td><td>「讲退款政策的段落」很擅长</td><td>要靠模型猜关键词</td></tr>
+      <tr><td>规模</td><td>百万级文档也行</td><td>数据太大时搜索成本高</td></tr>
+      <tr><td>工程量</td><td>切块、向量库、同步、权限</td><td>只需要好用的搜索工具</td></tr>
+    </table>
+    <table class="cmp mt">
+      <tr><th>场景</th><th>更适合</th></tr>
+      <tr class="me"><td>代码库</td><td>Agentic search。Claude Code 不建索引，直接 grep</td></tr>
+      <tr><td>海量客服知识库</td><td>RAG，问题大多是语义匹配</td></tr>
+      <tr><td>法律、财务文档</td><td>混合：先检索一批，再让模型自己深挖</td></tr>
+      <tr><td>开放式调研</td><td>多步搜索，边看边改查询词</td></tr>
+    </table>
+    <div class="tip">Claude Code 就是混合式：<b>CLAUDE.md 开局直接放进上下文</b>，其余文件靠 glob / grep 按需读。</div>
+  </section>
+
+  <!-- ==================== 记忆分类 ==================== -->
+  <section id="s-memtype">
+    <h2>记忆分类</h2>
+    <div class="card">
+      <h3>模型本身不记事，「记忆」都是工程做出来的</h3>
+      <p>按<b>存多久</b>分短期 / 长期，按<b>存什么</b>分语义 / 情景 / 程序性。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>短期记忆</th><th>长期记忆</th></tr>
+      <tr><td>范围</td><td>一次会话内</td><td>跨会话</td></tr>
+      <tr><td>放在哪</td><td>上下文窗口里的对话历史</td><td>窗口之外：文件、数据库</td></tr>
+      <tr><td>怎么进上下文</td><td>天然就在</td><td>启动时加载，或按需检索</td></tr>
+      <tr><td>主要问题</td><td>窗口满了要压缩</td><td>写什么、怎么找、何时删</td></tr>
+    </table>
+    <div class="grid mt">
+      <div class="card"><div class="ico">💡</div><h3>语义记忆</h3><p><b>事实</b>。「用户用 Python」「项目用 pnpm」。</p></div>
+      <div class="card"><div class="ico">🎞</div><h3>情景记忆</h3><p><b>发生过的事</b>。「上周三那次部署因为缺环境变量失败了」。常用来当示例。</p></div>
+      <div class="card"><div class="ico">⚙</div><h3>程序性记忆</h3><p><b>怎么做</b>。系统提示、规则、Skills，比如「提交前先跑 lint」。</p></div>
+    </div>
+    <div class="tip">这套分法借自认知科学，Agent 领域常引用 CoALA 论文和 LangChain 的记忆文档。</div>
+  </section>
+
+  <!-- ==================== 长期记忆实现 ==================== -->
+  <section id="s-memimpl">
+    <h2>长期记忆怎么实现</h2>
+    <table class="cmp">
+      <tr><th>方式</th><th>怎么做</th><th>优点</th><th>缺点</th></tr>
+      <tr class="me"><td>文件 + 索引</td><td>每条记忆一个文件，索引文件常驻上下文，相关的再读全文（Claude Code auto memory）</td><td>简单，人能看能改，可进 git</td><td>条数多了索引太长</td></tr>
+      <tr><td>向量库</td><td>记忆转成向量，按相似度召回（Mem0 等）</td><td>能存很多，语义召回</td><td>召回不准、难更新、难解释</td></tr>
+      <tr><td>知识图谱</td><td>抽成「实体-关系-实体」，带时间（Zep / Graphiti 等）</td><td>能回答关系和时间类问题</td><td>抽取成本高，系统复杂</td></tr>
+      <tr><td>厂商 memory</td><td>ChatGPT、Claude 应用自带的记忆；Claude API 的 memory tool 让模型读写一个记忆目录</td><td>开箱即用</td><td>不透明，难迁移</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">1</span>写入、读取、遗忘</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">写</div>
+        <div class="body"><div class="h">什么值得记</div><div class="d">用户纠正、明确偏好、代码里查不到的约束</div></div>
+        <div class="branches">
+          <div class="br ok">记：「回复用中文」「别改 generated/ 目录」</div>
+          <div class="br no">不记：代码和 git 能查到的、一次性的临时状态</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">时</div>
+        <div class="body"><div class="h">什么时候写</div><div class="d">对话中当场写（热路径），或会话结束后后台整理（冷路径）</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">读</div>
+        <div class="body"><div class="h">什么时候读</div><div class="d">少量核心记忆开局常驻；其余按需检索或按索引读全文</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">删</div>
+        <div class="body"><div class="h">什么时候忘</div><div class="d">记错了就删，有旧条目就改不新增，过时信息设过期</div></div>
+        <div class="branches">
+          <div class="br ask">冲突时：新的覆盖旧的，或保留时间让模型判断</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip warn">长期记忆也是攻击面：网页里的恶意文字被「记住」，以后每次会话都会读进来。<b>写入前要看来源</b>。</div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>窗口已经 100 万 token 了，还需要 context engineering 吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>腐化</b>：装得下不等于用得好，越长召回越差</li>
+        <li><b>成本</b>：每轮都重读全部上下文，缓存也要按 token 计费</li>
+        <li><b>延迟</b>：上下文越长，首 token 越慢</li>
+        <li><b>结论</b>：大窗口是余量，不是可以乱塞的理由</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>压缩和缓存有冲突吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>有</b>：压缩改写了历史，前缀变了，下一轮缓存不命中</li>
+        <li><b>缓解</b>：在任务间隙手动压缩，别在任务中途频繁压</li>
+        <li><b>优先轻手段</b>：先清旧工具结果，再考虑整体摘要</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>工具太多，为什么 Manus 不按需加载工具？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>缓存</b>：工具定义在上下文前部，增删一个，后面全部重算</li>
+        <li><b>混乱</b>：历史里调用过的工具突然没了，模型会乱调或违反 schema</li>
+        <li><b>替代</b>：定义全保留，解码时遮罩不该用的工具名</li>
+        <li><b>另一条路</b>：Claude Code 的 ToolSearch 只放工具名，定义集合不变，也能保住缓存</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>RAG 和 Agentic search 怎么选？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>看数据</b>：经常变、要精确匹配（代码）选 agentic search</li>
+        <li><b>看规模</b>：海量、相对静态、语义查询（知识库）选 RAG</li>
+        <li><b>看延迟</b>：要一次出结果选 RAG，能接受多轮选 agentic</li>
+        <li><b>常见答案</b>：混合，先召回一批，再让模型自己深挖</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>设计一个 Agent 的长期记忆，要考虑哪些点？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>存什么</b>：偏好、纠正、外部查不到的约束；能查到的不存</li>
+        <li><b>存哪</b>：条数少用文件 + 索引；条数多再上向量库或图谱</li>
+        <li><b>怎么读</b>：核心记忆常驻，其余按需检索</li>
+        <li><b>怎么忘</b>：去重、覆盖旧条目、记错能删、过时会过期</li>
+        <li><b>安全</b>：防止不可信内容被写进记忆</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

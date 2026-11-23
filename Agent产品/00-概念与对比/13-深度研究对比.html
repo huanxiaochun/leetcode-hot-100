@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>深度研究对比 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>深度研究对比</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 总览 ==================== -->
+  <section id="s-all">
+    <h2>总览</h2>
+    <div class="hero">
+      <div class="slogan">都叫「深度研究」，差别在<mark>去哪搜、流程谁定、引用怎么绑</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">OpenAI</div><div class="v">训练出来的单循环</div></div>
+        <div class="fact"><div class="k">Perplexity</div><div class="v">自建搜索索引</div></div>
+        <div class="fact"><div class="k">Gemini</div><div class="v">Google 搜索 + 计划先确认</div></div>
+        <div class="fact"><div class="k">Claude</div><div class="v">主 Agent 带并行子 Agent</div></div>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>产品</th><th>检索来源</th><th>流程谁定</th><th>耗时</th><th>输出</th></tr>
+      <tr><td><a href="../03-深度研究/OpenAI-Deep-Research.html">OpenAI Deep Research</a></td><td>ChatGPT 搜索工具；可限定站点、接 App / MCP</td><td>RL 训练的模型自己决定，开跑前先反问</td><td>5~30 分钟</td><td>长报告，正文内引用</td></tr>
+      <tr><td><a href="../03-深度研究/Perplexity.html">Perplexity Research</a></td><td>自家爬虫 + 自建索引</td><td>产品编排多轮检索，底层模型可换</td><td>几分钟</td><td>报告 + 句级编号引用</td></tr>
+      <tr><td>Gemini Deep Research</td><td>Google 搜索；可接 Gmail / Drive</td><td>先出研究计划，用户改完再跑</td><td>几分钟起</td><td>报告，可转 Google Docs</td></tr>
+      <tr><td>Claude Research</td><td>网页搜索 + Google Workspace + 连接器</td><td>主 Agent 规划，子 Agent 并行搜</td><td>几分钟到几十分钟</td><td>报告 + 内联引用</td></tr>
+    </table>
+    <div class="tip">Gemini、Claude 没有单独的拆解页，这里只作参照。</div>
+  </section>
+
+  <!-- ==================== 按维度对比 ==================== -->
+  <section id="s-dim">
+    <h2>按维度对比</h2>
+
+    <h3 class="sub"><span class="no">1</span>检索方式</h3>
+    <table class="cmp">
+      <tr><th>方式</th><th>谁在用</th><th>好处</th><th>代价</th></tr>
+      <tr><td>自建索引</td><td>Perplexity；Gemini 直接用 Google 的索引</td><td>快，能控排序和来源质量</td><td>爬虫和索引要长期投入，有版权和反爬争议</td></tr>
+      <tr><td>搜索 API</td><td>OpenAI、Claude 的搜索工具</td><td>不用养索引，接上就能用</td><td>结果质量受上游限制，按次付费</td></tr>
+      <tr><td>浏览器读全文</td><td>四家都会打开网页读；ChatGPT Agent、Comet 能操作网页</td><td>拿到摘要之外的细节、PDF、表格</td><td>慢，每页都占上下文</td></tr>
+    </table>
+    <div class="tip">检索决定上限：<b>搜不到的东西，模型再强也写不出来</b>。</div>
+
+    <h3 class="sub"><span class="no">2</span>研究流程</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">澄清问题</div><div class="d">长任务跑偏代价大，先对齐范围</div></div>
+        <div class="branches">
+          <div class="br ok">OpenAI：先反问几个问题</div>
+          <div class="br ask">Gemini：直接给计划让你改</div>
+          <div class="br no">Perplexity / Claude：多数直接开跑</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">规划</div><div class="d">拆子问题，定先查什么</div></div>
+        <div class="branches">
+          <div class="br ask">Gemini：计划公开、可编辑</div>
+          <div class="br ask">Claude：主 Agent 写计划，存进记忆</div>
+          <div class="br ask">OpenAI：藏在模型推理里</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">多轮搜索阅读</div><div class="d">读到新线索就改方向再搜</div></div>
+        <div class="branches">
+          <div class="br ok">OpenAI：一条循环串着搜读，可跑 Python</div>
+          <div class="br ok">Claude：同时派 3~5 个子 Agent</div>
+          <div class="br ok">Perplexity：自家搜索 + 沙箱</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">写报告</div><div class="d">汇总成文，把论点和来源对上</div></div>
+        <div class="branches">
+          <div class="br ok">Claude：单独的引用 Agent 补引用</div>
+          <div class="br ok">其余：边写边插引用</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">↻</div>
+        <div class="body"><div class="h">中途干预</div><div class="d">OpenAI 2026-02 起可随时打断，改方向或改可用来源</div></div>
+      </div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>耗时</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>典型耗时</th><th>运行方式</th></tr>
+      <tr><td>OpenAI</td><td>5~30 分钟</td><td>后台跑，侧栏看进度，完成后通知</td></tr>
+      <tr><td>Perplexity</td><td>快答秒级，Research 几分钟</td><td>同一个输入框切模式</td></tr>
+      <tr><td>Gemini</td><td>几分钟起</td><td>确认计划后后台跑</td></tr>
+      <tr><td>Claude</td><td>几分钟到几十分钟</td><td>子 Agent 并行，宽题目省时间</td></tr>
+    </table>
+    <div class="tip warn">时间长是因为读得多。<b>问题简单时用研究模式，是在浪费额度</b>。</div>
+
+    <h3 class="sub"><span class="no">4</span>引用方式和可信度</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>引用怎么给</th><th>能核查到哪</th></tr>
+      <tr><td>OpenAI</td><td>段落内链接</td><td>侧栏有活动记录和访问过的网页</td></tr>
+      <tr><td>Perplexity</td><td>每句后标 [1][2]，来源卡片放答案上方</td><td>粒度最细，点编号直达原文</td></tr>
+      <tr><td>Gemini</td><td>正文标注 + 文末来源列表</td><td>能看计划和浏览过的网站</td></tr>
+      <tr><td>Claude</td><td>内联引用</td><td>成文后由引用 Agent 逐条对齐来源</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>来源质量</b>：官方、论文 &gt; 新闻 &gt; 论坛、营销页</li>
+      <li><b>引用是否真支撑这句话</b>：链接真，内容对不上，是最常见的错</li>
+      <li><b>是否说明不确定</b>：证据冲突时有没有明说</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">5</span>输出形态</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">📄</div><h3>OpenAI</h3><p>结构化长报告，可含表格和 Python 画的图。</p></div>
+      <div class="card"><div class="ico">🔢</div><h3>Perplexity</h3><p>报告 + 来源列表，引用密度最高。</p></div>
+      <div class="card"><div class="ico">📝</div><h3>Gemini</h3><p>报告可导出到 Google Docs，还能生成音频概览。</p></div>
+      <div class="card"><div class="ico">🧾</div><h3>Claude</h3><p>对话里的报告，带内联引用，可继续追问。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">6</span>幻觉与引用错误的风险</h3>
+    <table class="cmp">
+      <tr><th>错误类型</th><th>表现</th><th>缓解机制</th></tr>
+      <tr><td>编造来源</td><td>给出不存在的链接</td><td>引用编号只能来自检索结果（Perplexity 的做法）</td></tr>
+      <tr><td>引用错配</td><td>链接真，但不支撑这句话</td><td>成文后单独校验（Claude 的引用 Agent）</td></tr>
+      <tr><td>来源不可靠</td><td>引用论坛、营销页、转载</td><td>限定可信站点（OpenAI 2026-02 起支持）</td></tr>
+      <tr><td>过度自信</td><td>证据不足也下定论</td><td>提示要求标出不确定；人工抽查关键结论</td></tr>
+      <tr><td>误读原文</td><td>数字、时间、主语搞错</td><td>关键事实多源交叉验证</td></tr>
+    </table>
+    <div class="tip warn">OpenAI 发布时自己写明：Deep Research 会幻觉、难以区分权威信息和传言、置信度校准不好。<b>四家都一样，引用是让人能核查，不是保证正确</b>。</div>
+
+    <h3 class="sub"><span class="no">7</span>成本</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>用户侧</th><th>开发者侧</th></tr>
+      <tr><td>OpenAI</td><td>含在 ChatGPT 套餐里，按月有次数额度，档位越高越多</td><td>专用的 o3 / o4-mini-deep-research 已于 2026-07-23 下线，改用通用模型 + 搜索工具自己搭</td></tr>
+      <tr><td>Perplexity</td><td>免费版次数有限，付费档更多</td><td>有 API，型号和价格变动频繁，以官网为准</td></tr>
+      <tr><td>Gemini</td><td>免费版有限，付费档更多</td><td>Interactions API 里的 Deep Research Agent（预览）</td></tr>
+      <tr><td>Claude</td><td>付费套餐才有</td><td>没有单独的 Research API，用搜索工具 + Agent SDK 自己搭</td></tr>
+    </table>
+    <div class="tip">Anthropic 公开的数据：它的多 Agent 研究系统，<b>token 用量约是普通聊天的 15 倍</b>。研究模式贵，主要贵在读得多。</div>
+  </section>
+
+  <!-- ==================== 各产品优劣 ==================== -->
+  <section id="s-pros">
+    <h2>各产品优劣</h2>
+
+    <h3 class="sub"><span class="no">1</span>OpenAI Deep Research</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>策略是练出来的</b>：端到端 RL，读到新线索会自己改方向</li>
+        <li><b>先反问</b>：开跑前对齐范围，少跑偏</li>
+        <li><b>能算</b>：跑 Python 处理表格、画图</li>
+        <li><b>可控性补上了</b>：限定站点、接 App / MCP、中途打断</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>慢</b>：动辄十几分钟，简单问题不划算</li>
+        <li><b>额度紧</b>：每月次数有限，低档套餐不够用</li>
+        <li><b>来源判断弱</b>：官方承认会引用不权威来源</li>
+        <li><b>API 断档</b>：专用模型已下线，开发者要自己搭</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>Perplexity</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>检索自己掌握</b>：爬虫、索引、排序都是自家的</li>
+        <li><b>引用最细</b>：句级编号，核查成本最低</li>
+        <li><b>模型可换</b>：2026-02 起 Research 跑在 Claude Opus 4.6 上</li>
+        <li><b>快慢一体</b>：快答和研究在同一个产品里切换</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>默认浅</b>：快答只检索一两轮，复杂题要手动切 Research</li>
+        <li><b>标了也会错</b>：模型可能误读原文，编号只保证来源存在</li>
+        <li><b>来源争议</b>：被出版方起诉、被指绕过反爬，部分站点会屏蔽</li>
+        <li><b>推理靠别人</b>：深度研究的质量取决于第三方模型</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>Gemini Deep Research（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>检索底子厚</b>：直接用 Google 搜索，覆盖广、更新快</li>
+        <li><b>计划可改</b>：跑之前就能删改子问题</li>
+        <li><b>生态打通</b>：读 Gmail / Drive，导出到 Docs</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>多一步交互</b>：要先看完、确认计划</li>
+        <li><b>API 在预览</b>：只能走 Interactions API</li>
+        <li><b>绑 Google 生态</b>：私有数据最好也在 Google 里</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span>Claude Research（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>并行</b>：子 Agent 各开一个上下文，宽题目更快</li>
+        <li><b>引用单独校验</b>：成文后再派引用 Agent 对来源</li>
+        <li><b>私有数据</b>：接 Google Workspace 和连接器</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>贵</b>：多 Agent 约 15 倍 token</li>
+        <li><b>协调难</b>：官方提到早期会派过多子 Agent、重复搜同一件事</li>
+        <li><b>没有 API</b>：只能在 Claude 应用里用</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ==================== 选型建议 ==================== -->
+  <section id="s-pick">
+    <h2>选型建议</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">一句话能答吗？</div><div class="d">查事实、查最新消息</div></div>
+        <div class="branches">
+          <div class="br ok">能 → Perplexity 快答 / 普通联网搜索</div>
+          <div class="br ask">不能 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">资料在内部系统吗？</div><div class="d">邮件、网盘、公司文档</div></div>
+        <div class="branches">
+          <div class="br ok">Google Workspace → Gemini 或 Claude</div>
+          <div class="br ok">其他系统 → OpenAI 接 App / MCP，或 Claude 连接器</div>
+          <div class="br ask">只查公开网页 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">范围想清楚了吗？</div><div class="d">深度、侧重、时间范围</div></div>
+        <div class="branches">
+          <div class="br ok">没想清 → Gemini（改计划）或 OpenAI（答反问）</div>
+          <div class="br ask">清楚 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">题目宽还是深？</div><div class="d">宽：很多对象逐个查；深：一条线索追到底</div></div>
+        <div class="branches">
+          <div class="br ok">宽 → 并行子 Agent 的 Claude</div>
+          <div class="br ok">深、要计算 → OpenAI</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">要嵌进自己的产品？</div><div class="d">需要 API 和可控的成本</div></div>
+        <div class="branches">
+          <div class="br ok">Gemini Deep Research Agent / Perplexity API</div>
+          <div class="br ask">要完全可控 → Agent SDK + 搜索工具自己搭</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">关键结论人工抽查引用</div><div class="d">不管选哪家，数字和定论点开原文看一眼</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Perplexity 为什么自建索引，别家多用搜索 API？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>定位不同</b>：Perplexity 的核心产品就是搜索，检索质量是它的护城河</li>
+        <li><b>可控</b>：自己控排序、来源权重、段落切分，延迟也更低</li>
+        <li><b>代价</b>：爬虫和索引要长期投入，还要面对版权和反爬</li>
+        <li><b>别家</b>：模型厂商的强项在推理，搜索交给上游更划算</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>单 Agent 循环和多 Agent 并行，研究效果差在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>单循环</b>：上下文连贯，适合一条线索追到底；宽题目要串行跑很久</li>
+        <li><b>并行</b>：每个子 Agent 独立上下文，适合拆得开的宽题目</li>
+        <li><b>并行的代价</b>：token 多很多，子 Agent 之间会重复搜、结论难合并</li>
+        <li><b>判断</b>：子问题之间依赖少，才值得拆</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>每句都标了引用，为什么还会错？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>错配</b>：链接是真的，但原文说的不是这句话</li>
+        <li><b>误读</b>：数字、时间、主语被模型改了</li>
+        <li><b>来源差</b>：引用本身就是转载、营销页、过时内容</li>
+        <li><b>防</b>：成文后逐句校验、限定可信站点、关键事实多源</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>先出计划（Gemini）和先反问（OpenAI）有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>共同目的</b>：长任务开跑前对齐范围，成本最低</li>
+        <li><b>反问</b>：用户只回答几个问题，负担轻，但看不到后面怎么查</li>
+        <li><b>计划</b>：用户直接看到子问题清单，能删改，但要花时间读</li>
+        <li><b>自己做时</b>：范围模糊用反问，用户是专家用可编辑计划</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

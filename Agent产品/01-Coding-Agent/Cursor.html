@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cursor · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">CODING AGENT</div>
+    <h1>Cursor</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">AI 原生的代码编辑器：<mark>从补全一行，到 Agent 改一片，都在 IDE 里完成</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Anysphere</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2023 年</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">VS Code 分支 IDE，另有云端 Agent、CLI</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">多家前沿模型 + 自研模型（Tab、Composer 等）</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>先索引整个代码库</b>，再用<b>大模型规划 + 小模型执行</b>，把延迟压到人能接受的程度。</div>
+  </section>
+
+  <!-- ==================== 核心工作流 ==================== -->
+  <section id="s-loop">
+    <h2>核心工作流</h2>
+    <div class="flow">
+      <div class="step"><div class="t">LEVEL 1</div><div class="h">Tab</div><div class="d">预测下一处修改，按 Tab 接受</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">LEVEL 2</div><div class="h">Cmd+K</div><div class="d">选中代码，一句话就地改</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">LEVEL 3</div><div class="h">Agent</div><div class="d">多文件修改、跑终端命令</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">LEVEL 4</div><div class="h">云端 Agent</div><div class="d">后台跑，做完提 PR</div></div>
+    </div>
+    <div class="loop-note">↻ 自主程度逐级升高，用户按任务大小选一档，随时可以回到手动</div>
+    <pre class="code"><span class="c"># Agent 模式改代码的两段式</span>
+plan = big_model(task, retrieved_code)      <span class="c"># 大模型：想清楚改什么，输出草稿 diff</span>
+<span class="k">for</span> f, sketch <span class="k">in</span> plan.edits:
+    new = apply_model(read(f), sketch)       <span class="c"># 小模型：把草稿合进整文件，速度快</span>
+    show_diff(f, new)                        <span class="c"># 用户逐块 Accept / Reject</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">⇥</div><h3>Tab 模型</h3><p>自研小模型，根据最近的编辑预测下一处改动，可以跨行、跳位置。</p></div>
+      <div class="card"><div class="ico">🩹</div><h3>Apply 模型</h3><p>把大模型写的草稿改动快速合并进完整文件，主模型不用重写整个文件。</p></div>
+      <div class="card"><div class="ico">🤖</div><h3>Agent 模式</h3><p>能搜代码、读写文件、跑终端命令、看报错再改，命令执行可设为需确认。</p></div>
+      <div class="card green"><div class="ico">🗂</div><h3>代码库索引</h3><p>代码切块做向量嵌入，支持语义搜索，<code>@codebase</code> 一问全库。</p></div>
+      <div class="card green"><div class="ico">📏</div><h3>Rules</h3><p><code>.cursor/rules</code> 下的规则文件，可按路径匹配自动注入，也有用户级全局规则。</p></div>
+      <div class="card green"><div class="ico">🧩</div><h3>扩展点</h3><p>MCP 接外部工具，<code>@</code> 引用文件、文档、网页，Bugbot 做 PR 审查。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>代码索引与上下文</h2>
+    <div class="card">
+      <h3>先把代码库变成可检索的</h3>
+      <ul class="pts">
+        <li><b>切块嵌入</b>：按语法结构切代码块，算向量存到服务端</li>
+        <li><b>Merkle 树增量同步</b>：只上传哈希变化的文件，不用每次全量重建</li>
+        <li><b>隐私</b>：服务端存向量和混淆路径，原始代码不落盘；遵守 <code>.cursorignore</code></li>
+        <li><b>混合检索</b>：语义搜索 + grep 精确搜索，Agent 自己挑工具</li>
+        <li><b>显式上下文</b>：<code>@文件</code> / <code>@文件夹</code> / <code>@Docs</code>，用户直接指定</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">⚡</div><h3>大小模型分工</h3><p>贵的模型只做规划，<mark>机械活交给专门训练的小模型</mark>，又快又省。</p></div>
+      <div class="card amber"><div class="ico">🖥</div><h3>拥有编辑器</h3><p>Fork VS Code 而不是做插件，才能控制 diff 展示、光标预测这些细节。</p></div>
+      <div class="card amber"><div class="ico">🎚</div><h3>渐进式自主</h3><p>从补全到后台 Agent 是同一个产品，用户信任一点点建立。</p></div>
+      <div class="card amber"><div class="ico">📊</div><h3>数据飞轮</h3><p>每次 Accept / Reject 都是反馈信号，用来训练 Tab 等自研模型。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>交互位置</th><th>找代码</th><th>执行环境</th></tr>
+      <tr><td>Claude Code</td><td>终端</td><td>grep / 读文件</td><td>本机</td></tr>
+      <tr class="me"><td>Cursor</td><td>IDE</td><td>向量索引 + 搜索</td><td>本机，可选云端</td></tr>
+      <tr><td>Codex</td><td>CLI / 云端</td><td>grep / 读文件</td><td>本机或云沙箱</td></tr>
+      <tr><td>Devin</td><td>网页 / Slack</td><td>自建索引</td><td>云端虚拟机</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>为什么要单独搞一个 Apply 模型？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>延迟</b>：让大模型重写整个文件太慢，草稿 diff 短得多</li>
+        <li><b>成本</b>：合并是机械活，小模型够用，单价低</li>
+        <li><b>可靠</b>：大模型写的 diff 行号常对不上，Apply 模型专门处理这种合并</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>代码库索引怎么保持最新？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>Merkle 树</b>：比对目录哈希，只找出变了的文件</li>
+        <li><b>增量重嵌入</b>：只对变动的块重新算向量</li>
+        <li><b>兜底</b>：索引可能滞后，Agent 还能 grep 和直接读文件</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>向量检索和 grep 各适合什么场景？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>向量</b>：模糊的问题，比如「登录逻辑在哪」，不知道关键词时</li>
+        <li><b>grep</b>：精确的符号名、报错字符串，结果准、永远最新</li>
+        <li><b>结论</b>：两者都给 Agent，让模型按问题选</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>Rules 和直接写进 prompt 有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>持久</b>：存在仓库里，团队共享，跟着代码版本走</li>
+        <li><b>按需</b>：可按文件路径匹配才注入，不浪费上下文</li>
+        <li><b>分层</b>：项目规则和用户规则叠加</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>通用 Agent 对比 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>通用 Agent 对比</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 总览 ==================== -->
+  <section id="s-all">
+    <h2>总览</h2>
+    <div class="hero">
+      <div class="slogan">通用 Agent 的核心问题是<mark>电脑由谁提供、用什么方式操作它</mark>，模型能力反而是其次</div>
+      <div class="facts">
+        <div class="fact"><div class="k">云端电脑</div><div class="v">Manus、ChatGPT Work 云端、Genspark</div></div>
+        <div class="fact"><div class="k">你的浏览器 / 电脑</div><div class="v">Claude in Chrome、Cowork、ChatGPT 桌面</div></div>
+        <div class="fact"><div class="k">开发者自己搭</div><div class="v">Claude Computer Use API</div></div>
+        <div class="fact"><div class="k">共同趋势</div><div class="v">先 API，再浏览器，最后才点屏幕</div></div>
+      </div>
+    </div>
+    <div class="tip">截至 2026-11：ChatGPT Agent 已下线，能力并入 2026-07 发布的 ChatGPT Work；Claude in Chrome 2026-08 对所有付费套餐开放；Manus 被 Meta 收购后因监管退回独立运营。</div>
+
+    <h3 class="sub"><span class="no">1</span>在哪跑、怎么操作</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>形态</th><th>谁提供电脑</th><th>操作方式</th><th>交付物</th></tr>
+      <tr><td><a href="../02-通用Agent/Manus.html">Manus</a></td><td>网页 / App，异步任务</td><td>Manus 的云端 Linux 沙箱；可接你的浏览器</td><td>浏览器 + Shell + Python 代码</td><td>文件、网页、报告、PPT</td></tr>
+      <tr><td><a href="../02-通用Agent/ChatGPT-Agent.html">ChatGPT Agent</a> → Work</td><td>ChatGPT 里的 Work 模式</td><td>OpenAI 云端环境；桌面版用你的电脑</td><td>连接器、文本 / 可视浏览器、终端、桌面 Computer Use</td><td>表格、PPT、文档、Sites</td></tr>
+      <tr><td><a href="../02-通用Agent/Claude-Computer-Use.html">Claude Computer Use</a></td><td>API 里的 computer 工具</td><td>开发者自己的 VM / 容器</td><td>截图 + 鼠标键盘坐标</td><td>能力本身，自己做产品</td></tr>
+      <tr><td>Claude in Chrome / Cowork</td><td>Chrome 侧边栏、桌面 app、网页、手机</td><td>你的浏览器和电脑；也可跑云端</td><td>连接器 → 浏览器 → 点屏幕</td><td>本机文件、报告、表格</td></tr>
+      <tr><td>Genspark（参照）</td><td>网页 AI 工作台</td><td>每个项目一台云端电脑</td><td>多模型 + 多工具自动分派</td><td>报告、PPT、表格、播客</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>登录态、安全、扩展、计费</h3>
+    <table class="cmp">
+      <tr><th>产品</th><th>登录态</th><th>权限与安全</th><th>扩展</th><th>计费</th></tr>
+      <tr><td>Manus</td><td>云端里人工接管登录；或 Browser Operator 用你已登录的浏览器</td><td>任务关在沙箱；本地浏览器每次会话要授权</td><td>连接器、Skills、定时任务</td><td>积分制，任务越复杂扣得越多</td></tr>
+      <tr><td>ChatGPT Work</td><td>云端接管模式；桌面直接用本机</td><td>高风险动作确认 + 监控模型拦注入 + auto-review</td><td>Apps / 连接器、定时任务</td><td>和 Codex 共用额度结构</td></tr>
+      <tr><td>Computer Use API</td><td>开发者自己处理</td><td>全靠开发者：隔离、最小权限、人工确认</td><td>和其他工具一起给模型</td><td>API 按 token，截图很占输入</td></tr>
+      <tr><td>Claude in Chrome / Cowork</td><td>直接用你浏览器里已登录的账号</td><td>每步过安全分类器才执行，可改回逐步审批；企业可限域名</td><td>连接器、Skills、Plugins</td><td>Claude 订阅共用额度</td></tr>
+      <tr><td>Genspark</td><td>云端里登录</td><td>项目级云电脑隔离</td><td>内置工具为主</td><td>订阅 + 积分</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 按维度对比 ==================== -->
+  <section id="s-dim">
+    <h2>按维度对比</h2>
+
+    <h3 class="sub"><span class="no">1</span>电脑由谁提供：云 VM vs 你的机器 vs 开发者环境</h3>
+    <table class="cmp">
+      <tr><th></th><th>云端 VM</th><th>你的浏览器 / 电脑</th><th>开发者环境</th></tr>
+      <tr><td>代表</td><td>Manus、ChatGPT Work 云端、Genspark</td><td>Claude in Chrome、Cowork、Manus Browser Operator</td><td>Computer Use API</td></tr>
+      <tr><td>好处</td><td>关掉网页照样跑，碰不到你的电脑</td><td>现成的登录态、少遇验证码、能用本地文件</td><td>数据不出自己的机器，环境随便定</td></tr>
+      <tr><td>代价</td><td>要重新登录；网站常把云 IP 当机器人</td><td>它能做的就是你账号能做的，出错影响真实账号</td><td>VM、截图、执行器都要自己搭</td></tr>
+      <tr><td>适合</td><td>公开网页调研、生成文件</td><td>后台系统、内部工具、已登录的 SaaS</td><td>做自己的 Agent 产品、跑自动化测试</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>操作方式：GUI 点屏幕 vs API / 代码</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">连接器 / API</div><div class="d">Gmail、Drive、Slack 直接拿结构化数据</div></div>
+        <div class="branches"><div class="br ok">最快最稳，几秒完成</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">代码 / Shell</div><div class="d">Manus 的 CodeAct、ChatGPT 的终端：一段 Python 做完一串操作</div></div>
+        <div class="branches"><div class="br ok">适合处理数据、批量生成文件</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">读网页文本 / DOM</div><div class="d">文本浏览器、Chrome 扩展读页面结构</div></div>
+        <div class="branches"><div class="br ask">便宜精确，只限网页</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">截图 + 点坐标</div><div class="d">Computer Use、可视浏览器、桌面 Computer Use</div></div>
+        <div class="branches"><div class="br no">什么软件都能用，但慢、费 token、会点错</div></div>
+      </div>
+    </div>
+    <div class="tip">Cowork 官方写明的顺序就是<b>连接器 → 浏览器 → 点屏幕</b>；ChatGPT Agent 当年也是能读文本就不截图。GUI 是兜底，不是首选。</div>
+
+    <h3 class="sub"><span class="no">3</span>同步盯着 vs 异步交付</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">⏳</div><h3>异步</h3><p>Manus、ChatGPT Work、Genspark：派一个目标，几十分钟后拿文件。<b>适合调研和产出物</b>，人不用在场。</p></div>
+      <div class="card amber"><div class="ico">👀</div><h3>同步</h3><p>Claude in Chrome、桌面 Computer Use：在你眼前操作。<b>能随时叫停</b>，但它用你的电脑时你最好别抢鼠标。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span>安全：能动手的 Agent，风险在动作</h3>
+    <table class="cmp">
+      <tr><th>风险</th><th>典型做法</th></tr>
+      <tr><td>提示注入</td><td>网页、邮件里藏指令；ChatGPT 用监控模型拦，Claude in Chrome 每步过分类器</td></tr>
+      <tr><td>不可逆动作</td><td>付款、发送、删除前停下问人；部分高风险任务直接拒绝</td></tr>
+      <tr><td>凭据</td><td>云端靠用户接管输入密码；本机方案直接复用登录态，所以权限范围更大</td></tr>
+      <tr><td>敏感网站</td><td>ChatGPT 的监视模式：用户离开页面就暂停</td></tr>
+      <tr><td>企业管控</td><td>管理员限制可访问域名、可用连接器、网络出口</td></tr>
+    </table>
+    <div class="tip warn">分类器和监控模型<b>降低</b>注入成功率，不能归零。涉及钱和对外发送的步骤，保留人工确认。</div>
+
+    <h3 class="sub"><span class="no">5</span>上下文：长任务怎么不跑偏</h3>
+    <ul class="pts">
+      <li><b>Manus</b>：todo.md 反复重写、文件系统当外部记忆、上下文只追加保住 KV-cache</li>
+      <li><b>ChatGPT Work</b>：把大任务拆成小步骤独立完成，可以连续跑几个小时</li>
+      <li><b>Computer Use API</b>：截图最占上下文，只留最近几张，其余丢掉</li>
+      <li><b>Cowork</b>：会话和文件跟着账号走，Chrome 里开的任务能在桌面或手机上接着做</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 各产品优劣 ==================== -->
+  <section id="s-pc">
+    <h2>各产品优劣</h2>
+
+    <h3 class="sub"><span class="no">1</span><a href="../02-通用Agent/Manus.html">Manus</a></h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>工具最全的云电脑</b>：浏览器、Shell、Python、部署网页都在一个沙箱里</li>
+        <li><b>过程可回放</b>：每一步屏幕都能看、能分享</li>
+        <li><b>两种浏览器</b>：云端隔离浏览器 + 本地 Browser Operator 用你的登录态</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>积分难预估</b>：复杂任务一次能扣掉很多积分，跑偏了也照扣</li>
+        <li><b>不自研基座模型</b>：能力上限跟着第三方模型走</li>
+        <li><b>归属变动</b>：Meta 收购被叫停后要拆分，部分用户被要求备份数据</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span><a href="../02-通用Agent/ChatGPT-Agent.html">ChatGPT Agent</a>（现为 ChatGPT Work）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>多路径选最快</b>：连接器、文本浏览器、终端、可视浏览器按任务挑</li>
+        <li><b>云端 + 桌面</b>：Work 在网页跑云端，桌面 app 还能用你的电脑</li>
+        <li><b>入口最大</b>：就在 ChatGPT 里，不用装别的</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>产品变得快</b>：Operator → Agent → Work，Atlas 浏览器一年内就下线，教程很快过时</li>
+        <li><b>截图路径慢</b>：遇到只能点的网站，速度和准确率明显下降</li>
+        <li><b>用量按任务大小扣</b>：长任务吃额度，复杂度难事先估</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span><a href="../02-通用Agent/Claude-Computer-Use.html">Claude Computer Use</a>（API）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>整个桌面都能操作</b>：不限浏览器，老系统、桌面软件也行</li>
+        <li><b>环境完全自控</b>：数据不出自己的机器，能嵌进自己的产品</li>
+        <li><b>和 bash、编辑工具一起给</b>：能用命令就不点界面</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>要自己搭</b>：虚拟桌面、截图、坐标换算、执行器都是开发者的活</li>
+        <li><b>贵且慢</b>：每步一张截图，token 多、延迟高</li>
+        <li><b>安全自负</b>：隔离、权限、确认都得自己做</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span>Claude in Chrome / Cowork</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>用现成登录态</b>：内部后台、供应商门户这类没连接器的系统也能操作</li>
+        <li><b>少弹窗</b>：分类器判安全就自动执行，不用每步批</li>
+        <li><b>跨设备接力</b>：Chrome、桌面、网页、手机同一个会话</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>爆炸半径大</b>：它拿的是你的真实账号，被注入时后果更直接</li>
+        <li><b>占用你的电脑</b>：本机操作时不适合同时干别的</li>
+        <li><b>Chrome 绑定</b>：浏览器能力主要在 Chrome 和 Claude 桌面 app 里</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>参照产品</h3>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">✨</div><h3>Genspark</h3>
+        <ul class="pts">
+          <li><b>优</b>：一个指令自动分派给不同模型和工具，出 PPT、表格这类成品快</li>
+          <li><b>劣</b>：偏内容生成，碰需要登录的业务系统时不如本机浏览器类</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="ico">🗄</div><h3>Operator（已退场）</h3>
+        <ul class="pts">
+          <li><b>优</b>：第一个面向大众的「只看截图」浏览器 Agent，证明了路线可行</li>
+          <li><b>劣</b>：只有可视浏览器，慢；后来并入 ChatGPT Agent</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 选型建议 ==================== -->
+  <section id="s-pick">
+    <h2>选型建议</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">要嵌进你自己的产品吗？</div><div class="d">先分清是「自己用」还是「给用户用」</div></div>
+        <div class="branches">
+          <div class="br ok">是 → Computer Use API + 自建隔离 VM</div>
+          <div class="br ask">否 → 继续</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">目标系统有连接器吗？</div><div class="d">Gmail、Drive、Slack、CRM 这类</div></div>
+        <div class="branches">
+          <div class="br ok">有 → 哪家都行，优先走连接器</div>
+          <div class="br ask">没有 → 继续</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">需要你的登录态吗？</div><div class="d">内部后台、已登录的 SaaS</div></div>
+        <div class="branches">
+          <div class="br ok">要 → Claude in Chrome / Cowork，或 Manus Browser Operator</div>
+          <div class="br ask">不要 → 继续</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">要操作桌面软件吗？</div><div class="d">不是网页的本地应用</div></div>
+        <div class="branches">
+          <div class="br ok">要 → Cowork 或 ChatGPT 桌面的 Computer Use</div>
+          <div class="br ask">不要 → 继续</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">公开网页调研 + 出成品</div><div class="d">异步云端类：Manus、ChatGPT Work、Genspark，按你已有的订阅选</div></div>
+        <div class="branches"><div class="br no">涉及付款、对外发送：无论哪家都留人工确认</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>云端 VM 和本机浏览器两条路，为什么各家都在同时做？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>云端</b>：安全、能后台跑，但没有登录态，常被网站当机器人</li>
+        <li><b>本机</b>：登录态现成，但风险落在真实账号上</li>
+        <li><b>结论</b>：任务不同，选路不同；Manus 加 Browser Operator、ChatGPT 加桌面版都是补另一半</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>纯视觉操作这么慢，为什么还要做？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>覆盖面</b>：没有 API 的老系统、桌面软件、Canvas 页面只能靠它</li>
+        <li><b>不用逐家集成</b>：屏幕是通用接口</li>
+        <li><b>用法</b>：放在最后一档兜底，前面先试连接器和代码</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>用分类器代替逐步审批，安全吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>为什么要换</b>：每步都问，人会麻木地点同意</li>
+        <li><b>分类器做什么</b>：判断这一步是否安全、是否符合用户原始请求</li>
+        <li><b>边界</b>：降低注入成功率但不归零；付款、发送仍要人确认，企业再加域名白名单</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>ChatGPT Agent 为什么被 Work 取代？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>任务变长</b>：Work 定位能跑几个小时、交付表格和 PPT 的成品</li>
+        <li><b>底座统一</b>：Work 内置 Codex 的能力，和 Codex 共用额度和管控</li>
+        <li><b>补桌面</b>：桌面 app 能用你的电脑，不再只靠云端浏览器</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

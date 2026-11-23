@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devin · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">CODING AGENT</div>
+    <h1>Devin</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">「AI 软件工程师」：<mark>像派活给同事一样派任务，它在自己的电脑上干完，交回一个 PR</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Cognition</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2024-03 发布，2024-12 正式开放</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页、Slack、Linear 等，跑在云端 VM</div></div>
+        <div class="fact"><div class="k">计费</div><div class="v">订阅制（Free / Pro / Max / Teams），早期按 ACU 计</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>完全异步</b>，人不用盯着；Agent 有<b>完整的开发机</b>：shell、编辑器、浏览器都有。</div>
+  </section>
+
+  <!-- ==================== 核心工作流 ==================== -->
+  <section id="s-loop">
+    <h2>核心工作流</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">接任务</div><div class="d">Slack / 工单里 @Devin</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">出计划</div><div class="d">先查代码，给出计划让人确认</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">在 VM 里干活</div><div class="d">写代码、跑命令、开浏览器测</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">提 PR</div><div class="d">回复 review 意见，继续改</div></div>
+    </div>
+    <div class="loop-note">↻ 过程中人可以随时插话纠偏，也可以接管它的 IDE 自己改</div>
+    <pre class="code"><span class="c"># 异步协作：人只在关键节点出现</span>
+session = devin.start(task, playbook=<span class="s">"修 bug"</span>)
+plan = session.plan()           <span class="c"># 人确认或修改计划</span>
+<span class="k">while</span> <span class="k">not</span> session.done:
+    session.step()              <span class="c"># shell / 编辑器 / 浏览器</span>
+    <span class="k">if</span> session.blocked: notify(human)   <span class="c"># 卡住了才找人</span>
+open_pr(session.diff)</pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🖥</div><h3>云端 VM</h3><p>每个会话一台独立机器，可以预装依赖、保存成快照，下次直接复用。</p></div>
+      <div class="card"><div class="ico">🧰</div><h3>三件套工具</h3><p>Shell 跑命令，编辑器改代码，浏览器查文档、测网页。</p></div>
+      <div class="card"><div class="ico">🗺</div><h3>规划器</h3><p>开工前先出计划，执行中边做边更新，人能看到它打算干什么。</p></div>
+      <div class="card green"><div class="ico">🧠</div><h3>Knowledge</h3><p>团队沉淀的知识条目，按触发条件自动召回，Devin 也会建议新增。</p></div>
+      <div class="card green"><div class="ico">📘</div><h3>Playbooks</h3><p>可复用的任务模板：步骤、要求、注意事项，同类任务反复用。</p></div>
+      <div class="card green"><div class="ico">💬</div><h3>协作入口</h3><p>Slack、Linear、GitHub 里派活和沟通，做完通知你。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 上下文 ==================== -->
+  <section id="s-ctx">
+    <h2>知识与上下文</h2>
+    <div class="card">
+      <h3>让它像老员工一样懂这个仓库</h3>
+      <ul class="pts">
+        <li><b>代码库索引</b>：对接入的仓库预先建索引，生成 Wiki 式文档（DeepWiki）</li>
+        <li><b>Devin Search</b>：基于索引问答，回答附代码出处</li>
+        <li><b>Knowledge</b>：长期记忆，跨会话生效，不用每次重新交代</li>
+        <li><b>Playbooks</b>：把「怎么做」写死，减少每次重新探索</li>
+        <li><b>VM 快照</b>：环境状态也是上下文，装好的依赖不用重来</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">⏳</div><h3>异步优先</h3><p>人派完活就走，<mark>交互单位是任务和 PR，不是一轮对话</mark>。</p></div>
+      <div class="card amber"><div class="ico">🌐</div><h3>完整开发机</h3><p>有浏览器就能看文档、点页面验证前端，覆盖面比纯 shell 大。</p></div>
+      <div class="card amber"><div class="ico">📚</div><h3>组织级记忆</h3><p>Knowledge + Playbooks 让经验在团队内复用，越用越懂你们。</p></div>
+      <div class="card amber"><div class="ico">👥</div><h3>可并行派活</h3><p>多个会话同时跑，一个工程师管一队 Devin。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>交互位置</th><th>找代码</th><th>执行环境</th></tr>
+      <tr><td>Claude Code</td><td>终端</td><td>grep / 读文件</td><td>本机</td></tr>
+      <tr><td>Cursor</td><td>IDE</td><td>向量索引 + 搜索</td><td>本机，可选云端</td></tr>
+      <tr><td>Codex</td><td>CLI / 云端</td><td>grep / 读文件</td><td>本机或云沙箱</td></tr>
+      <tr class="me"><td>Devin</td><td>网页 / Slack</td><td>自建索引</td><td>云端虚拟机</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>全异步 Agent 和 IDE 里同步协作的 Agent，各有什么取舍？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>异步</b>：人省时间、可并行，但走偏了发现得晚</li>
+        <li><b>同步</b>：随时纠偏、反馈快，但人要一直盯着</li>
+        <li><b>折中</b>：开工前确认计划，卡住时主动求助</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>为什么给 Agent 一整台 VM，而不是只给 shell？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>能力</b>：浏览器能查资料、测 UI，完成端到端任务</li>
+        <li><b>隔离</b>：在自己的机器上随便折腾，不碰用户电脑</li>
+        <li><b>复用</b>：环境做成快照，下次秒起</li>
+        <li><b>代价</b>：成本高、启动慢，需要按用量计费</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>Knowledge 和 Playbooks 有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>Knowledge</b>：事实型记忆，「我们用 pnpm」，按场景自动召回</li>
+        <li><b>Playbooks</b>：流程型模板，「升级依赖分这几步」，派任务时指定</li>
+        <li><b>共同点</b>：都是把人的经验外化，减少重复交代</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

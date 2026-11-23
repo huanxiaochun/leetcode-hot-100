@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">CODING AGENT</div>
+    <h1>Claude Code</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">住在终端里的编程 Agent：<mark>给它一个任务，它自己读代码、改代码、跑命令、验证结果</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Anthropic</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-02 预览，2025-05 正式版</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">CLI，另有 IDE 插件、桌面版、网页版</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">Claude 系列（Opus / Sonnet / Haiku）</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>不做索引、不做 RAG</b>，像人一样用 grep / 读文件去找代码，<b>模型负责决策，工程负责给工具和边界</b>。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">理解任务</div><div class="d">用户指令 + CLAUDE.md + 当前目录</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">收集上下文</div><div class="d">Glob / Grep 找文件，Read 读代码</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">动手</div><div class="d">Edit 改文件，Bash 跑命令</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">验证</div><div class="d">跑测试 / 编译 / lint，看输出</div></div>
+    </div>
+    <div class="loop-note">↻ 模型每轮决定调哪个工具，直到它认为任务完成，返回纯文本给用户</div>
+    <pre class="code"><span class="c"># 本质就是一个 while 循环</span>
+messages = [system, user_task]
+<span class="k">while</span> True:
+    resp = llm(messages, tools)
+    <span class="k">if</span> resp.stop_reason != <span class="s">"tool_use"</span>: <span class="k">break</span>      <span class="c"># 没有工具调用 = 做完了</span>
+    results = [run(t) <span class="k">for</span> t <span class="k">in</span> resp.tool_calls]  <span class="c"># 先过权限检查</span>
+    messages += [resp, results]</pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">⚙</div><h3>单一主循环</h3><p>主会话就是一个循环、一份消息历史，好调试、好预测；要并行时再派子代理。</p></div>
+      <div class="card"><div class="ico">🧰</div><h3>工具集</h3><p>Read / Write / Edit、Bash、Glob / Grep、WebFetch / WebSearch、Task 待办工具（旧版叫 TodoWrite）、Agent（子代理）。</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>权限 + 沙箱</h3><p>6 种权限模式定基线，allow / deny 规则做例外，沙箱限制命令能碰到的文件和网络。</p></div>
+      <div class="card green"><div class="ico">📄</div><h3>CLAUDE.md</h3><p>项目级 / 用户级的说明文件，每次会话自动加载，相当于长期记忆。</p></div>
+      <div class="card green"><div class="ico">🧩</div><h3>扩展点</h3><p>MCP 接外部工具，Hooks 拦截工具调用，Skills 按需加载说明，Plugins 打包分发。</p></div>
+      <div class="card green"><div class="ico">🤖</div><h3>子代理</h3><p>把搜索、调研这类脏活派给子代理，只把结论带回主上下文。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 工具加载 ==================== -->
+  <section id="s-tool">
+    <h2>工具加载机制</h2>
+    <div class="card">
+      <h3>核心矛盾：工具越多，越占上下文</h3>
+      <p>每个工具的 JSON Schema 都要放进提示词。接几个 MCP server 就是几十个工具，<mark>光定义就能吃掉上万 token</mark>，模型选工具也更容易选错。</p>
+      <p>所以 Claude Code 按「常用程度」分层加载：<b>常驻的给全量，不常用的只给名字，用到再取</b>。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th>来源</th><th>启动时放进上下文的</th><th>什么时候拿到全部内容</th></tr>
+      <tr><td>内置工具</td><td>完整 schema（Read、Edit、Bash、Grep…）</td><td>一直在</td></tr>
+      <tr><td>MCP 工具</td><td>只有工具名，如 <code>mcp__github__create_pr</code></td><td>模型调 <code>ToolSearch</code> 取回 schema 后才能调用</td></tr>
+      <tr><td>Skills</td><td>只有 name + 一句话 description</td><td>调用 Skill 时才加载 SKILL.md 正文，附带的脚本 / 文档再按需读</td></tr>
+      <tr><td>子代理</td><td>类型名 + 用途说明</td><td>派任务时新开上下文，只带它定义里允许的工具</td></tr>
+    </table>
+    <pre class="code"><span class="c"># 延迟加载：上下文里只有名字，没有参数定义</span>
+<span class="c"># 模型想用 WebFetch → 先搜 schema → 再调用</span>
+ToolSearch(query=<span class="s">"select:WebFetch"</span>)   <span class="c"># 返回完整 JSON Schema</span>
+WebFetch(url=<span class="s">"..."</span>, prompt=<span class="s">"..."</span>)      <span class="c"># 现在可以正常调用了</span></pre>
+    <h3 class="sub">一次工具调用的完整链路</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">模型发出 tool_use</div><div class="d">一轮可以同时发多个互不依赖的调用</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">PreToolUse Hook</div><div class="d">用户配置的脚本先过一遍，可以改参数</div></div>
+        <div class="branches">
+          <div class="br ok">allow → 免弹窗（deny / ask 规则照样生效）</div>
+          <div class="br no">拦截 → 原因回给模型</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">权限检查</div><div class="d">按 allow / deny 规则和当前权限模式判断</div></div>
+        <div class="branches">
+          <div class="br ok">命中 allow → 直接执行</div>
+          <div class="br ask">没命中 → 弹窗问用户</div>
+          <div class="br no">deny 或用户拒绝 → 告诉模型被拒</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">执行工具</div><div class="d">真正读文件、跑命令、调 MCP server</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">PostToolUse Hook</div><div class="d">拿到结果后再跑脚本，比如自动格式化、记日志</div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">↻</div>
+        <div class="body"><div class="h">结果作为 tool_result 回到消息历史</div><div class="d">成功、报错、被拒都会回给模型，由它决定下一步</div></div>
+      </div>
+    </div>
+    <div class="tip">这套思路叫<b>渐进式披露</b>：先给目录，用到再展开。Skills 和延迟加载的 MCP 工具都是这么做的。</div>
+  </section>
+
+  <!-- ==================== 记忆 ==================== -->
+  <section id="s-mem">
+    <h2>记忆机制</h2>
+    <div class="card">
+      <h3>模型本身不记事，记忆全靠「文件 + 每次启动时读进来」</h3>
+      <p>分两类：<b>人写的规则</b>（CLAUDE.md）和<b>Agent 自己记的经验</b>（auto memory）。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>CLAUDE.md：分层的说明文件</h3>
+    <table class="cmp">
+      <tr><th>层级</th><th>位置</th><th>用途</th></tr>
+      <tr><td>企业策略</td><td>系统级托管目录</td><td>公司统一规范，用户改不了</td></tr>
+      <tr><td>用户级</td><td><code>~/.claude/CLAUDE.md</code></td><td>个人习惯，所有项目生效</td></tr>
+      <tr><td>项目级</td><td><code>./CLAUDE.md</code></td><td>构建命令、代码规范，提交进 git 团队共享</td></tr>
+      <tr><td>子目录</td><td><code>src/xx/CLAUDE.md</code></td><td>读到这个目录的文件时才加载</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>加载方式</b>：启动时从当前目录往上逐级找，找到的全部拼进上下文</li>
+      <li><b>导入</b>：可以写 <code>@docs/style.md</code> 把别的文件引进来</li>
+      <li><b>维护</b>：<code>/init</code> 扫描项目自动生成，<code>/memory</code> 打开编辑</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>Auto memory：Agent 自己写的长期记忆</h3>
+    <div class="flow">
+      <div class="step"><div class="t">存</div><div class="h">一条事实一个文件</div><div class="d">frontmatter 写 name / description / type</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">索引</div><div class="h">MEMORY.md</div><div class="d">每条记忆一行链接，<b>每次会话自动加载</b></div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">取</div><div class="h">按需读全文</div><div class="d">看索引觉得相关，再读那个文件</div></div>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">👤</div><h3>user</h3><p>用户是谁、擅长什么。</p></div>
+      <div class="card green"><div class="ico">✍</div><h3>feedback</h3><p>用户的纠正和认可，附上原因。</p></div>
+      <div class="card green"><div class="ico">📌</div><h3>project</h3><p>代码里看不出来的目标和约束。</p></div>
+      <div class="card green"><div class="ico">🔗</div><h3>reference</h3><p>外部链接：看板、文档、工单。</p></div>
+    </div>
+    <div class="tip">实例就在本仓库：你说过一次「用中文回复」「HTML 页要字大、文字少」，它们存在 <code>~/.claude/projects/&lt;项目&gt;/memory/</code>，所以每次新会话都会照做。<br>规则：<b>代码和 git 里能查到的不存</b>，记错了要删，有旧条目就更新不新增。</div>
+
+    <h3 class="sub"><span class="no">3</span>短期记忆：会话内</h3>
+    <ul class="pts">
+      <li><b>消息历史</b>：本次对话的全部消息和工具结果，存成本地 jsonl</li>
+      <li><b>恢复会话</b>：<code>claude --continue</code> 接着上一次，<code>--resume</code> 选历史会话</li>
+      <li><b>压缩</b>：快满时把对话换成摘要，见下一节</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 上下文与缓存 ==================== -->
+  <section id="s-ctx">
+    <h2>上下文与缓存</h2>
+    <div class="card">
+      <h3>模型不记得上一次请求，每轮都把全部内容重发一遍</h3>
+      <p>所以要管两件事：<b>窗口装得下</b>（压缩），<b>重发得便宜</b>（缓存）。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>窗口里装了什么</h3>
+    <table class="cmp">
+      <tr><th>时机</th><th>进入上下文的内容</th></tr>
+      <tr><td>开口之前</td><td>系统提示、CLAUDE.md、MEMORY.md、MCP 工具名、Skill 描述、环境信息</td></tr>
+      <tr><td>干活过程中</td><td>读的每个文件、命令输出、匹配到的路径规则、Hook 输出</td></tr>
+      <tr><td>派子代理</td><td>只进来调用参数和一段总结，子代理读的文件留在它自己的窗口</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>快满了：压缩</h3>
+    <ul class="pts">
+      <li><b>自动压缩</b>：接近上限时把对话换成一份结构化摘要，会话不中断</li>
+      <li><b>手动压缩</b>：<code>/compact 重点保留 auth 的修复</code>，自己指定摘要保留什么</li>
+      <li><b>局部压缩</b>：<code>/rewind</code> 选一条消息，只压缩它之前或之后的部分</li>
+      <li><b>换任务</b>：<code>/clear</code> 清空，旧对话不再占位置和费用</li>
+    </ul>
+    <table class="cmp mt">
+      <tr><th>压缩后</th><th>内容</th></tr>
+      <tr><td>从磁盘重新注入</td><td>根目录 CLAUDE.md、auto memory、Skill 描述、plan 模式写的计划</td></tr>
+      <tr><td>重读文件</td><td>最近改过的最多 5 个文件；超过 5,000 token 的只给路径</td></tr>
+      <tr><td>重新注入 Skill 正文</td><td>每个最多 5,000 token，总共 25,000，超了先丢最早的</td></tr>
+      <tr><td>被总结掉</td><td>子目录 CLAUDE.md、带 <code>paths:</code> 的规则，下次读到对应文件再加载</td></tr>
+    </table>
+    <div class="tip">Skill 正文超长时保留开头，所以<b>最重要的指令写在 SKILL.md 最前面</b>。</div>
+
+    <h3 class="sub"><span class="no">3</span>重发得便宜：Prompt Caching</h3>
+    <div class="card">
+      <p>API 按<b>请求开头（前缀）</b>做精确匹配，前缀里任何一处变了，后面全部重算。所以 Claude Code 把<mark>最不常变的放最前面</mark>：</p>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">系统提示 + 工具定义</div><div class="d">工具集合变了才变</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">项目上下文</div><div class="d">CLAUDE.md、auto memory；会话开始、<code>/clear</code>、<code>/compact</code> 时才变</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">对话</div><div class="d">每轮只在末尾追加，前面的都能命中缓存</div></div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <div class="card amber"><div class="ico">✗</div><h3>会让缓存失效</h3><p>切模型、开 fast mode、增删 MCP server、开关插件、整个禁用一个工具、压缩、升级版本。</p></div>
+      <div class="card green"><div class="ico">✓</div><h3>不影响缓存</h3><p>改仓库文件、会话中改 CLAUDE.md、切权限模式、调用 Skill、rewind。这些内容都追加在对话末尾。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>有效期</b>：默认 5 分钟没请求就过期；订阅用户的主对话用 1 小时</li>
+      <li><b>子代理</b>：系统提示不同，从零建自己的缓存；fork 继承父对话，能直接命中父的缓存</li>
+      <li><b>批量派活</b>：workflow 同时起一批相同前缀的 agent 时，先放第一个，其余最多等 5 秒，让它们读到第一个写好的缓存</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 安全模型 ==================== -->
+  <section id="s-safe">
+    <h2>安全模型</h2>
+    <div class="card">
+      <h3>三层叠加：权限模式定基线，规则做例外，沙箱兜底</h3>
+      <p>权限决定<b>要不要问人</b>，沙箱决定<b>命令跑起来能碰到什么</b>。两者互相独立。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">1</span>权限模式：哪些操作不用问</h3>
+    <table class="cmp">
+      <tr><th>模式</th><th>不问就能做的</th><th>适合</th></tr>
+      <tr><td><code>default</code>（Manual）</td><td>只有读</td><td>敏感操作，每步自己看</td></tr>
+      <tr><td><code>acceptEdits</code></td><td>读、改文件、<code>mkdir</code> / <code>mv</code> 这类常见文件命令</td><td>边看边改代码</td></tr>
+      <tr><td><code>plan</code></td><td>读和探索，不改源码，计划批准后才能动手</td><td>动手前先调研</td></tr>
+      <tr class="me"><td><code>auto</code></td><td>全部，由分类器模型在后台审核</td><td>长任务，减少弹窗</td></tr>
+      <tr><td><code>dontAsk</code></td><td>只有预先批准的工具，其余直接拒绝</td><td>CI、脚本</td></tr>
+      <tr><td><code>bypassPermissions</code></td><td>全部</td><td>只在隔离的容器 / 虚拟机里用</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>规则叠在模式上</b>：<code>allow</code> / <code>ask</code> / <code>deny</code>，例如 <code>Bash(npm test)</code>；<mark>deny 在任何模式下都生效</mark>，包括 bypass</li>
+      <li><b>任何模式都不自动放行</b>：命中 ask 规则的、需要用户交互的工具、删除关键路径（如 <code>rm -rf ~</code>）</li>
+      <li><b>Hook 不能越权</b>：PreToolUse 返回 allow 也绕不过 deny / ask 规则</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>Auto mode：用另一个模型代替人审批</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">先查规则</div><div class="d">命中 allow / ask / deny 就直接按规则办</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">低风险直接过</div><div class="d">只读操作、工作目录内改文件</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">其余交给分类器</div><div class="d">拦超出用户要求、碰陌生基础设施、像是被读到的内容诱导的操作</div></div>
+        <div class="branches">
+          <div class="br ok">通过 → 执行</div>
+          <div class="br no">拦截 → 把命中的策略名告诉模型</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">🛡</div><h3>防提示注入</h3><p>分类器<mark>看不到工具返回的内容</mark>，只看用户消息、工具调用和 CLAUDE.md，网页里的恶意文字骗不到它。</p></div>
+      <div class="card"><div class="ico">✂</div><h3>收回宽泛授权</h3><p>进入 auto 时暂时去掉 <code>Bash(*)</code>、<code>Bash(python*)</code> 这类等于任意执行的规则，退出再恢复。</p></div>
+      <div class="card"><div class="ico">🤖</div><h3>子代理审三次</h3><p>派任务前审任务描述，运行中逐个审动作，结束后审它的报告再交给父代理。</p></div>
+      <div class="card"><div class="ico">📋</div><h3>删之前先看</h3><p><code>git reset --hard</code>、<code>rm -rf</code> 前自动跑一次 <code>git status</code>，告诉分类器有没有未提交的改动。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>沙箱：限制 Bash 能碰到什么</h3>
+    <table class="cmp">
+      <tr><th>维度</th><th>默认</th></tr>
+      <tr><td>写</td><td>只能写工作目录和临时目录</td></tr>
+      <tr><td>读</td><td>大部分机器可读，用 <code>denyRead</code> 挡掉 <code>~/.ssh</code> 这类凭据</td></tr>
+      <tr><td>网络</td><td>没有直连，走本机代理按域名白名单放行，白名单默认为空</td></tr>
+    </table>
+    <ul class="pts">
+      <li><b>实现</b>：macOS 用 Seatbelt，Linux / WSL2 用 bubblewrap，开源为 <code>sandbox-runtime</code></li>
+      <li><b>只包 Bash</b>：Read / Edit / WebFetch 走权限规则；Hook、MCP server 也不在沙箱里</li>
+      <li><b>换来少弹窗</b>：auto-allow 模式下，在沙箱里跑的命令直接放行</li>
+    </ul>
+  </section>
+
+  <!-- ==================== Hooks ==================== -->
+  <section id="s-hook">
+    <h2>Hooks 生命周期</h2>
+    <div class="card">
+      <h3>在固定时机跑你自己的逻辑，结果是确定的，不靠模型自觉</h3>
+      <p>比如「每次改完文件自动格式化」「禁止改 .env」，写进 CLAUDE.md 模型可能忘，写成 Hook 一定执行。</p>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">会话</div>
+        <div class="body"><div class="h">SessionStart / SessionEnd</div><div class="d">开始时注入上下文、装环境；压缩后也会再触发一次</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">每轮</div>
+        <div class="body"><div class="h">UserPromptSubmit → … → Stop</div><div class="d">提交前检查或补充提示词；回答结束时判断是不是真做完了</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">工具</div>
+        <div class="body"><div class="h">PreToolUse → PermissionRequest → PostToolUse</div><div class="d">执行前拦截 / 改参数，要审批时介入，执行后格式化、记日志；失败走 PostToolUseFailure</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">其他</div>
+        <div class="body"><div class="h">SubagentStart / Stop、PreCompact、FileChanged…</div><div class="d">子代理、压缩、文件变化、切模型等，共 30 多种事件</div></div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">0</div><h3>exit 0</h3><p>成功。打印的 JSON 可以带决策，比如 deny、补充上下文。</p></div>
+      <div class="card amber"><div class="ico">2</div><h3>exit 2</h3><p>阻断。能阻断的事件会停下这次操作，stderr 回给模型。</p></div>
+      <div class="card"><div class="ico">?</div><h3>其他退出码</h3><p>非阻断错误，操作照常继续。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>五种处理器</b>：<code>command</code> 跑脚本、<code>http</code> 调接口、<code>mcp_tool</code> 调 MCP 工具、<code>prompt</code> 让小模型判断、<code>agent</code> 派代理检查</li>
+      <li><b>matcher</b>：按工具名匹配，例如只对 <code>Edit|Write</code> 生效</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 回退与会话 ==================== -->
+  <section id="s-ckpt">
+    <h2>回退与会话</h2>
+    <h3 class="sub"><span class="no">1</span>Checkpoint：改坏了能退回去</h3>
+    <ul class="pts">
+      <li><b>自动打点</b>：每发一条消息就存一个检查点，记录文件编辑工具改过的文件，保留最近 100 个</li>
+      <li><b>回退</b>：<code>/rewind</code> 或连按两次 Esc，选一条消息</li>
+    </ul>
+    <table class="cmp mt">
+      <tr><th>选项</th><th>效果</th></tr>
+      <tr><td>恢复代码和对话</td><td>两样都退回那个时间点</td></tr>
+      <tr><td>只恢复对话</td><td>对话退回，代码保持现状</td></tr>
+      <tr><td>只恢复代码</td><td>代码退回，对话保留</td></tr>
+      <tr><td>从这里开始总结 / 总结到这里</td><td>只压缩一段对话，不碰文件</td></tr>
+    </table>
+    <div class="tip warn">不追踪：只被 Bash 改过的文件、多数子代理的改动、你在外面手动改的。<b>不能代替 git</b>。</div>
+
+    <h3 class="sub"><span class="no">2</span>会话：恢复和分叉</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">▶</div><h3>恢复</h3><p><code>--continue</code> / <code>--resume</code>：同一个会话 ID，接着往后追加。</p></div>
+      <div class="card"><div class="ico">⑂</div><h3>分叉</h3><p><code>/branch</code> 或 <code>--fork-session</code>：复制历史到新 ID，原会话不动，适合换个思路试。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 多 Agent ==================== -->
+  <section id="s-multi">
+    <h2>多 Agent 协作</h2>
+    <div class="card">
+      <h3>核心区别：谁来决定下一步做什么</h3>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>子代理</th><th>Agent teams</th><th>Workflow</th></tr>
+      <tr><td>是什么</td><td>主 Agent 派出去的工人</td><td>一个 lead 带几个平级会话</td><td>Claude 写的 JS 脚本，运行时执行</td></tr>
+      <tr><td>谁定下一步</td><td>主 Agent，逐轮决定</td><td>lead，逐轮决定</td><td>脚本</td></tr>
+      <tr><td>中间结果放哪</td><td>主 Agent 的上下文</td><td>共享任务列表</td><td>脚本变量</td></tr>
+      <tr><td>沟通方式</td><td>只把结果交回调用方</td><td>成员之间直接发消息</td><td>脚本把结果传给下一步</td></tr>
+      <tr><td>规模</td><td>每轮几个</td><td>几个长期运行的成员</td><td>一次几十到几百个</td></tr>
+      <tr><td>中断后</td><td>这一轮重来</td><td>成员继续跑</td><td>同会话内可续跑</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">1</span>子代理</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">🔎</div><h3>Explore</h3><p>只读，搜代码用；不加载 CLAUDE.md，跑得快。调用时指定 quick / medium / very thorough。</p></div>
+      <div class="card"><div class="ico">📐</div><h3>Plan</h3><p>plan 模式下调研用，只读。</p></div>
+      <div class="card"><div class="ico">🛠</div><h3>General-purpose</h3><p>既能查也能改，处理多步任务。</p></div>
+      <div class="card green"><div class="ico">⑂</div><h3>Fork</h3><p>继承完整对话、工具和模型，不用重新交代背景，能命中父的缓存。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>自定义</b>：<code>.claude/agents/*.md</code>，frontmatter 写工具白名单、模型、权限、Hook</li>
+      <li><b>限制</b>：最多嵌套 3 层；同时运行默认最多 20 个</li>
+      <li><b>什么时候不用</b>：需要频繁来回沟通、各阶段共享大量上下文、改动很小、在意延迟</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>Agent teams</h3>
+    <ul class="pts">
+      <li><b>组成</b>：lead（主会话）+ 成员（独立 Claude 实例）+ 共享任务列表 + 信箱</li>
+      <li><b>协作</b>：成员自己认领任务，完成后自动解锁依赖它的任务；成员之间直接发消息、互相质疑</li>
+      <li><b>适合</b>：多方向并行调研、前后端分人负责、多个假设同时验证；<mark>token 开销明显更高</mark></li>
+    </ul>
+
+    <h3 class="sub"><span class="no">3</span>Workflow</h3>
+    <ul class="pts">
+      <li><b>把编排写成代码</b>：循环、分支、中间结果都在脚本里，Claude 的上下文只收最终答案</li>
+      <li><b>可以固化质量流程</b>：比如每条发现都派独立 agent 反向验证，过了才报告</li>
+      <li><b>适合</b>：全仓库扫 bug、几百个文件的迁移、需要多来源交叉核对的调研</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 新机制 ==================== -->
+  <section id="s-new">
+    <h2>较新的设计</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="ico">{}</div><h3>Code Mode</h3>
+        <p>模型不再一次调一个工具，而是<mark>写一段 JS 批量调用</mark>：并行跑命令、把上一步结果喂给下一步，只把需要的部分返回给自己。</p>
+        <p>适合跨很多文件的重复改动、结果要先过滤再看的搜索。auto mode 下分类器审的是这段代码，不是里面每个调用。</p>
+      </div>
+      <div class="card">
+        <div class="ico">🎓</div><h3>Advisor</h3>
+        <p>主模型干活，<mark>关键时刻请更强的模型给意见</mark>：定方案前、同一个错反复出现时、宣布完成前。</p>
+        <p>顾问看到完整对话，在服务端运行；什么时候问由主模型决定。开关它不影响主模型的缓存。</p>
+      </div>
+      <div class="card">
+        <div class="ico">🎯</div><h3>/goal</h3>
+        <p>给一个完成条件，每轮结束后<mark>由另一个小模型判断</mark>：没达成就继续，达成或判定做不到就停。</p>
+        <p>本质是一个用提示词判断的 Stop Hook。好处是完成与否不由干活的模型自己说了算。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🔍</div><h3>Agentic Search</h3><p>不建向量索引，<mark>让模型自己 grep</mark>。代码一直在变，索引容易过期；grep 永远是最新的，还没有隐私和同步问题。</p></div>
+      <div class="card amber"><div class="ico">⌨</div><h3>Unix 哲学</h3><p>CLI 可以被管道、脚本、CI 调用：<code>claude -p "..."</code> 无头模式直接塞进自动化流程。</p></div>
+      <div class="card amber"><div class="ico">🪶</div><h3>薄框架，厚模型</h3><p>工程只做工具、权限、上下文，规划交给模型。模型变强，产品自动变强。</p></div>
+      <div class="card amber"><div class="ico">📦</div><h3>能力外溢成 SDK</h3><p>同一套循环开放为 Claude Agent SDK，可以用来做非编程类 Agent。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>交互位置</th><th>找代码</th><th>执行环境</th></tr>
+      <tr class="me"><td>Claude Code</td><td>终端</td><td>grep / 读文件</td><td>本机</td></tr>
+      <tr><td>Cursor</td><td>IDE</td><td>向量索引 + 搜索</td><td>本机，可选云端</td></tr>
+      <tr><td>Codex</td><td>CLI / 云端</td><td>grep / 读文件</td><td>本机或云沙箱</td></tr>
+      <tr><td>Devin</td><td>网页 / Slack</td><td>自建索引</td><td>云端虚拟机</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>为什么 Claude Code 不用 RAG 检索代码？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>新鲜度</b>：代码频繁变，索引要不停重建，grep 永远是当前状态</li>
+        <li><b>精确性</b>：找函数名、报错信息这类精确匹配，grep 比语义检索准</li>
+        <li><b>简单</b>：不需要额外的索引服务，代码不出本机</li>
+        <li><b>代价</b>：多花几轮工具调用和 token，靠模型能力和缓存抵消</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>长任务上下文爆了怎么办？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>压缩</b>：早期对话总结成摘要，保留关键决策和文件路径</li>
+        <li><b>隔离</b>：探索类工作派给子代理，主上下文只收结论</li>
+        <li><b>外部化</b>：进度写进 Task 待办工具 / 文件，状态不只存在对话里</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>Agent 能跑任意命令，安全怎么保证？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>分级权限</b>：只读放行，写和执行要确认，可设白名单</li>
+        <li><b>Hooks</b>：工具调用前后跑自定义脚本，可以拦截危险操作</li>
+        <li><b>沙箱</b>：限制文件系统和网络访问范围</li>
+        <li><b>提示注入</b>：工具返回内容当数据，不当指令</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>接了几百个工具，上下文和选工具准确率怎么办？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>延迟加载</b>：只放工具名，模型用 ToolSearch 按需取 schema</li>
+        <li><b>渐进式披露</b>：Skills 只放一句描述，调用时才加载正文</li>
+        <li><b>子代理裁剪</b>：每类子代理只带自己需要的工具</li>
+        <li><b>附带好处</b>：常驻前缀稳定，prompt cache 命中率高</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>Agent 的长期记忆怎么设计？为什么不用向量库？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>两类</b>：人写的规则（CLAUDE.md）+ Agent 自己记的经验（auto memory）</li>
+        <li><b>索引常驻，正文按需</b>：MEMORY.md 每次加载，相关条目再读全文</li>
+        <li><b>写入有规矩</b>：分类型、带原因、去重、记错就删，代码里有的不存</li>
+        <li><b>为什么用文件</b>：记忆条数少，模型看索引就能挑；纯文本人能直接看和改，可以进 git</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q6</span>怎样让长会话的 prompt cache 命中率高？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>原理</b>：按前缀精确匹配，前面任何一处变了，后面全部重算</li>
+        <li><b>排序</b>：系统提示和工具定义 → 项目上下文 → 对话，越不常变越靠前</li>
+        <li><b>只追加</b>：plan 模式说明、Skill 正文、文件变化提醒都作为消息追加到末尾，不改前缀</li>
+        <li><b>避免</b>：中途切模型、增删 MCP server、频繁压缩</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q7</span>auto mode 让模型审批模型，怎么防止被绕过？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>规则优先</b>：deny 规则、关键路径删除不经过分类器，分类器也放行不了</li>
+        <li><b>隔离输入</b>：分类器看不到工具返回内容，提示注入影响不到它；服务端另有探针扫描工具结果</li>
+        <li><b>收权</b>：进入 auto 时去掉 <code>Bash(*)</code> 这类宽泛的 allow 规则</li>
+        <li><b>纵深</b>：再叠一层沙箱，审批漏了也碰不到凭据和外网</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q8</span>子代理、Agent teams、Workflow 怎么选？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>子代理</b>：任务独立、只要结果，比如搜代码、跑一轮调研</li>
+        <li><b>Agent teams</b>：成员之间要讨论、互相质疑，比如并行验证几个假设</li>
+        <li><b>Workflow</b>：几十上百个 agent、流程固定、要能复跑，比如全仓库迁移</li>
+        <li><b>判断依据</b>：谁持有计划，中间结果放哪，能不能接受更高的 token 开销</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

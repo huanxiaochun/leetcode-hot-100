@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具与扩展 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>工具与扩展</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 一句话分清 ==================== -->
+  <section id="s-map">
+    <h2>一句话分清</h2>
+    <div class="hero">
+      <div class="slogan">这些名词分属不同层：<mark>给能力、给知识、管自动化、管隔离、管打包、管 Agent 之间通信</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">给能力</div><div class="v">Tool、MCP、CLI</div></div>
+        <div class="fact"><div class="k">给知识 / 流程</div><div class="v">Skills</div></div>
+        <div class="fact"><div class="k">确定性自动化</div><div class="v">Hook</div></div>
+        <div class="fact"><div class="k">隔离上下文</div><div class="v">Subagent</div></div>
+        <div class="fact"><div class="k">打包分发</div><div class="v">Plugin</div></div>
+        <div class="fact"><div class="k">Agent 互联</div><div class="v">A2A</div></div>
+      </div>
+    </div>
+    <div class="tip">记一个底层事实：<b>模型眼里只有「工具」和「文字」两样东西</b>。MCP 最后变成工具，CLI 走 Bash 这一个工具，Skill 和 Subagent 的结果都变成文字进上下文。Hook 和 Plugin 模型根本看不到。</div>
+  </section>
+
+  <!-- ==================== 总对比表 ==================== -->
+  <section id="s-table">
+    <h2>总对比表</h2>
+    <table class="cmp">
+      <tr><th></th><th>是什么</th><th>解决什么问题</th><th>谁来调用</th></tr>
+      <tr><td>Tool</td><td>带 JSON Schema 的函数声明</td><td>让模型能动手</td><td>模型发意图，程序执行</td></tr>
+      <tr><td>MCP</td><td>把工具接入 Agent 的开放协议</td><td>同一个服务一次接入，所有客户端都能用</td><td>模型发意图，客户端转给 MCP server</td></tr>
+      <tr><td>Skills</td><td>一个文件夹：SKILL.md + 脚本 / 文档</td><td>让模型知道「这件事我们怎么做」</td><td>模型按描述自动加载，或用户 <code>/名字</code></td></tr>
+      <tr><td>CLI</td><td>现成的命令行工具</td><td>不写集成，直接用 gh、git、kubectl</td><td>模型通过 Bash 工具写命令</td></tr>
+      <tr><td>Plugin</td><td>把 Skills、Subagent、Hook、MCP 打成一个包</td><td>一键安装、团队共享、版本更新</td><td>用户安装和启用</td></tr>
+      <tr><td>Subagent</td><td>有独立上下文的子 Agent</td><td>脏活不污染主上下文，可并行</td><td>主 Agent 派任务</td></tr>
+      <tr><td>Hook</td><td>生命周期事件上挂的脚本</td><td>必须每次发生的事，不靠模型自觉</td><td>运行时按事件触发，模型不参与</td></tr>
+      <tr><td>A2A</td><td>Agent 之间通信的开放协议</td><td>不同团队 / 厂商的 Agent 互相发现、委派任务</td><td>一个 Agent 调另一个 Agent</td></tr>
+    </table>
+    <table class="cmp mt">
+      <tr><th></th><th>什么时候进上下文</th><th>上下文开销</th><th>典型例子</th></tr>
+      <tr><td>Tool</td><td>schema 每次请求都带</td><td>中，每个工具几百 token</td><td><code>get_weather</code>、Read、Edit</td></tr>
+      <tr><td>MCP</td><td>普通客户端：连上就带全部 schema；Claude Code：启动只放工具名，用到再取</td><td>不延迟加载时最大，几个 server 就能上万</td><td>GitHub、Slack、Notion、数据库 MCP</td></tr>
+      <tr><td>Skills</td><td>name + description 常驻；正文调用时；附件读到才进</td><td>低，没用时只占一句描述</td><td><code>/deploy</code> 发布清单、API 规范</td></tr>
+      <tr><td>CLI</td><td>只有 Bash 一个工具定义；用法靠模型已有知识或 <code>--help</code></td><td>最低，但输出可能很长</td><td><code>gh pr list</code>、<code>kubectl get pods</code></td></tr>
+      <tr><td>Plugin</td><td>本身不占，看里面装了什么</td><td>= 内部组件之和，启用就一直在</td><td>代码审查插件、语言 LSP 插件</td></tr>
+      <tr><td>Subagent</td><td>常驻类型名 + 说明；派出后在独立窗口跑</td><td>主上下文只收任务描述和总结</td><td>Explore 搜代码、调研、审查</td></tr>
+      <tr><td>Hook</td><td>不进，除非脚本返回内容</td><td>默认为零</td><td>改完自动格式化、拦截改 .env</td></tr>
+      <tr><td>A2A</td><td>对方 Agent 的内部过程完全不进，只收结果</td><td>低，只有消息和产出物</td><td>采购 Agent 委托供应商的报价 Agent</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 逐个讲清 ==================== -->
+  <section id="s-each">
+    <h2>逐个讲清</h2>
+
+    <h3 class="sub"><span class="no">1</span>Tool / Function calling</h3>
+    <div class="card">
+      <p>最底层的机制。程序声明「有哪些函数、参数长什么样」，模型输出<b>调用意图</b>，程序执行后把结果作为 <code>tool_result</code> 回填。</p>
+      <p>其他所有「能力类」扩展，最后都要落到这一层。</p>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>MCP（Model Context Protocol）</h3>
+    <div class="flow">
+      <div class="step"><div class="t">Host</div><div class="h">Agent 应用</div><div class="d">Claude Code、Cursor、ChatGPT</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">Client</div><div class="h">协议客户端</div><div class="d">每个 server 一个连接</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">Server</div><div class="h">MCP 服务</div><div class="d">包装 GitHub、数据库等</div></div>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">🧰</div><h3>Server 提供三样</h3><p><b>Tools</b> 可调用的函数，<b>Resources</b> 可读的数据，<b>Prompts</b> 提示词模板。</p></div>
+      <div class="card"><div class="ico">🔌</div><h3>两种传输</h3><p><b>stdio</b>：本地子进程。<b>Streamable HTTP</b>：远程服务，可走 OAuth。旧的 SSE 已弃用。</p></div>
+      <div class="card"><div class="ico">🌐</div><h3>生态</h3><p>Anthropic 2024 年底开源，OpenAI、Google、微软都已支持。现由 Linux 基金会下的 AAIF 托管。</p></div>
+    </div>
+    <pre class="code"><span class="c"># Claude Code 接一个远程 MCP</span>
+claude mcp add --transport http notion https://mcp.notion.com/mcp
+<span class="c"># 模型看到的工具名：mcp__notion__search、mcp__notion__create_page ...</span></pre>
+
+    <h3 class="sub"><span class="no">3</span>Skills</h3>
+    <pre class="code">.claude/skills/deploy/
+├── SKILL.md          <span class="c"># 必需：frontmatter + 说明</span>
+├── checklist.md      <span class="c"># 可选：参考文档，用到才读</span>
+└── scripts/check.sh  <span class="c"># 可选：脚本，模型用 Bash 去跑</span>
+
+<span class="c"># SKILL.md 内容</span>
+---
+<span class="k">name</span>: deploy
+<span class="k">description</span>: <span class="s">发布到生产环境。用户说"上线""发布"时使用</span>
+<span class="c">---</span>
+1. 先跑 scripts/check.sh，有报错就停
+2. 按 checklist.md 逐项确认 ...</pre>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">启动：只放 name + description</div><div class="d">几十个 Skill 也只占很少 token</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">任务匹配：加载 SKILL.md 正文</div><div class="d">模型觉得描述对得上，或用户输入 <code>/deploy</code></div></div>
+      </div>
+      <div class="node end">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">执行中：按需读附件、跑脚本</div><div class="d">脚本的代码不进上下文，只有输出进</div></div>
+      </div>
+    </div>
+    <ul class="pts">
+      <li><b>渐进式披露</b>：先给目录，用到再展开，这是 Skills 最核心的设计</li>
+      <li><b>开放标准</b>：Agent Skills 规范在 agentskills.io，Codex、Cursor、Copilot、Gemini CLI 等都已支持</li>
+      <li><b>前身</b>：Claude Code 的自定义斜杠命令已并入 Skills</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">4</span>CLI：让 Agent 直接用命令行</h3>
+    <pre class="code"><span class="c"># 不接任何 MCP，模型直接在 Bash 里组合命令</span>
+gh pr list --author @me --json number,title | jq <span class="s">'.[0]'</span>
+kubectl get pods -n prod | grep CrashLoop
+git log --oneline -20 -- src/auth/</pre>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">🧠</div><h3>模型本来就会</h3><p>训练数据里有大量 man page、脚本和问答，gh / git / kubectl 不用教。</p></div>
+      <div class="card green"><div class="ico">🔗</div><h3>能组合</h3><p>管道、grep、jq 一行过滤完，只把需要的几行交给模型。</p></div>
+      <div class="card green"><div class="ico">🪶</div><h3>省 token</h3><p>不用常驻几十个工具 schema，只有一个 Bash。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>Plugin</h3>
+    <pre class="code">my-plugin/
+├── .claude-plugin/plugin.json   <span class="c"># 清单：名字、版本、描述</span>
+├── skills/review/SKILL.md
+├── agents/reviewer.md           <span class="c"># Subagent 定义</span>
+├── hooks/hooks.json
+└── .mcp.json                    <span class="c"># 要连的 MCP server</span></pre>
+    <ul class="pts">
+      <li><b>本身不是新能力</b>：只是容器，装的是 Skills、Subagent、Hook、MCP</li>
+      <li><b>分发</b>：从 marketplace（一个带清单的仓库）按名字安装，有版本、能更新</li>
+      <li><b>命名空间</b>：插件里的 Skill 叫 <code>/my-plugin:review</code>，多个插件不冲突</li>
+      <li><b>注意</b>：启用后每个会话都在，描述常驻上下文，Hook 每次都触发</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">6</span>Subagent</h3>
+    <div class="flow">
+      <div class="step"><div class="t">派</div><div class="h">主 Agent</div><div class="d">写一段任务说明</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">干</div><div class="h">子 Agent</div><div class="d">新上下文，读几十个文件</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">回</div><div class="h">只交总结</div><div class="d">中间过程留在它的窗口</div></div>
+    </div>
+    <ul class="pts">
+      <li><b>定义</b>：<code>.claude/agents/*.md</code>，写系统提示、工具白名单、模型</li>
+      <li><b>代价</b>：子 Agent 不知道主对话的背景，交代不清就做偏</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">7</span>Hook</h3>
+    <pre class="code"><span class="c">// settings.json：每次改文件前先跑脚本，exit 2 就拦下</span>
+{ <span class="s">"hooks"</span>: { <span class="s">"PreToolUse"</span>: [{
+    <span class="s">"matcher"</span>: <span class="s">"Edit|Write"</span>,
+    <span class="s">"hooks"</span>: [{ <span class="s">"type"</span>: <span class="s">"command"</span>, <span class="s">"command"</span>: <span class="s">"./block-env.sh"</span> }]
+}] } }</pre>
+    <ul class="pts">
+      <li><b>事件</b>：SessionStart、UserPromptSubmit、PreToolUse、PostToolUse、Stop 等</li>
+      <li><b>能做</b>：拦截、改参数、给模型补充上下文、发通知、记审计日志</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">8</span>A2A（Agent2Agent）</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">🪪</div><h3>Agent Card</h3><p>一份 JSON 名片：我是谁、会什么、地址、怎么鉴权。用来发现对方。</p></div>
+      <div class="card"><div class="ico">📦</div><h3>Task</h3><p>委派的任务有状态：进行中、需要补充信息、完成、失败。适合长任务。</p></div>
+      <div class="card"><div class="ico">📨</div><h3>Message / Artifact</h3><p>过程中来回发消息，最后交付产出物（文件、结构化数据）。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>不透明</b>：调用方看不到对方内部用了什么模型、工具、提示词</li>
+      <li><b>来源</b>：Google 2025 年发布，后捐给 Linux 基金会，2026 年发布 1.0</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 容易混的几组 ==================== -->
+  <section id="s-vs">
+    <h2>容易混的几组</h2>
+
+    <h3 class="sub"><span class="no">1</span>MCP vs Tool</h3>
+    <div class="card">
+      <h3>MCP 是「工具怎么接进来」的协议，Tool 是「模型怎么调用」的机制</h3>
+      <p>MCP server 暴露的工具，被客户端翻译成普通 tool 定义交给模型。<mark>在模型眼里，MCP 工具和自己写的工具没有区别</mark>。</p>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>自己写 Tool</th><th>MCP</th></tr>
+      <tr><td>代码在哪</td><td>Agent 程序里</td><td>独立的 server 进程或远程服务</td></tr>
+      <tr><td>复用</td><td>换个 Agent 要重写</td><td>写一次，所有支持 MCP 的客户端都能用</td></tr>
+      <tr><td>谁维护</td><td>你自己</td><td>通常是服务提供方（GitHub、Notion 官方）</td></tr>
+      <tr><td>适合</td><td>只给自家 Agent 用的内部函数</td><td>要给很多 Agent / 很多人用的服务</td></tr>
+    </table>
+    <div class="tip">类比 USB：Tool 是「设备能干什么」，MCP 是「统一的接口」。</div>
+
+    <h3 class="sub"><span class="no">2</span>MCP vs CLI：近一年争论最多的一组</h3>
+    <div class="card">
+      <p>2026 年初开始，不少工程师认为「有现成 CLI 就别接 MCP」，于是有了一轮 MCP vs CLI 的讨论。结论不是谁取代谁，而是<b>各有适用场景</b>。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">⌨</div><h3>CLI 胜在</h3><p>模型本来就会用；管道组合灵活；不用常驻 schema，token 省；没有额外的 server 进程要维护。</p></div>
+      <div class="card"><div class="ico">🔌</div><h3>MCP 胜在</h3><p>OAuth 鉴权和细粒度权限；跨客户端标准化；远程 SaaS 没有 CLI 也能接；参数和返回是结构化的，好校验。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>场景</th><th>更合适</th><th>原因</th></tr>
+      <tr><td>本地开发查 PR、看日志</td><td>CLI</td><td><code>gh</code>、<code>git</code> 现成，已登录</td></tr>
+      <tr><td>排查 k8s 集群</td><td>CLI</td><td><code>kubectl</code> + <code>grep</code> 一行过滤</td></tr>
+      <tr><td>网页版 / 手机版 Agent 读 Notion</td><td>MCP</td><td>没有终端，只能走远程服务 + OAuth</td></tr>
+      <tr><td>企业给全员开放内部系统</td><td>MCP</td><td>统一鉴权、按人授权、可审计</td></tr>
+      <tr><td>浏览器自动化、设计稿读取</td><td>MCP</td><td>交互有状态，没有好用的 CLI</td></tr>
+    </table>
+    <div class="tip warn">CLI 的风险：给了 Bash 等于给了任意执行，要靠权限规则和沙箱兜住。MCP 的问题：不做延迟加载时，工具 schema 很占上下文。</div>
+
+    <h3 class="sub"><span class="no">3</span>Skills vs MCP</h3>
+    <table class="cmp">
+      <tr><th></th><th>Skills</th><th>MCP</th></tr>
+      <tr><td>给模型的是</td><td>知识和流程：「怎么做」</td><td>能力：「能做什么」</td></tr>
+      <tr><td>形态</td><td>Markdown + 脚本，放在本地文件夹</td><td>一个运行中的服务</td></tr>
+      <tr><td>加载</td><td>渐进式：描述 → 正文 → 附件</td><td>工具定义（全量或延迟加载）</td></tr>
+      <tr><td>例子</td><td>「我们的 SQL 规范、表结构、常用查询」</td><td>「连上数据库执行 SQL」</td></tr>
+    </table>
+    <div class="tip">最好的用法是<b>配合</b>：MCP 负责连上数据库，Skill 告诉模型表结构和查询习惯。Skill 也可以直接写「用 <code>gh</code> 做这些事」，把 CLI 变成一套流程。</div>
+
+    <h3 class="sub"><span class="no">4</span>Skills vs Subagent</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">📘</div><h3>Skill = 说明书</h3><p>内容<b>加进当前上下文</b>，由当前 Agent 照着做。适合参考资料、固定流程。</p></div>
+      <div class="card"><div class="ico">👷</div><h3>Subagent = 外包工人</h3><p>新开一个<b>独立上下文</b>去干活，只交回结论。适合要读很多文件、可以并行的任务。</p></div>
+    </div>
+    <ul class="pts">
+      <li><b>看问题出在哪</b>：缺知识用 Skill；上下文要爆了用 Subagent</li>
+      <li><b>能组合</b>：Subagent 定义里可以预装 Skill；Skill 也能设成 <code>context: fork</code> 在子 Agent 里跑</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">5</span>Hook vs 写在提示词里的规则</h3>
+    <table class="cmp">
+      <tr><th></th><th>提示词 / CLAUDE.md 里写</th><th>Hook</th></tr>
+      <tr><td>执行方式</td><td>模型读了之后自己遵守</td><td>运行时到点就跑</td></tr>
+      <tr><td>可靠性</td><td>大概率遵守，长对话里可能忘</td><td>每次都执行，确定</td></tr>
+      <tr><td>适合</td><td>需要判断的偏好：代码风格、命名</td><td>必须遵守的规则：禁改 .env、改完跑 lint</td></tr>
+    </table>
+    <div class="tip">一句话：<b>提示词是请求，Hook 是强制</b>。规则绝对不能破，就写成 Hook。</div>
+
+    <h3 class="sub"><span class="no">6</span>MCP vs A2A</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">🔧</div><h3>MCP：Agent ↔ 工具</h3><p>对方是<b>被调用的能力</b>，输入输出明确，一般很快返回。</p></div>
+      <div class="card green"><div class="ico">🤝</div><h3>A2A：Agent ↔ Agent</h3><p>对方是<b>有自主性的 Agent</b>，可能跑很久、中途反问、最后交付产出物。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>MCP</th><th>A2A</th></tr>
+      <tr><td>对方内部</td><td>一个函数</td><td>不透明，自己有模型和工具</td></tr>
+      <tr><td>交互</td><td>一次调用，一次结果</td><td>有状态的任务，可多轮、可推送进度</td></tr>
+      <tr><td>发现</td><td>客户端配置 server 地址</td><td>读对方的 Agent Card</td></tr>
+      <tr><td>例子</td><td>旅行 Agent 调航班查询 API</td><td>旅行 Agent 委托酒店方的预订 Agent</td></tr>
+    </table>
+    <div class="tip">两者是互补关系：一个 Agent 用 MCP 接自己的工具，用 A2A 和别的 Agent 协作。Subagent 是同一个产品内部的分工，A2A 是跨团队、跨厂商的。</div>
+  </section>
+
+  <!-- ==================== 选型决策链 ==================== -->
+  <section id="s-pick">
+    <h2>选型决策链</h2>
+    <div class="card">
+      <h3>按顺序问自己，先命中哪条就用哪个</h3>
+    </div>
+    <div class="chain mt">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">这件事必须每次都发生吗？</div><div class="d">例：改完格式化、禁止删某目录</div></div>
+        <div class="branches">
+          <div class="br ok">是，不需要判断 → Hook</div>
+          <div class="br ask">否 → 往下</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">模型缺的是知识或流程吗？</div><div class="d">它会做，但不知道你们的做法</div></div>
+        <div class="branches">
+          <div class="br ok">每次都要知道的短规则 → CLAUDE.md</div>
+          <div class="br ok">偶尔用、内容长 → Skill</div>
+          <div class="br ask">缺的是能力 → 往下</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">要接外部系统吗？</div><div class="d">GitHub、k8s、数据库、SaaS</div></div>
+        <div class="branches">
+          <div class="br ok">有成熟 CLI、本地终端里用 → CLI（+ Skill 写用法）</div>
+          <div class="br ok">要 OAuth、远程、多客户端共享 → MCP</div>
+          <div class="br ok">只是自家程序里的函数 → 直接写 Tool</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">中间过程会塞满上下文吗？</div><div class="d">读很多文件、多方向并行调研</div></div>
+        <div class="branches">
+          <div class="br ok">是 → Subagent</div>
+          <div class="br ask">否 → 主 Agent 自己做</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">对方是别人独立运行的 Agent 吗？</div><div class="d">其他团队、其他厂商、对外服务</div></div>
+        <div class="branches">
+          <div class="br ok">是 → A2A</div>
+          <div class="br ask">同一产品内部 → Subagent</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">6</div>
+        <div class="body"><div class="h">要分享给团队或多个仓库吗？</div><div class="d">一套 Skill + Hook + MCP 想一键装</div></div>
+        <div class="branches">
+          <div class="br ok">是 → 打包成 Plugin</div>
+          <div class="br ask">只自己用 → 放用户目录就行</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">真实项目都是组合</div><div class="d">例：MCP 连数据库 + Skill 讲表结构 + Hook 拦截 DROP + Subagent 跑分析 + Plugin 发给团队</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>有了 Function calling，为什么还需要 MCP？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>层次不同</b>：Function calling 是模型调用工具的机制，MCP 是工具接入的协议</li>
+        <li><b>解决 M×N</b>：没有 MCP，每个 Agent 都要给每个服务写一遍集成；有了 MCP，服务方写一次 server</li>
+        <li><b>附带能力</b>：OAuth 鉴权、远程传输、Resources / Prompts 等标准化</li>
+        <li><b>模型无感</b>：最终仍转换成普通 tool 交给模型</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>有人说「CLI 比 MCP 好」，你怎么看？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>CLI 的优势成立</b>：模型熟悉、能用管道组合、token 省、少维护一个服务</li>
+        <li><b>但有前提</b>：要有终端、有成熟 CLI、本机已登录，通常是单人本地开发</li>
+        <li><b>MCP 不可替代的</b>：网页 / 移动端 Agent、OAuth 按人授权、企业统一审计、没有 CLI 的 SaaS</li>
+        <li><b>MCP 的 token 问题</b>：可以用延迟加载工具 schema 缓解，Claude Code 默认就这么做</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>Skills 和把说明写进系统提示有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>加载时机</b>：系统提示每次全量；Skill 平时只占一句描述，用到才加载正文</li>
+        <li><b>能带文件</b>：Skill 是文件夹，可以带脚本和参考文档，脚本代码不进上下文</li>
+        <li><b>可复用</b>：遵循 Agent Skills 开放标准，同一个 Skill 能在多个 Agent 产品里用</li>
+        <li><b>选法</b>：每次都要知道的短规则放系统提示 / CLAUDE.md，长的、偶尔用的做成 Skill</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>「禁止修改 .env」应该写在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>写成 PreToolUse Hook</b>：匹配 Edit / Write，路径是 .env 就 exit 2 拦截，原因回给模型</li>
+        <li><b>或者用权限 deny 规则</b>：同样是确定性的</li>
+        <li><b>不要只写在提示词里</b>：那只是请求，长对话里模型可能忘</li>
+        <li><b>可以两者都写</b>：提示词让模型别去试，Hook 兜底</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>MCP 和 A2A 是竞争关系吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>不是</b>：MCP 连 Agent 和工具，A2A 连 Agent 和 Agent</li>
+        <li><b>区别</b>：工具是透明的函数、一次调用；Agent 是不透明的、有状态的长任务</li>
+        <li><b>组合</b>：一个 Agent 内部用 MCP 接工具，对外用 A2A 和其他 Agent 协作</li>
+        <li><b>现状</b>：两个协议都已在 Linux 基金会下托管</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

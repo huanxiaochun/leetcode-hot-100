@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多 Agent 与编排 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>多 Agent 与编排</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 取舍 ==================== -->
+  <section id="s-why">
+    <h2>单 Agent 还是多 Agent</h2>
+    <div class="hero">
+      <div class="slogan">多 Agent 用<mark>更多 token 和协调成本</mark>，换<mark>并行和干净的上下文</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">单 Agent</div><div class="v">一个循环、一份历史</div></div>
+        <div class="fact"><div class="k">多 Agent</div><div class="v">多个循环，各有自己的窗口</div></div>
+        <div class="fact"><div class="k">token 开销</div><div class="v">Anthropic 数据：约为聊天的 15 倍</div></div>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>单 Agent</th><th>多 Agent</th></tr>
+      <tr><td>上下文</td><td>连续，每一步都看到之前所有决定</td><td>各自隔离，子任务不污染主窗口</td></tr>
+      <tr><td>并行</td><td>串行，长任务慢</td><td>多个方向同时跑</td></tr>
+      <tr><td>token</td><td>少</td><td>Agent 约为聊天的 4 倍，多 Agent 约 15 倍</td></tr>
+      <tr><td>协调</td><td>不需要</td><td>拆任务、传上下文、合并结果都可能出错</td></tr>
+      <tr><td>调试</td><td>一条轨迹</td><td>多条轨迹交织，行为难预测</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 两种观点 ==================== -->
+  <section id="s-view">
+    <h2>两种观点</h2>
+    <div class="grid">
+      <div class="card green">
+        <div class="ico">A</div><h3>Anthropic：多 Agent 做调研更强</h3>
+        <p>《How we built our multi-agent research system》，2025-06。</p>
+        <ul class="pts">
+          <li>Opus 4 做 lead + Sonnet 4 做子代理，内部调研评测比单个 Opus 4 <b>高 90.2%</b></li>
+          <li>BrowseComp 上，<b>token 用量单独解释 80% 的表现差异</b></li>
+          <li>本质：多个窗口 = 能花更多 token 去并行思考</li>
+          <li>适合广度优先、方向互相独立的问题</li>
+        </ul>
+      </div>
+      <div class="card amber">
+        <div class="ico">C</div><h3>Cognition：别做多 Agent</h3>
+        <p>《Don't Build Multi-Agents》，2025-06，Devin 团队。</p>
+        <ul class="pts">
+          <li><b>原则 1</b>：共享上下文，而且共享完整轨迹，不只是单条消息</li>
+          <li><b>原则 2</b>：每个动作都带着隐含决定，决定冲突结果就坏</li>
+          <li>默认用单线程 Agent，太长就加一个专门压缩历史的模型</li>
+        </ul>
+      </div>
+    </div>
+    <h3 class="sub"><span class="no">1</span>Cognition 的例子：做一个 Flappy Bird</h3>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">主 Agent 拆成两个子任务</div><div class="d">子任务 1 做背景和水管，子任务 2 做小鸟</div></div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">两个子代理各干各的</div><div class="d">互相看不到对方在做什么</div></div>
+        <div class="branches">
+          <div class="br no">子代理 1 做成了马里奥风格的背景</div>
+          <div class="br no">子代理 2 的小鸟风格和动作都不对</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✗</div>
+        <div class="body"><div class="h">合并时对不上</div><div class="d">把原始任务也传给子代理，风格仍可能不一致</div></div>
+      </div>
+    </div>
+    <div class="tip">两边其实不矛盾：<b>调研类</b>任务子方向独立、只读、结果能合并，适合多 Agent；<b>写代码</b>这类步骤之间强依赖的任务，单 Agent 更稳。Anthropic 原文也说多数编程任务可并行的部分不多。</div>
+  </section>
+
+  <!-- ==================== 拓扑 ==================== -->
+  <section id="s-topo">
+    <h2>常见拓扑</h2>
+    <table class="cmp">
+      <tr><th>拓扑</th><th>谁决定下一步</th><th>上下文怎么流动</th><th>代表</th></tr>
+      <tr><td>Orchestrator-worker</td><td>主 Agent</td><td>主派任务，worker 交回摘要</td><td>Claude Research、Claude Code 子代理</td></tr>
+      <tr><td>Handoff</td><td>当前 Agent 决定交给谁</td><td>对话整个转给下一个 Agent</td><td>OpenAI Agents SDK</td></tr>
+      <tr><td>图编排</td><td>图里的边和条件</td><td>节点读写共享 state</td><td>LangGraph</td></tr>
+      <tr><td>群聊 / 团队</td><td>选发言人的规则或 lead</td><td>共享消息或任务列表</td><td>AutoGen、CrewAI、Claude Code agent teams</td></tr>
+      <tr><td>脚本化编排</td><td>代码</td><td>脚本变量</td><td>Claude Code workflows</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">1</span>Orchestrator-worker</h3>
+    <div class="flow">
+      <div class="step"><div class="t">LEAD</div><div class="h">拆解</div><div class="d">定策略，决定派几个</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">WORKERS</div><div class="h">并行执行</div><div class="d">各自搜索、读资料</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">LEAD</div><div class="h">汇总</div><div class="d">不够就再派一轮</div></div>
+    </div>
+    <ul class="pts">
+      <li><b>按难度定规模</b>：Anthropic 在提示里写死规则，简单查询 1 个 Agent 调 3~10 次工具，复杂调研 10 个以上子代理</li>
+      <li><b>早期翻车</b>：简单问题派 50 个子代理、子代理之间互相打扰</li>
+    </ul>
+
+    <h3 class="sub"><span class="no">2</span>Handoff（OpenAI Agents SDK）</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">↪</div><h3>Handoff</h3><p>交接在模型眼里是一个工具，如 <code>transfer_to_refund_agent</code>。调了它，<b>后续对话由新 Agent 接管</b>。适合客服分诊。</p></div>
+      <div class="card"><div class="ico">🔧</div><h3>Agent as tool</h3><p>把另一个 Agent 包成工具调用，结果回到原 Agent，<b>控制权不转移</b>。就是 orchestrator-worker。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>图编排（LangGraph）</h3>
+    <pre class="code"><span class="c"># 节点是函数或 Agent，边决定下一步，state 在节点间传递</span>
+g = StateGraph(State)
+g.add_node(<span class="s">"plan"</span>, planner)
+g.add_node(<span class="s">"code"</span>, coder)
+g.add_node(<span class="s">"review"</span>, reviewer)
+g.add_edge(<span class="s">"plan"</span>, <span class="s">"code"</span>)
+g.add_conditional_edges(<span class="s">"review"</span>, route)   <span class="c"># 不通过 → 回 code</span>
+app = g.compile(checkpointer=saver)          <span class="c"># 可暂停、恢复、人工介入</span></pre>
+
+    <h3 class="sub"><span class="no">4</span>群聊 / 团队</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">💬</div><h3>AutoGen</h3><p>微软出品。GroupChat 里多个 Agent 轮流发言，由规则或模型选下一个发言人。</p></div>
+      <div class="card"><div class="ico">👥</div><h3>CrewAI</h3><p>每个 Agent 有 role / goal / backstory，任务按顺序或由经理 Agent 分配。</p></div>
+      <div class="card"><div class="ico">🧑‍🤝‍🧑</div><h3>Claude Code agent teams</h3><p>一个 lead + 几个独立会话，共享任务列表，成员之间直接发消息。实验功能，默认关闭。</p></div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>脚本化编排（workflow）</h3>
+    <ul class="pts">
+      <li><b>把计划写成代码</b>：循环、分支、中间结果都在脚本里，主 Agent 只收最终答案</li>
+      <li><b>规模</b>：一次几十到几百个 Agent，比如全仓库扫 bug、500 个文件的迁移</li>
+      <li><b>能固化质量流程</b>：每条发现都派独立 Agent 反向核对，过了才报告</li>
+      <li><b>可复跑</b>：脚本存下来就是一个命令</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 上下文传递 ==================== -->
+  <section id="s-ctx">
+    <h2>子代理的上下文传递和结果回收</h2>
+    <h3 class="sub"><span class="no">1</span>派任务时给什么</h3>
+    <div class="card">
+      <p>子代理<b>只知道你写进任务描述的东西</b>。Anthropic 要求每个任务描述都包含：</p>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">🎯</div><h3>目标</h3><p>要回答什么问题。</p></div>
+      <div class="card green"><div class="ico">📋</div><h3>输出格式</h3><p>列表、表格，还是带出处的结论。</p></div>
+      <div class="card green"><div class="ico">🧰</div><h3>工具和来源</h3><p>去哪找、用什么工具。</p></div>
+      <div class="card green"><div class="ico">🚧</div><h3>边界</h3><p>哪些不归它管，避免重复和遗漏。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>传法</th><th>做法</th><th>取舍</th></tr>
+      <tr><td>只传任务描述</td><td>全新窗口，写一段说明</td><td>最省 token，但容易误解</td></tr>
+      <tr><td>传完整历史（fork）</td><td>复制父对话</td><td>不用重新交代背景，还能命中父的缓存；窗口一开始就不干净</td></tr>
+      <tr><td>传引用</td><td>给文件路径、URL，让它自己读</td><td>精确，传递成本低</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>结果怎么收回来</h3>
+    <ul class="pts">
+      <li><b>摘要</b>：子代理可能用了几万 token，只交回 1,000~2,000 token 的结论</li>
+      <li><b>写文件</b>：大结果存到文件系统，只把路径交回，避免「传话游戏」一层层丢信息</li>
+      <li><b>结构化</b>：要求固定格式，方便主 Agent 合并、去重</li>
+      <li><b>要验证</b>：子代理的话和工具结果一样，当数据看，必要时再派一个去核对</li>
+    </ul>
+  </section>
+
+  <!-- ==================== A2A ==================== -->
+  <section id="s-a2a">
+    <h2>A2A 协议</h2>
+    <div class="card">
+      <h3>MCP 让 Agent 接工具，A2A 让 Agent 接 Agent</h3>
+      <p>Google 2025-04 发布，同年交给 Linux 基金会。让不同框架、不同公司做的 Agent 能互相发现、委托任务，<b>不用暴露各自内部的提示、记忆和工具</b>。</p>
+    </div>
+    <div class="grid mt">
+      <div class="card"><div class="ico">🪪</div><h3>Agent Card</h3><p>一份 JSON 名片，放在 <code>/.well-known/</code> 下：我叫什么、能干什么、怎么认证。</p></div>
+      <div class="card"><div class="ico">📦</div><h3>Task</h3><p>一次委托，有状态：提交、进行中、需要输入、完成、失败。可以很长时间。</p></div>
+      <div class="card"><div class="ico">✉</div><h3>Message / Artifact</h3><p>过程中来回的消息，以及最终产出的文件或数据。</p></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th></th><th>MCP</th><th>A2A</th></tr>
+      <tr><td>连接对象</td><td>工具、数据源</td><td>另一个 Agent</td></tr>
+      <tr><td>对方</td><td>听话执行，没有自己的判断</td><td>自己会规划，可能反问</td></tr>
+      <tr><td>交互</td><td>一次调用一次结果</td><td>长任务，可流式、可推送进度</td></tr>
+      <tr><td>传输</td><td>JSON-RPC，stdio / HTTP</td><td>基于 HTTP，JSON-RPC 等</td></tr>
+    </table>
+    <div class="tip">两者互补：一个 Agent 用 MCP 调自己的工具，用 A2A 把子任务交给别家的 Agent。</div>
+  </section>
+
+  <!-- ==================== 什么时候拆 ==================== -->
+  <section id="s-split">
+    <h2>什么时候拆、怎么拆</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">单 Agent 能做好吗？</div><div class="d">先用最简单的方案试，再决定要不要加复杂度</div></div>
+        <div class="branches">
+          <div class="br ok">能 → 别拆</div>
+          <div class="br ask">上下文爆了 → 先试压缩、外部化</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">子任务之间独立吗？</div><div class="d">一个子任务的决定会不会影响另一个</div></div>
+        <div class="branches">
+          <div class="br ok">独立 → 适合并行</div>
+          <div class="br no">强依赖、改同一份文件 → 别拆</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">值这么多 token 吗？</div><div class="d">多 Agent 的 token 是数倍到十几倍</div></div>
+        <div class="branches">
+          <div class="br ok">高价值任务 → 拆</div>
+          <div class="br no">高频低价值 → 不拆</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">谁持有计划？</div><div class="d">选拓扑</div></div>
+        <div class="branches">
+          <div class="br ask">模型逐轮决定 → orchestrator-worker</div>
+          <div class="br ask">流程固定 → 图编排 / workflow 脚本</div>
+          <div class="br ask">按领域分诊 → handoff</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">按什么维度拆</div><div class="d">按信息来源、按子问题、按模块；子代理以只读调研为主，写操作尽量留给一个 Agent</div></div>
+      </div>
+    </div>
+    <div class="grid mt">
+      <div class="card green"><div class="ico">✓</div><h3>适合拆</h3><p>多方向调研、多个假设并行验证、大批量相同处理（每个文件一份）、独立审查。</p></div>
+      <div class="card amber"><div class="ico">✗</div><h3>不适合拆</h3><p>步骤强依赖的编码、要频繁来回沟通的任务、很小的改动、在意延迟的场景。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Anthropic 说多 Agent 好，Cognition 说别做，谁对？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>任务不同</b>：Anthropic 做的是调研，子方向独立、只读；Cognition 做的是写代码，步骤强依赖</li>
+        <li><b>共同点</b>：都把上下文当核心问题，都承认多 Agent 贵且难协调</li>
+        <li><b>结论</b>：能并行、能合并的用多 Agent；决定之间互相牵制的用单 Agent</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>多 Agent 为什么能提升效果？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>花更多 token</b>：BrowseComp 上 token 用量解释了 80% 的差异</li>
+        <li><b>干净窗口</b>：每个子代理只看自己的任务，不被别的信息干扰</li>
+        <li><b>并行</b>：lead 同时起 3~5 个子代理，Anthropic 称复杂查询的调研时间最多缩短 90%</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>Handoff 和 agent as tool 有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>Handoff</b>：控制权转移，新 Agent 接着和用户对话，默认带上之前的历史</li>
+        <li><b>Agent as tool</b>：控制权不变，调用方拿到结果继续</li>
+        <li><b>选法</b>：按领域分诊（退款、技术支持）用 handoff；要一个主 Agent 统筹用 as tool</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>子代理结果出错或互相矛盾怎么办？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>事前</b>：任务描述写清目标、格式、边界，减少误解</li>
+        <li><b>事中</b>：并行的子代理尽量只读，写操作集中到一个 Agent</li>
+        <li><b>事后</b>：派独立 Agent 核对，或让多个子代理交叉验证，冲突时回原始来源</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>A2A 和 MCP 是竞争关系吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>不是</b>：MCP 接工具和数据，A2A 接其他 Agent</li>
+        <li><b>区别</b>：A2A 的对方有自己的判断，任务可以很长、要中途补信息</li>
+        <li><b>常见组合</b>：内部用 MCP 调工具，跨团队、跨公司用 A2A 委托</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perplexity · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">DEEP RESEARCH</div>
+    <h1>Perplexity</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">答案引擎：<mark>不给你十个蓝色链接，直接给答案，每句话标出来源</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">Perplexity AI</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2022-12</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">网页 / App / Comet 浏览器 / API</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">自研 Sonar + 可选 GPT、Claude 等</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>检索增强生成（RAG）做成了产品</b>。模型是可替换的，核心是<b>检索、排序和引用</b>。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">改写查询</div><div class="d">理解意图，拆成搜索词</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">检索</div><div class="d">实时搜网页 + 自建索引</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">抽取排序</div><div class="d">挑出最相关的段落</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">生成答案</div><div class="d">只基于这些段落写，标 [1][2]</div></div>
+    </div>
+    <div class="loop-note">↻ 快速模式一问一答；Pro Search / Research 模式会多轮搜索再回答</div>
+    <pre class="code"><span class="c"># 一次检索增强问答</span>
+queries = rewrite(question, history)       <span class="c"># 结合追问的上下文</span>
+docs    = search(queries)                  <span class="c"># 网页、新闻、论文……</span>
+chunks  = rerank(extract(docs), question)  <span class="c"># 段落级打分</span>
+answer  = llm(<span class="s">"只根据以下资料回答，并标注编号"</span>, chunks, question)
+show(answer, sources=chunks)               <span class="c"># 来源卡片放在答案上方</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🕷</div><h3>爬虫与索引</h3><p>有自己的爬虫（PerplexityBot）和索引，同时接实时搜索。</p></div>
+      <div class="card"><div class="ico">📶</div><h3>排序</h3><p>按相关性和来源质量挑段落，决定答案的上限。</p></div>
+      <div class="card"><div class="ico">🤖</div><h3>Sonar 模型</h3><p>基于开源模型微调，专门优化“按资料回答 + 引用”。</p></div>
+      <div class="card green"><div class="ico">🔍</div><h3>Pro Search</h3><p>先规划步骤，多轮搜索，适合需要比较和推理的问题。</p></div>
+      <div class="card green"><div class="ico">📑</div><h3>Research 模式</h3><p>深度研究：几分钟内搜大量来源，出长报告。</p></div>
+      <div class="card green"><div class="ico">🧭</div><h3>Comet 浏览器</h3><p>把答案引擎和 Agent 放进浏览器，能代用户操作网页。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 检索与引用 ==================== -->
+  <section id="s-ctx">
+    <h2>检索与引用</h2>
+    <div class="card">
+      <h3>引用是产品的核心，不是附加功能</h3>
+      <ul class="pts">
+        <li><b>先检索再生成</b>：模型只看检索到的段落，不靠记忆回答</li>
+        <li><b>句级标注</b>：每句后标编号，点开就是原文</li>
+        <li><b>来源在前</b>：答案上方先列来源卡片，用户先看到出处</li>
+        <li><b>追问</b>：后续问题带着对话上下文重新检索</li>
+        <li><b>聚焦范围</b>：可以限定只搜学术、社交、财经等来源</li>
+      </ul>
+    </div>
+    <div class="tip warn">标了引用也可能错：<b>来源本身不准，或模型误读原文</b>。还有出版方对抓取内容的版权争议。</div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🎯</div><h3>答案代替链接</h3><p>用户要的是答案，<mark>搜索结果只是原料</mark>。把“自己点开读”这一步交给模型。</p></div>
+      <div class="card amber"><div class="ico">🔁</div><h3>模型可换</h3><p>不押注一家模型，用户可选，自己也能换成更便宜更快的。</p></div>
+      <div class="card amber"><div class="ico">⚡</div><h3>快</h3><p>默认模式秒级出答案，延迟是答案引擎的关键体验。</p></div>
+      <div class="card amber"><div class="ico">🔗</div><h3>Sonar API</h3><p>把“联网搜索 + 引用”打包成 API，返回答案和来源列表。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>核心</th><th>耗时</th><th>产出</th></tr>
+      <tr class="me"><td>Perplexity</td><td>检索 + 排序 + 引用</td><td>秒级，研究模式分钟级</td><td>带编号引用的答案</td></tr>
+      <tr><td>Google 搜索</td><td>索引 + 排序</td><td>毫秒级</td><td>链接列表（另有 AI 概览）</td></tr>
+      <tr><td>OpenAI Deep Research</td><td>推理模型多轮搜读</td><td>分钟级</td><td>长报告 + 引用</td></tr>
+      <tr><td>ChatGPT 联网搜索</td><td>对话模型 + 搜索工具</td><td>秒级</td><td>答案 + 引用</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>设计一个答案引擎，链路怎么搭？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>查询改写</b>：结合对话历史，拆成多个搜索词</li>
+        <li><b>召回</b>：搜索 API / 自建索引，取前若干网页</li>
+        <li><b>抽取 + 重排</b>：切段落，用重排模型打分</li>
+        <li><b>生成</b>：约束只用给定资料，强制标引用</li>
+        <li><b>后处理</b>：检查引用编号是否真的支撑这句话</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>怎么保证引用是真的，而不是模型编的？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>编号来自检索结果</b>：模型只能引用给它的编号，不能自造链接</li>
+        <li><b>事后校验</b>：用小模型判断句子和原文是否一致</li>
+        <li><b>资料不够就说不知道</b>：在提示里明确要求</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>Perplexity 和 Deep Research 的区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>深度</b>：Perplexity 默认一两轮检索，Deep Research 几十轮</li>
+        <li><b>延迟</b>：秒级对分钟级</li>
+        <li><b>场景</b>：查事实、快问答 vs 写调研报告</li>
+        <li><b>趋势</b>：两边在靠拢，Perplexity 也有研究模式</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

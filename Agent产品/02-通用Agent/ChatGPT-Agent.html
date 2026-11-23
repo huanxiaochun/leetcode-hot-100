@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatGPT Agent · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">GENERAL AGENT</div>
+    <h1>ChatGPT Agent</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">ChatGPT 里的“自带电脑”模式：<mark>Operator 会动手 + Deep Research 会调研，合成一个 Agent</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">OpenAI</div></div>
+        <div class="fact"><div class="k">前身</div><div class="v">Operator（2025-01）+ Deep Research（2025-02）</div></div>
+        <div class="fact"><div class="k">发布</div><div class="v">2025-07，ChatGPT 里选 agent 模式</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">前身 Operator 用 CUA，Agent 用统一训练的新模型</div></div>
+      </div>
+    </div>
+    <div class="tip warn">现状：OpenAI 帮助中心已标注 ChatGPT agent <b>不再提供</b>，能力并入 2026-07 发布的 <b>ChatGPT Work</b>。下面讲的设计思路仍然适用。</div>
+    <div class="tip">一句话记住：<b>CUA = 看截图 + 点鼠标</b>，不依赖网站 API；Agent 在此基础上加了<b>文本浏览器、终端和连接器</b>，能选最快的路。</div>
+  </section>
+
+  <!-- ==================== 核心循环 ==================== -->
+  <section id="s-loop">
+    <h2>核心循环</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">理解任务</div><div class="d">必要时先问清楚</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">选工具</div><div class="d">可视浏览器 / 文本浏览器 / 终端 / 连接器</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">执行观察</div><div class="d">截图或文本结果回到模型</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">关键处确认</div><div class="d">付款、发送前停下问用户</div></div>
+    </div>
+    <div class="loop-note">↻ 跑在 OpenAI 的云端虚拟机里，工具之间共享文件和登录状态</div>
+    <pre class="code"><span class="c"># CUA 的感知-推理-动作循环（Operator 时代）</span>
+<span class="k">while</span> <span class="k">not</span> done:
+    img = vm.screenshot()                  <span class="c"># 只看像素，不读 DOM</span>
+    thought, act = cua(goal, history, img) <span class="c"># 先推理，再给动作</span>
+    <span class="k">if</span> act.sensitive: ask_user()          <span class="c"># 登录、付款、验证码交还用户</span>
+    vm.do(act)                             <span class="c"># click(x,y) / type / scroll</span></pre>
+  </section>
+
+  <!-- ==================== 架构 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">👁</div><h3>CUA 模型</h3><p>GPT-4o 的视觉能力 + 强化学习训练的推理，看截图输出鼠标键盘动作。Operator 的大脑。</p></div>
+      <div class="card"><div class="ico">🌐</div><h3>可视浏览器</h3><p>像人一样点按钮、填表单，适合没有 API 的网站。</p></div>
+      <div class="card"><div class="ico">📃</div><h3>文本浏览器</h3><p>直接读网页文本，搜索和阅读比截图快得多。来自 Deep Research。</p></div>
+      <div class="card green"><div class="ico">⌨</div><h3>终端</h3><p>跑代码、处理数据、生成表格和 PPT。</p></div>
+      <div class="card green"><div class="ico">🔌</div><h3>连接器</h3><p>接 Gmail、日历、GitHub 等，用 API 拿数据，不用去点网页。</p></div>
+      <div class="card green"><div class="ico">⏰</div><h3>定时任务</h3><p>做完的任务可以设成定期重复执行。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 安全 ==================== -->
+  <section id="s-ctx">
+    <h2>人机协作与安全</h2>
+    <div class="card">
+      <h3>能动手的 Agent，风险在“动作”</h3>
+      <ul class="pts">
+        <li><b>接管模式</b>：输密码、验证码时用户自己在虚拟浏览器里操作</li>
+        <li><b>动作前确认</b>：下单、发邮件这类有后果的操作先问用户</li>
+        <li><b>监视模式</b>：在邮箱等敏感网站上，用户离开页面就暂停</li>
+        <li><b>拒绝高风险</b>：银行转账等任务直接不做</li>
+        <li><b>提示注入</b>：网页里藏的指令可能劫持 Agent，用监控模型拦截</li>
+        <li><b>随时打断</b>：用户可以中途插话改方向，Agent 接着做</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🖱</div><h3>通用接口 = GUI</h3><p>不需要每个网站做集成，<mark>屏幕就是 API</mark>。代价是慢，容易点错。</p></div>
+      <div class="card amber"><div class="ico">🔀</div><h3>多路径选最快</h3><p>能用文本就不截图，能用 API 就不点网页。可视浏览器只是兜底。</p></div>
+      <div class="card amber"><div class="ico">🧪</div><h3>端到端 RL</h3><p>在虚拟机里用强化学习训练工具使用，模型自己学会什么时候用哪个工具。</p></div>
+      <div class="card amber"><div class="ico">🧬</div><h3>产品合并</h3><p>Operator 会操作但不会深挖，Deep Research 会分析但不能动手。合并后一个任务里两样都做。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>执行环境</th><th>操作方式</th><th>面向谁</th></tr>
+      <tr class="me"><td>ChatGPT Agent</td><td>OpenAI 云端虚拟机</td><td>可视 + 文本浏览器、终端、连接器</td><td>普通用户</td></tr>
+      <tr><td>Operator（前身）</td><td>OpenAI 云端浏览器</td><td>只有截图 + 鼠标键盘</td><td>普通用户</td></tr>
+      <tr><td>Manus</td><td>云端虚拟机</td><td>浏览器 + Shell + 代码</td><td>普通用户</td></tr>
+      <tr><td>Claude Computer Use</td><td>开发者自己的环境</td><td>截图 + 鼠标键盘</td><td>开发者（API）</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>GUI Agent 和调 API 的 Agent 怎么选？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>API 优先</b>：快、稳定、结果结构化</li>
+        <li><b>GUI 兜底</b>：没有 API 的网站、老系统、需要像人一样操作的场景</li>
+        <li><b>ChatGPT Agent 的做法</b>：两者都给，让模型按任务挑</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>为什么要把 Operator 和 Deep Research 合并？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>能力互补</b>：真实任务常是“先查资料，再去网站操作”</li>
+        <li><b>一个上下文</b>：两边共享虚拟机、文件和登录状态，不用来回切</li>
+        <li><b>统一训练</b>：一个模型学会多种工具，比两个产品拼接更连贯</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>能操作浏览器的 Agent，最大的安全风险是什么？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>提示注入</b>：网页内容里藏指令，诱导 Agent 泄露数据或乱操作</li>
+        <li><b>不可逆动作</b>：付款、发送、删除，必须人确认</li>
+        <li><b>凭证</b>：密码由用户在接管模式下输入，模型不经手</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coze 与火山方舟 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">FRAMEWORK / PROTOCOL</div>
+    <h1>Coze 与火山方舟</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">字节的两层 Agent 基建：<mark>扣子让人拖拽搭 Agent，方舟给开发者模型和 API</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">公司</div><div class="v">字节跳动 / 火山引擎</div></div>
+        <div class="fact"><div class="k">扣子 Coze</div><div class="v">低代码 Agent 平台，2025-07 开源 Coze Studio</div></div>
+        <div class="fact"><div class="k">火山方舟</div><div class="v">大模型服务平台：推理、精调、评测</div></div>
+        <div class="fact"><div class="k">模型</div><div class="v">豆包 Seed 系列为主，也有 DeepSeek 等三方模型</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：<b>扣子面向“搭应用”，方舟面向“调模型”</b>。扣子里的大模型节点，底层就是方舟上的模型。</div>
+  </section>
+
+  <!-- ==================== 核心原理 ==================== -->
+  <section id="s-loop">
+    <h2>核心工作原理</h2>
+    <div class="flow">
+      <div class="step"><div class="t">STEP 1</div><div class="h">人设与回复逻辑</div><div class="d">写 Bot 的系统提示，选模型</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 2</div><div class="h">挂技能</div><div class="d">插件、工作流、知识库、数据库、变量</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 3</div><div class="h">调试</div><div class="d">预览对话，看每步调用了什么</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">STEP 4</div><div class="h">发布</div><div class="d">飞书、抖音等渠道，或 API / SDK</div></div>
+    </div>
+    <div class="loop-note">↻ 对话时模型按人设决定调哪个插件或工作流，结果回填后继续回答，和 Function Calling 同一个循环</div>
+    <pre class="code"><span class="c"># 方舟 API 兼容 OpenAI 格式，换 base_url 和 key 就能用</span>
+<span class="k">import</span> os
+<span class="k">from</span> openai <span class="k">import</span> OpenAI
+client = OpenAI(base_url=<span class="s">"https://ark.cn-beijing.volces.com/api/v3"</span>,
+                api_key=os.environ[<span class="s">"ARK_API_KEY"</span>])
+resp = client.chat.completions.create(
+    model=<span class="s">"&lt;模型 ID 或接入点 ID&gt;"</span>,
+    messages=[{<span class="s">"role"</span>: <span class="s">"user"</span>, <span class="s">"content"</span>: <span class="s">"你好"</span>}])</pre>
+  </section>
+
+  <!-- ==================== 组件 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🤖</div><h3>Bot / 智能体</h3><p>人设 + 模型 + 技能。单 Agent 模式，也有多 Agent 模式按节点跳转。</p></div>
+      <div class="card"><div class="ico">🔀</div><h3>工作流</h3><p>画布拖节点：大模型、插件、代码、知识库、条件、循环。<b>固定流程不靠模型猜</b>。</p></div>
+      <div class="card"><div class="ico">🔌</div><h3>插件</h3><p>把 HTTP API 包成工具，填好参数说明，模型就能调。有官方插件商店。</p></div>
+      <div class="card"><div class="ico">📚</div><h3>知识库</h3><p>上传文档、表格、网页，自动切片向量化，对话时检索召回，就是托管版 RAG。</p></div>
+      <div class="card green"><div class="ico">⚡</div><h3>方舟 · 模型服务</h3><p>在线推理、批量推理、上下文缓存、模型精调、评测。按 token 计费。</p></div>
+      <div class="card green"><div class="ico">🛠</div><h3>方舟 · Agent 能力</h3><p>Responses API 管上下文和工具调用；应用实验室支持零代码和高代码搭应用；可接 MCP 服务。</p></div>
+    </div>
+    <div class="tip">火山引擎还有 <b>AgentKit</b>（Agent 运行时、沙箱工具等）和开源的 <b>VeADK</b> 开发套件，偏向代码开发的 Agent 上云部署。</div>
+  </section>
+
+  <!-- ==================== 记忆与状态 ==================== -->
+  <section id="s-ctx">
+    <h2>记忆与上下文</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>扣子这边</h3>
+        <ul class="pts">
+          <li><b>对话历史</b>：可设带入的轮数，控制长度</li>
+          <li><b>变量</b>：存用户昵称、偏好这类键值，跨会话保留</li>
+          <li><b>数据库</b>：结构化存记录，比如记账、待办，Bot 可用自然语言读写</li>
+          <li><b>长期记忆</b>：自动总结对话里的用户信息，下次召回</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>方舟这边</h3>
+        <ul class="pts">
+          <li><b>上下文缓存</b>：重复的长前缀缓存下来，降成本和首 token 延迟</li>
+          <li><b>Responses API</b>：服务端存上下文，下一轮传上一次的 id 即可，不用重发全量</li>
+          <li><b>无状态 Chat API</b>：兼容 OpenAI，历史由调用方自己管</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🧱</div><h3>工作流兜底确定性</h3><p>关键链路用工作流写死，<mark>开放问题才交给模型自由发挥</mark>，适合企业场景。</p></div>
+      <div class="card amber"><div class="ico">📣</div><h3>一键多渠道发布</h3><p>同一个 Bot 发到飞书、抖音、微信等，还能出 API 和网页 SDK 嵌进自家产品。</p></div>
+      <div class="card amber"><div class="ico">🔓</div><h3>开源 Coze Studio / Loop</h3><p>Apache 2.0。Studio 是搭建平台，Loop 管 Prompt 调试、评测、观测，后端用 Go 和自研 Eino 框架。</p></div>
+      <div class="card amber"><div class="ico">💰</div><h3>模型价格低</h3><p>方舟主打性价比和高并发，大流量 Agent 的 token 成本更可控。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>产品</th><th>开发方式</th><th>面向谁</th><th>部署</th></tr>
+      <tr class="me"><td>扣子 Coze</td><td>可视化 Bot + 工作流</td><td>业务、运营、开发</td><td>云端，或开源版自部署</td></tr>
+      <tr><td>Dify</td><td>可视化工作流</td><td>开发者</td><td>开源自部署 / 云</td></tr>
+      <tr><td>火山方舟</td><td>API + SDK</td><td>开发者</td><td>火山引擎云</td></tr>
+      <tr><td>阿里云百炼</td><td>API + 可视化应用</td><td>开发者、企业</td><td>阿里云</td></tr>
+      <tr><td>LangGraph</td><td>写代码</td><td>开发者</td><td>自部署 / 托管</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>Bot 里什么时候用插件，什么时候用工作流？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>插件</b>：单个原子能力，查天气、搜索，交给模型自己决定调不调</li>
+        <li><b>工作流</b>：多步骤、顺序固定、要稳定输出，如审批、报表生成</li>
+        <li><b>组合</b>：工作流里也能调插件，Bot 把工作流当成一个大工具</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>知识库召回不准，你会怎么调？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>切片</b>：按标题层级分段，别把一个知识点切断</li>
+        <li><b>检索</b>：语义 + 全文混合检索，加 rerank</li>
+        <li><b>参数</b>：调召回条数和相似度阈值</li>
+        <li><b>查询改写</b>：结合多轮上下文把用户问题改写完整再检索</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>如果让你在方舟上从零做一个 Agent 服务，链路怎么设计？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>模型层</b>：按任务选模型，复杂推理用强模型，路由和分类用小模型</li>
+        <li><b>编排层</b>：自写循环或用 LangGraph / VeADK，工具走 Function Calling 或 MCP</li>
+        <li><b>成本</b>：固定的系统提示走上下文缓存，离线任务走批量推理</li>
+        <li><b>质量</b>：上线前用评测集回归，线上看 trace 定位坏例</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>低代码平台和代码框架各自的天花板在哪？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>低代码</b>：上手快、迭代快；复杂状态、精细控制、版本管理和测试难做</li>
+        <li><b>代码框架</b>：完全可控、好测试；开发和运维成本高</li>
+        <li><b>常见做法</b>：原型在扣子验证，量大、逻辑复杂后迁到代码框架</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

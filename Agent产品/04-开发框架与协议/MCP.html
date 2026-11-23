@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">FRAMEWORK / PROTOCOL</div>
+    <h1>MCP</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 定位 ==================== -->
+  <section id="s-pos">
+    <h2>产品定位</h2>
+    <div class="hero">
+      <div class="slogan">Model Context Protocol：<mark>AI 应用接外部工具和数据的统一插口</mark>，常被比作 AI 的 USB-C</div>
+      <div class="facts">
+        <div class="fact"><div class="k">发起</div><div class="v">Anthropic，2024-11 开源</div></div>
+        <div class="fact"><div class="k">治理</div><div class="v">2025-12 捐给 Linux 基金会下的 AAIF</div></div>
+        <div class="fact"><div class="k">形态</div><div class="v">开放协议 + 多语言官方 SDK</div></div>
+        <div class="fact"><div class="k">底层</div><div class="v">JSON-RPC 2.0</div></div>
+      </div>
+    </div>
+    <div class="tip">一句话记住：把 <b>M 个应用 × N 个工具</b> 的对接，变成 <b>M + N</b>。工具写一次 Server，所有支持 MCP 的应用都能用。</div>
+  </section>
+
+  <!-- ==================== 核心原理 ==================== -->
+  <section id="s-loop">
+    <h2>核心工作原理</h2>
+    <div class="flow">
+      <div class="step"><div class="t">HOST</div><div class="h">宿主应用</div><div class="d">Claude Desktop、IDE、自研 Agent，管 LLM 和用户</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">CLIENT</div><div class="h">客户端</div><div class="d">Host 内部，每个 Server 一个，1 对 1 连接</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">SERVER</div><div class="h">服务端</div><div class="d">包装 GitHub、数据库、文件系统等能力</div></div>
+    </div>
+    <div class="loop-note">↻ 初始化协商能力 → tools/list 拿工具清单给 LLM → LLM 选工具 → tools/call 执行 → 结果回填上下文</div>
+    <pre class="code"><span class="c">// Client → Server：调用工具</span>
+{<span class="s">"jsonrpc"</span>: <span class="s">"2.0"</span>, <span class="s">"id"</span>: 3, <span class="s">"method"</span>: <span class="s">"tools/call"</span>,
+ <span class="s">"params"</span>: {<span class="s">"name"</span>: <span class="s">"get_weather"</span>, <span class="s">"arguments"</span>: {<span class="s">"city"</span>: <span class="s">"北京"</span>}}}
+
+<span class="c">// Server → Client：返回结果</span>
+{<span class="s">"jsonrpc"</span>: <span class="s">"2.0"</span>, <span class="s">"id"</span>: 3,
+ <span class="s">"result"</span>: {<span class="s">"content"</span>: [{<span class="s">"type"</span>: <span class="s">"text"</span>, <span class="s">"text"</span>: <span class="s">"晴 22℃"</span>}]}}</pre>
+  </section>
+
+  <!-- ==================== 组件 ==================== -->
+  <section id="s-arch">
+    <h2>关键组件</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🔧</div><h3>Tools</h3><p><b>模型控制</b>。可执行的函数，带 JSON Schema 参数，由 LLM 决定何时调用。</p></div>
+      <div class="card"><div class="ico">📄</div><h3>Resources</h3><p><b>应用控制</b>。按 URI 读取的数据，如文件、表结构，由 Host 决定塞不塞进上下文。</p></div>
+      <div class="card"><div class="ico">💬</div><h3>Prompts</h3><p><b>用户控制</b>。预置的提示模板，常以斜杠命令的形式给用户选。</p></div>
+      <div class="card green"><div class="ico">🧠</div><h3>Sampling</h3><p>反向能力：Server 请 Client 调一次 LLM，Server 自己不用持有模型 key。</p></div>
+      <div class="card green"><div class="ico">🙋</div><h3>Elicitation</h3><p>反向能力：Server 执行中途向用户要补充信息，如确认、填表。</p></div>
+      <div class="card green"><div class="ico">📁</div><h3>Roots</h3><p>Client 告诉 Server 可操作的目录边界。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 传输与安全 ==================== -->
+  <section id="s-ctx">
+    <h2>传输与安全</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>两种标准传输</h3>
+        <ul class="pts">
+          <li><b>stdio</b>：Host 拉起本地子进程，走标准输入输出，适合本地工具</li>
+          <li><b>Streamable HTTP</b>：一个 HTTP 端点，可按需升级为 SSE 流，适合远程服务</li>
+          <li><b>旧 HTTP+SSE</b>：早期双端点方案，已被 Streamable HTTP 取代</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>安全要点</h3>
+        <ul class="pts">
+          <li><b>授权</b>：远程 Server 用 OAuth 2.1，Server 是资源服务器</li>
+          <li><b>用户确认</b>：规范要求敏感工具调用前让用户知情、可拒绝</li>
+          <li><b>工具投毒</b>：工具描述里藏指令，会被 LLM 当真</li>
+          <li><b>数据外泄</b>：多个 Server 混用时，一个恶意 Server 可诱导模型把别家数据带走</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tip">新动向：<b>2026-07 版规范把协议层改成无状态</b>，去掉了会话和 <code>Mcp-Session-Id</code>，远程 Server 更容易水平扩展。</div>
+  </section>
+
+  <!-- ==================== 亮点 ==================== -->
+  <section id="s-hl">
+    <h2>设计亮点</h2>
+    <div class="grid">
+      <div class="card amber"><div class="ico">🔌</div><h3>解耦</h3><p>工具方只维护一个 Server，<mark>不用给每个 Agent 框架各写一套插件</mark>。</p></div>
+      <div class="card amber"><div class="ico">🎚</div><h3>按控制方分三类原语</h3><p>工具归模型、资源归应用、提示归用户，谁来触发一目了然。</p></div>
+      <div class="card amber"><div class="ico">🤝</div><h3>能力协商</h3><p>initialize 时双方声明支持哪些能力，新旧版本能共存。</p></div>
+      <div class="card amber"><div class="ico">🌐</div><h3>行业共识</h3><p>OpenAI、Google、微软等都已支持，中立基金会治理，不再只是 Anthropic 一家。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 对比 ==================== -->
+  <section id="s-cmp">
+    <h2>横向对比</h2>
+    <table class="cmp">
+      <tr><th>方案</th><th>解决什么</th><th>谁和谁通信</th><th>是否跨厂商</th></tr>
+      <tr class="me"><td>MCP</td><td>Agent 接工具 / 数据</td><td>应用 ↔ 工具服务</td><td>是，开放协议</td></tr>
+      <tr><td>Function Calling</td><td>模型输出结构化调用</td><td>模型 ↔ 应用</td><td>各家格式不同</td></tr>
+      <tr><td>A2A</td><td>Agent 之间协作</td><td>Agent ↔ Agent</td><td>是，开放协议</td></tr>
+      <tr><td>Coze 插件</td><td>Bot 接外部 API</td><td>平台 ↔ API</td><td>只在平台内</td></tr>
+    </table>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>有了 Function Calling，为什么还要 MCP？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>层次不同</b>：FC 是模型怎么表达“我要调工具”，MCP 是工具怎么被发现和执行</li>
+        <li><b>互补</b>：Host 把 MCP 的工具清单转成 FC 格式喂给模型</li>
+        <li><b>价值</b>：工具一次实现、到处复用，还带资源、提示、授权等标准</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>Tools、Resources、Prompts 有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>区别在谁触发</b>：Tools 由模型调，Resources 由应用选，Prompts 由用户点</li>
+        <li><b>副作用</b>：Tools 可以有副作用，Resources 只读</li>
+        <li><b>举例</b>：查数据库是 Tool，表结构是 Resource，“生成周报”模板是 Prompt</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>工具接了几百个，模型选不准、上下文爆了怎么办？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>按需加载</b>：先给工具摘要或检索工具，命中后再展开完整 schema</li>
+        <li><b>分组</b>：按任务只挂相关 Server，或拆给子 Agent</li>
+        <li><b>写好描述</b>：工具名和描述要区分度高，参数尽量少</li>
+        <li><b>压缩结果</b>：工具返回大结果时截断或摘要，别全量塞回</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>MCP 有哪些安全风险？怎么防？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>工具投毒</b>：只装可信 Server，审核描述，版本锁定防“先好后坏”</li>
+        <li><b>提示注入</b>：工具返回内容当数据，不当指令</li>
+        <li><b>越权</b>：OAuth 最小权限，token 不透传给下游</li>
+        <li><b>兜底</b>：敏感操作人工确认，本地 Server 跑在沙箱里</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>

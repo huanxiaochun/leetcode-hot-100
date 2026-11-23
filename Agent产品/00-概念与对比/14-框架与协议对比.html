@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>框架与协议对比 · Agent 产品</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <a class="back" href="../index.html">← 全部产品</a>
+    <div class="cat">概念与对比</div>
+    <h1>框架与协议对比</h1>
+  </div>
+  <nav id="nav"></nav>
+</aside>
+
+<main><div class="inner">
+
+  <!-- ==================== 总览 ==================== -->
+  <section id="s-all">
+    <h2>总览</h2>
+    <div class="hero">
+      <div class="slogan">从拖拽到写图，差别在<mark>下一步谁定、状态存哪、绑不绑模型</mark></div>
+      <div class="facts">
+        <div class="fact"><div class="k">低代码平台</div><div class="v">Coze、Dify</div></div>
+        <div class="fact"><div class="k">高层 SDK</div><div class="v">OpenAI、Claude、Google ADK</div></div>
+        <div class="fact"><div class="k">图编排</div><div class="v">LangGraph、MS Agent Framework</div></div>
+        <div class="fact"><div class="k">角色团队</div><div class="v">CrewAI</div></div>
+        <div class="fact"><div class="k">协议</div><div class="v">MCP、A2A</div></div>
+      </div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>名称</th><th>抽象层次</th><th>编排模型</th><th>模型绑定</th><th>部署</th></tr>
+      <tr><td><a href="../04-开发框架与协议/LangGraph.html">LangGraph</a></td><td>图编排</td><td>节点 + 条件边，开发者画死</td><td>不绑</td><td>自部署 / LangSmith 托管</td></tr>
+      <tr><td><a href="../04-开发框架与协议/OpenAI-Agents-SDK.html">OpenAI Agents SDK</a></td><td>高层 SDK</td><td>Runner 循环 + Handoff</td><td>默认 OpenAI，可接其他</td><td>自部署</td></tr>
+      <tr><td>Claude Agent SDK</td><td>高层 SDK，带现成工具</td><td>Claude Code 同款单循环 + 子代理</td><td>只用 Claude</td><td>自己的容器；或 Managed Agents 托管</td></tr>
+      <tr><td><a href="../04-开发框架与协议/Coze与火山方舟.html">Coze / 火山方舟</a></td><td>低代码平台 + 模型 API</td><td>画布工作流 + Bot 自主调技能</td><td>豆包为主，有三方模型</td><td>扣子云 / Coze Studio 自部署</td></tr>
+      <tr><td>CrewAI</td><td>高层 SDK</td><td>Crew（角色 + 任务）+ Flow（事件驱动）</td><td>不绑</td><td>自部署 / 官方企业平台</td></tr>
+      <tr><td>MS Agent Framework</td><td>SDK + 图工作流</td><td>Agent + 图式 Workflow</td><td>不绑，Azure 优先</td><td>自部署 / Azure AI Foundry</td></tr>
+      <tr><td>Google ADK</td><td>高层 SDK</td><td>LLM Agent + 顺序 / 并行 / 循环 Agent</td><td>Gemini 优先，可接其他</td><td>自部署 / Google Cloud</td></tr>
+      <tr><td>Dify</td><td>低代码平台</td><td>画布工作流 / Chatflow</td><td>不绑</td><td>开源自部署 / 云</td></tr>
+    </table>
+    <div class="tip">CrewAI、MS Agent Framework、Google ADK、Dify、Claude Agent SDK 没有单独的拆解页，这里只作参照。MS Agent Framework 是 <b>AutoGen 和 Semantic Kernel 合并后的继任者</b>，2026-04 发布 1.0，两个老项目进入维护模式。</div>
+  </section>
+
+  <!-- ==================== 按维度对比 ==================== -->
+  <section id="s-dim">
+    <h2>按维度对比</h2>
+
+    <h3 class="sub"><span class="no">1</span>抽象层次</h3>
+    <table class="cmp">
+      <tr><th>层次</th><th>代表</th><th>你要写的</th><th>你放弃的</th></tr>
+      <tr><td>低代码平台</td><td>Coze、Dify</td><td>提示词、拖节点、配插件</td><td>代码级控制、git 版本管理、单元测试</td></tr>
+      <tr><td>高层 SDK</td><td>OpenAI、Claude、ADK、CrewAI</td><td>Agent 配置 + 工具函数</td><td>循环细节，交给框架的 Runner</td></tr>
+      <tr><td>图编排</td><td>LangGraph、MAF Workflow</td><td>状态、节点、边</td><td>简洁，样板代码多</td></tr>
+      <tr><td>裸 API</td><td>Function calling 自己写循环</td><td>全部</td><td>什么都不放弃，什么都要自己造</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">2</span>编排模型：下一步谁定</h3>
+    <table class="cmp">
+      <tr><th>方式</th><th>代表</th><th>适合</th></tr>
+      <tr><td>开发者画图</td><td>LangGraph 条件边、MAF Workflow、Coze / Dify 工作流、CrewAI Flow</td><td>流程固定、要审计</td></tr>
+      <tr><td>模型移交</td><td>OpenAI Handoff、ADK 的 Agent 转交</td><td>客服分诊这类按意图路由</td></tr>
+      <tr><td>模型单循环</td><td>Claude Agent SDK、OpenAI Runner</td><td>开放任务，步骤事先说不清</td></tr>
+      <tr><td>角色协作</td><td>CrewAI Crew（顺序 / 经理分派）</td><td>按岗位拆分的内容类任务</td></tr>
+    </table>
+    <div class="tip">多数框架两种都支持：<b>确定的部分画死，开放的部分交给模型</b>。ADK 的顺序 / 并行 / 循环 Agent、CrewAI 的 Flow 套 Crew 都是这个思路。</div>
+
+    <h3 class="sub"><span class="no">3</span>状态与持久化</h3>
+    <table class="cmp">
+      <tr><th>名称</th><th>会话状态</th><th>崩溃后能恢复吗</th></tr>
+      <tr><td>LangGraph</td><td>checkpointer 每步快照，SQLite / Postgres</td><td>能，从最近一步续跑，还能时间旅行</td></tr>
+      <tr><td>OpenAI SDK</td><td>Session 存对话，SQLite 等实现</td><td>运行状态可序列化后恢复</td></tr>
+      <tr><td>Claude SDK</td><td>会话存 jsonl，可 resume / fork</td><td>依赖容器文件系统；托管版服务端存会话</td></tr>
+      <tr><td>MAF</td><td>Agent 线程 + Workflow 检查点</td><td>Workflow 能从检查点恢复</td></tr>
+      <tr><td>Google ADK</td><td>SessionService 管会话、State、Memory</td><td>换成数据库实现后可持久</td></tr>
+      <tr><td>CrewAI</td><td>Flow state + 内置记忆</td><td>Flow 可加持久化</td></tr>
+      <tr><td>Coze / Dify</td><td>平台托管变量、数据库、对话</td><td>平台负责，你不用管也改不了</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">4</span>人在回路</h3>
+    <table class="cmp">
+      <tr><th>名称</th><th>怎么暂停等人</th></tr>
+      <tr><td>LangGraph</td><td><code>interrupt()</code> 暂停，状态落库，人批完 <code>Command(resume=…)</code> 继续</td></tr>
+      <tr><td>OpenAI SDK</td><td>工具标记需要审批，运行暂停，批准或拒绝后续跑</td></tr>
+      <tr><td>Claude SDK</td><td>权限模式 + 工具调用回调 + Hook，逐个工具决定放不放行</td></tr>
+      <tr><td>MAF</td><td>Workflow 里发出请求，等外部输入再走</td></tr>
+      <tr><td>CrewAI</td><td>任务上开人工输入，产出先给人看</td></tr>
+      <tr><td>Coze</td><td>工作流里放问答节点，向用户要信息</td></tr>
+    </table>
+    <div class="tip warn">关键看<b>暂停期间状态存在哪</b>。存在内存里，进程一重启审批就丢了。</div>
+
+    <h3 class="sub"><span class="no">5</span>多 Agent 支持</h3>
+    <table class="cmp">
+      <tr><th>名称</th><th>方式</th></tr>
+      <tr><td>LangGraph</td><td>子图：一张图当另一张图的节点</td></tr>
+      <tr><td>OpenAI SDK</td><td>Handoff 移交控制权，或把 Agent 当工具调</td></tr>
+      <tr><td>Claude SDK</td><td>子代理：独立上下文，只交回结论</td></tr>
+      <tr><td>CrewAI</td><td>Crew 里多个角色，顺序执行或经理分派</td></tr>
+      <tr><td>MAF</td><td>继承 AutoGen 的群聊、编排模式，加图式 Workflow</td></tr>
+      <tr><td>Google ADK</td><td>父子 Agent 树 + 工作流 Agent，原生支持 A2A 调远程 Agent</td></tr>
+      <tr><td>Coze</td><td>多 Agent 模式，按节点跳转</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">6</span>可观测性</h3>
+    <table class="cmp">
+      <tr><th>名称</th><th>自带什么</th><th>注意</th></tr>
+      <tr><td>LangGraph</td><td>接 LangSmith 看 trace、做评测；Studio 可视化调图</td><td>LangSmith 是付费产品</td></tr>
+      <tr><td>OpenAI SDK</td><td>tracing 默认开，记录每次模型、工具、handoff</td><td>默认上传到 OpenAI，含输入输出</td></tr>
+      <tr><td>Claude SDK</td><td>完整消息流和工具调用都能拿到</td><td>没有现成 trace 面板，要自己接</td></tr>
+      <tr><td>MAF</td><td>内置 OpenTelemetry</td><td>接哪个后端自己选</td></tr>
+      <tr><td>Google ADK</td><td>本地开发 Web UI 看事件流</td><td>线上接 Google Cloud 或 OTel</td></tr>
+      <tr><td>Coze / Dify</td><td>调试面板、运行日志；Coze Loop 管评测和观测</td><td>只看得到平台内的步骤</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">7</span>模型绑定程度</h3>
+    <table class="cmp">
+      <tr><th>程度</th><th>名称</th><th>换模型的代价</th></tr>
+      <tr><td>完全绑定</td><td>Claude Agent SDK</td><td>只能换 Claude 型号或渠道（Bedrock、Vertex 等）</td></tr>
+      <tr><td>默认偏向</td><td>OpenAI SDK、Google ADK、Coze / 方舟</td><td>能接别家，但托管工具、部分特性只在自家模型上有</td></tr>
+      <tr><td>不绑</td><td>LangGraph、CrewAI、MAF、Dify</td><td>换模型改配置即可，提示词要重调</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">8</span>部署方式</h3>
+    <table class="cmp">
+      <tr><th>方式</th><th>名称</th><th>要自己管的</th></tr>
+      <tr><td>纯 SaaS</td><td>扣子云、Dify 云</td><td>几乎不用管，数据在平台</td></tr>
+      <tr><td>开源平台自部署</td><td>Coze Studio、Dify</td><td>数据库、向量库、升级</td></tr>
+      <tr><td>库 + 自己的服务</td><td>OpenAI SDK、CrewAI、LangGraph、ADK、MAF</td><td>进程、存储、扩缩容</td></tr>
+      <tr><td>库 + 沙箱容器</td><td>Claude SDK、OpenAI SDK 沙箱 Agent</td><td>带文件系统的隔离环境</td></tr>
+      <tr><td>厂商托管运行时</td><td>LangSmith、Azure AI Foundry、Google Cloud、Claude Managed Agents</td><td>只写 Agent，按量付费</td></tr>
+    </table>
+
+    <h3 class="sub"><span class="no">9</span>适合谁</h3>
+    <div class="grid">
+      <div class="card"><div class="ico">🧩</div><h3>业务、运营</h3><p>Coze 发到飞书、抖音；Dify 要数据留在内网。</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>想快速上线的开发者</h3><p>按主力模型选：OpenAI SDK、Claude SDK、Google ADK。</p></div>
+      <div class="card"><div class="ico">🏗</div><h3>流程复杂的生产系统</h3><p>LangGraph；.NET 或 Azure 栈选 MAF。</p></div>
+      <div class="card"><div class="ico">👥</div><h3>多角色原型</h3><p>CrewAI，按岗位描述 Agent，最快跑通。</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== 协议 ==================== -->
+  <section id="s-proto">
+    <h2>协议对比</h2>
+    <div class="flow">
+      <div class="step"><div class="t">FUNCTION CALLING</div><div class="h">模型 ↔ 应用</div><div class="d">模型说「我要调哪个工具、参数是什么」</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">MCP</div><div class="h">应用 ↔ 工具服务</div><div class="d">工具在哪、有哪些、怎么调</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="t">A2A</div><div class="h">Agent ↔ Agent</div><div class="d">把整件任务委托给另一个 Agent</div></div>
+    </div>
+    <table class="cmp mt">
+      <tr><th>维度</th><th>Function calling</th><th><a href="../04-开发框架与协议/MCP.html">MCP</a></th><th><a href="02-工具与扩展.html#s-each">A2A</a></th></tr>
+      <tr><td>解决什么</td><td>模型输出结构化调用</td><td>工具和数据一次接入，到处复用</td><td>跨框架、跨厂商的 Agent 协作</td></tr>
+      <tr><td>格式</td><td>各家 API 不同</td><td>JSON-RPC 2.0；stdio / Streamable HTTP</td><td>1.0 起支持 JSON-RPC、gRPC、HTTP+JSON</td></tr>
+      <tr><td>怎么发现</td><td>每次请求带上工具列表</td><td><code>tools/list</code></td><td>Agent Card（<code>/.well-known/agent-card.json</code>）</td></tr>
+      <tr><td>状态</td><td>无，历史由调用方管</td><td>2026-07-28 版起协议层无状态</td><td>有 Task 生命周期，支持长任务、流式、推送</td></tr>
+      <tr><td>对方是什么</td><td>你自己的函数</td><td>一组工具，调用方看得到参数</td><td>不透明的 Agent，只看到能力描述和结果</td></tr>
+      <tr><td>治理</td><td>各厂商自定</td><td>Linux 基金会 AAIF（2025-12 起）</td><td>Linux 基金会（2025-06 起），2026 年发布 1.0</td></tr>
+    </table>
+    <pre class="code"><span class="c"># 同一个工具，两家 function calling 格式不同</span>
+<span class="c"># OpenAI Responses API</span>
+{<span class="s">"type"</span>: <span class="s">"function"</span>, <span class="s">"name"</span>: <span class="s">"get_weather"</span>, <span class="s">"parameters"</span>: {...}}
+<span class="c"># Anthropic Messages API</span>
+{<span class="s">"name"</span>: <span class="s">"get_weather"</span>, <span class="s">"input_schema"</span>: {...}}
+<span class="c"># MCP Server 写一次，Host 负责转成各家格式喂给模型</span></pre>
+    <ul class="pts">
+      <li><b>三者是叠加关系</b>：MCP 的工具最后还是变成 function calling 给模型；A2A 的远程 Agent 在调用方眼里常被包装成一个工具</li>
+      <li><b>框架支持</b>：表里的框架都能接 MCP；Google ADK 和 MAF 原生支持 A2A</li>
+      <li><b>MCP 新版</b>：去掉了 initialize 握手和 <code>Mcp-Session-Id</code>，远程 Server 能放在普通负载均衡后面水平扩展</li>
+    </ul>
+  </section>
+
+  <!-- ==================== 各产品优劣 ==================== -->
+  <section id="s-pros">
+    <h2>各产品优劣</h2>
+
+    <h3 class="sub"><span class="no">1</span>LangGraph</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>流程显式</b>：图是代码，可测、可审、可预期</li>
+        <li><b>checkpoint 一套多用</b>：恢复、审批、时间旅行都建在它上面</li>
+        <li><b>不藏东西</b>：不绑模型，不替你写 prompt</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>概念多</b>：State、reducer、super-step，样板代码多</li>
+        <li><b>恢复有坑</b>：中断的节点从头重跑，副作用要幂等</li>
+        <li><b>好用的配套收费</b>：trace、评测、托管都在 LangSmith</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">2</span>OpenAI Agents SDK</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>原语少</b>：Agent、Handoff、Guardrail，半天上手</li>
+        <li><b>trace 开箱即用</b>：不写代码就能看全链路</li>
+        <li><b>补上长任务</b>：2026-04 起有沙箱执行和长任务 harness</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>流转靠模型</b>：Handoff 选错 Agent 时只能调提示词</li>
+        <li><b>数据出境</b>：trace 默认传 OpenAI，合规场景要关掉或换后端</li>
+        <li><b>托管工具绑模型</b>：网页搜索、文件检索等只在 OpenAI 模型上能用</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">3</span>Claude Agent SDK（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>开箱就是能干活的 Agent</b>：文件、Bash、搜索、权限、Hook、子代理都现成</li>
+        <li><b>上下文管理成熟</b>：压缩、缓存是 Claude Code 打磨过的</li>
+        <li><b>复用扩展</b>：MCP、Skills 直接用</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>只能用 Claude</b>：模型换不了</li>
+        <li><b>运行重</b>：底层拉起 Claude Code 进程，要带文件系统的容器</li>
+        <li><b>没有图编排</b>：固定流程要自己在外层写代码控</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">4</span>Coze / 火山方舟</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>非开发也能搭</b>：拖节点、配插件、挂知识库</li>
+        <li><b>多渠道发布</b>：飞书、抖音、API、网页 SDK</li>
+        <li><b>方舟便宜</b>：模型价格低，有上下文缓存和批量推理</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>复杂逻辑难维护</b>：画布上没有像样的版本管理和测试</li>
+        <li><b>迁移成本</b>：状态和知识库在平台里，搬走要重做</li>
+        <li><b>生态偏国内</b>：豆包为主，海外渠道少</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">5</span>CrewAI（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>直观</b>：写角色、目标、背景就是一个 Agent</li>
+        <li><b>Flow 兜底</b>：事件驱动的确定流程，里面再套 Crew</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>提示词藏在框架里</b>：效果不好时要翻源码调</li>
+        <li><b>自主协作难控</b>：经理模式下轮数和 token 不好预估</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">6</span>Microsoft Agent Framework（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>两家合一</b>：AutoGen 的多 Agent + Semantic Kernel 的企业特性</li>
+        <li><b>Python 和 .NET</b>：微软栈团队首选</li>
+        <li><b>OTel、A2A、MCP 都内置</b></li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>迁移</b>：AutoGen、SK 的老代码要改写</li>
+        <li><b>偏 Azure</b>：托管、身份、监控最顺的路径都在 Azure</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">7</span>Google ADK（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>语言多</b>：Python、TypeScript、Go、Java、Kotlin</li>
+        <li><b>确定和自主混用</b>：顺序 / 并行 / 循环 Agent 套 LLM Agent</li>
+        <li><b>A2A 原生</b>：调远程 Agent 像调子 Agent</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>偏 Gemini + Google Cloud</b>：内置工具和托管都在这条线上</li>
+        <li><b>多语言不齐</b>：各语言版本独立实现，特性进度不一致</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub"><span class="no">8</span>Dify（参照）</h3>
+    <div class="grid">
+      <div class="card green"><div class="ico">✓</div><h3>优势</h3><ul class="pts">
+        <li><b>开源自部署</b>：数据留在内网</li>
+        <li><b>RAG 和工作流成熟</b>：模型不绑，插件接各家</li>
+      </ul></div>
+      <div class="card amber"><div class="ico">✗</div><h3>劣势</h3><ul class="pts">
+        <li><b>许可证有附加条件</b>：做多租户 SaaS 要商业授权，前端 Logo 不能去</li>
+        <li><b>画布天花板</b>：和 Coze 一样，复杂逻辑难测难改</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ==================== 选型建议 ==================== -->
+  <section id="s-pick">
+    <h2>选型建议</h2>
+    <div class="chain">
+      <div class="node">
+        <div class="dot">1</div>
+        <div class="body"><div class="h">团队写代码吗？</div><div class="d">谁来搭、谁来维护</div></div>
+        <div class="branches">
+          <div class="br ok">不写，发国内渠道 → Coze</div>
+          <div class="br ok">不写，要数据留内网 → Dify</div>
+          <div class="br ask">写 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">2</div>
+        <div class="body"><div class="h">是不是「一个 Agent + 一堆工具」？</div><div class="d">大多数需求其实就是这个</div></div>
+        <div class="branches">
+          <div class="br ok">是，用 Claude → Claude Agent SDK</div>
+          <div class="br ok">是，用 OpenAI → Agents SDK</div>
+          <div class="br ok">是，用 Gemini → Google ADK</div>
+          <div class="br ask">不是 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">3</div>
+        <div class="body"><div class="h">流程要固定、可审批、可恢复吗？</div><div class="d">跑几小时、中间要人批</div></div>
+        <div class="branches">
+          <div class="br ok">要 → LangGraph</div>
+          <div class="br ok">.NET 或 Azure 栈 → MS Agent Framework</div>
+          <div class="br ask">不要 → 下一步</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">4</div>
+        <div class="body"><div class="h">多个角色协作，先验证想法？</div><div class="d">写稿、审稿、调研这类分岗位任务</div></div>
+        <div class="branches">
+          <div class="br ok">是 → CrewAI</div>
+          <div class="br no">上生产后流程变复杂 → 迁到 LangGraph</div>
+        </div>
+      </div>
+      <div class="node">
+        <div class="dot">5</div>
+        <div class="body"><div class="h">选协议</div><div class="d">和框架选择独立</div></div>
+        <div class="branches">
+          <div class="br ok">接工具和数据 → MCP</div>
+          <div class="br ok">和别的团队、厂商的 Agent 协作 → A2A</div>
+          <div class="br ask">只有自己的几个函数 → 直接 function calling</div>
+        </div>
+      </div>
+      <div class="node end">
+        <div class="dot">✓</div>
+        <div class="body"><div class="h">先用最简单的写法跑通</div><div class="d">瓶颈真出现了再换框架，别一开始就上图编排</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 常见问题 ==================== -->
+  <section id="s-qa">
+    <h2>常见问题</h2>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q1</span>LangGraph 和 OpenAI Agents SDK 本质区别是什么？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>谁定流程</b>：LangGraph 开发者画边；Agents SDK 模型通过 Handoff 决定</li>
+        <li><b>状态</b>：LangGraph 每步 checkpoint；Agents SDK 主要存对话</li>
+        <li><b>代价</b>：LangGraph 更可控但代码多；Agents SDK 上手快但复杂流程难管</li>
+        <li><b>能组合</b>：LangGraph 节点里也可以跑一个 SDK 的 Agent</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q2</span>Function calling、MCP、A2A 是什么关系？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>Function calling</b>：模型怎么表达「我要调工具」，各家格式不同</li>
+        <li><b>MCP</b>：工具怎么被发现和执行，一次实现到处用</li>
+        <li><b>A2A</b>：把任务委托给一个看不到内部的 Agent，有任务状态</li>
+        <li><b>叠加</b>：MCP 工具最后转成 function calling；A2A 的远程 Agent 常被包成一个工具</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q3</span>低代码平台做到什么程度该迁到代码框架？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>信号</b>：画布节点多到看不清、改一处坏一处、没法回归测试</li>
+        <li><b>信号</b>：要细粒度权限、复杂状态、和内部系统深度集成</li>
+        <li><b>怎么迁</b>：先把稳定的子流程写成代码服务，平台调它，逐步替换</li>
+        <li><b>别过早迁</b>：需求还在变时，低代码迭代更快</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q4</span>AutoGen 现在还该用吗？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>新项目不用</b>：AutoGen 和 Semantic Kernel 已进入维护模式，只修 bug 和安全问题</li>
+        <li><b>继任者</b>：Microsoft Agent Framework，2026-04 发布 1.0</li>
+        <li><b>老项目</b>：按官方迁移指南逐步改，不急着一次重写</li>
+      </ul></div></details>
+    </div>
+    <div class="q">
+      <div class="q-title"><span class="idx">Q5</span>Claude Agent SDK 和直接调 API 自己写循环有什么区别？</div>
+      <details><summary>参考答案</summary><div class="ans"><ul class="pts">
+        <li><b>自己写</b>：只拿到模型，工具、权限、压缩、重试全要自己造</li>
+        <li><b>SDK</b>：拿到 Claude Code 的整套循环和内置工具，几行代码就能读写文件、跑命令</li>
+        <li><b>代价</b>：要跑在带文件系统的容器里，只能用 Claude</li>
+        <li><b>选法</b>：Agent 要操作文件和命令行用 SDK；只是对话加几个 API 工具，自己写循环更轻</li>
+      </ul></div></details>
+    </div>
+  </section>
+
+</div></main>
+<script src="../assets/page.js"></script>
+</body>
+</html>
